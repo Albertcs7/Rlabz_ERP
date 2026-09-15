@@ -61,6 +61,18 @@ class CertificatesController extends Controller
             || in_array('view-projects', $permissions, true);
     }
 
+    /**
+     * Students may hold a general certificate-viewing permission (e.g.
+     * view-certificates-read) intended for seeing their OWN certificates on
+     * their dashboard — that permission alone must not let a student fetch an
+     * arbitrary certificate by ID or another student's list by substituting a
+     * different ID in the URL. Coordinators/faculty/director are unrestricted.
+     */
+    protected function isRestrictedToOwnCertificates(Request $request): bool
+    {
+        return ($request->auth_user['role'] ?? null) === 'student';
+    }
+
     public function index(Request $request)
     {
         if (!$this->isAuthorized($request)) {
@@ -78,6 +90,11 @@ class CertificatesController extends Controller
     public function show(Request $request, Certificate $certificate)
     {
         if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        if ($this->isRestrictedToOwnCertificates($request)
+            && (int) $certificate->student_id !== (int) $this->currentUserId($request)) {
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
@@ -112,7 +129,7 @@ class CertificatesController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $certificates = Certificate::with(['project', 'module', 'issuer'])
+        $certificates = Certificate::with(['project.faculty', 'module', 'issuer'])
             ->where('student_id', $studentId)
             ->orderBy('issue_date', 'desc')
             ->get();
@@ -123,6 +140,11 @@ class CertificatesController extends Controller
     public function studentCertificates(Request $request, User $student)
     {
         if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        if ($this->isRestrictedToOwnCertificates($request)
+            && (int) $student->id !== (int) $this->currentUserId($request)) {
             return response()->json(['error' => 'Forbidden'], 403);
         }
 

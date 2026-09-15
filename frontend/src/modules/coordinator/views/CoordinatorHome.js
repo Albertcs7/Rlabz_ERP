@@ -145,31 +145,31 @@ export async function CoordinatorHome(route, router) {
       </div>
 
       <div class="coordinator-kpi-grid">
-        <div class="coordinator-kpi-card" data-nav="/coordinator/projects" tabindex="0" role="button">
+        <div class="coordinator-kpi-card kpi-navy" data-nav="/coordinator/projects" tabindex="0" role="button">
           <span>Active Projects</span>
           <strong>${activeProjects}</strong>
           <small>Currently in progress</small>
         </div>
 
-        <div class="coordinator-kpi-card" data-nav="/coordinator/students" tabindex="0" role="button">
+        <div class="coordinator-kpi-card kpi-blue" data-nav="/coordinator/students" tabindex="0" role="button">
           <span>Students Assigned</span>
           <strong>${totalStudents}</strong>
           <small>Across active projects</small>
         </div>
 
-        <div class="coordinator-kpi-card" data-nav="/coordinator/projects" tabindex="0" role="button">
+        <div class="coordinator-kpi-card kpi-green" data-nav="/coordinator/projects" tabindex="0" role="button">
           <span>Average Progress</span>
           <strong>${avgProgress}%</strong>
           <small>Portfolio completion rate</small>
         </div>
 
-        <div class="coordinator-kpi-card" data-nav="/coordinator/projects" tabindex="0" role="button">
+        <div class="coordinator-kpi-card kpi-orange" data-nav="/coordinator/projects" tabindex="0" role="button">
           <span>Urgent Projects</span>
           <strong>${urgentProjects}</strong>
           <small>Require coordination</small>
         </div>
 
-        <div class="coordinator-kpi-card" data-nav="/coordinator/finance" tabindex="0" role="button">
+        <div class="coordinator-kpi-card kpi-navy" data-nav="/coordinator/finance" tabindex="0" role="button">
           <span>Total Profit</span>
           <strong>${totalProfit !== null ? formatCurrency(totalProfit) : '—'}</strong>
           <small>Revenue minus costs</small>

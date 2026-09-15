@@ -112,6 +112,36 @@
   color: #9ca3af;
 }
 
+/* KPI card accent colors (requested palette) — left border + matching number
+   color, background stays white for readable contrast. */
+.coordinator-kpi-card.kpi-navy {
+  border-left: 4px solid #002c49;
+}
+.coordinator-kpi-card.kpi-navy strong {
+  color: #002c49;
+}
+
+.coordinator-kpi-card.kpi-blue {
+  border-left: 4px solid #27a3ff;
+}
+.coordinator-kpi-card.kpi-blue strong {
+  color: #27a3ff;
+}
+
+.coordinator-kpi-card.kpi-green {
+  border-left: 4px solid #43ae47;
+}
+.coordinator-kpi-card.kpi-green strong {
+  color: #43ae47;
+}
+
+.coordinator-kpi-card.kpi-orange {
+  border-left: 4px solid #f9440d;
+}
+.coordinator-kpi-card.kpi-orange strong {
+  color: #f9440d;
+}
+
 .coordinator-panel {
   background: white;
   border-radius: 12px;

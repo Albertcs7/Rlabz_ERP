@@ -205,23 +205,28 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 28px 56px;
   box-sizing: border-box;
   text-align: center;
   font-family: 'Georgia', 'Times New Roman', serif;
+  position: relative;
 }
 
-.certificate-brand {
-  letter-spacing: 6px;
-  font-weight: 800;
-  color: #1e3a8a;
-  font-size: 0.9rem;
-  font-family: Arial, sans-serif;
+.certificate-logo {
+  position: absolute;
+  top: 16px;
+  left: 22px;
+  height: 44px;
+  width: auto;
+}
+
+.certificate-body {
+  margin-top: 12px;
 }
 
 .certificate-title {
-  font-size: 2.2rem;
+  font-size: 2.35rem;
   font-weight: 800;
   color: #111827;
   letter-spacing: 1.5px;
@@ -236,7 +241,7 @@
 }
 
 .certificate-student-name {
-  font-size: 1.9rem;
+  font-size: 2.05rem;
   font-weight: 700;
   color: #1e3a8a;
   margin-top: 4px;
@@ -245,7 +250,7 @@
 .certificate-sentence {
   max-width: 680px;
   margin: 14px auto 0;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   line-height: 1.7;
   color: #1f2937;
 }
@@ -255,7 +260,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-top: 16px;
+  margin-top: 32px;
   font-family: Arial, sans-serif;
 }
 
@@ -266,7 +271,7 @@
 
 .certificate-footer-center {
   flex: 1;
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   color: #4b5563;
   line-height: 1.6;
 }
@@ -280,7 +285,7 @@
 .certificate-footer-label {
   font-weight: 700;
   color: #111827;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
 }
 
 .certificate-footer-role {

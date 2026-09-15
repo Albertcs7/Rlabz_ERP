@@ -539,14 +539,38 @@ class CoordinatorController extends Controller
             return response()->json(['error' => 'Selected requirement does not belong to this project'], 422);
         }
 
-        $userId = $this->currentUserId($request) ?? $request->user()?->id ?? 1;
+        $userId = $this->currentUserId($request) ?? $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['error' => 'Unable to identify current user'], 400);
+        }
 
-        $change = RequirementChange::create([
+        $change = new RequirementChange([
             'client_requirement_id' => $requirement->id,
-            'previous_value' => json_encode($requirement),
-            'updated_value' => json_encode($validated),
+            'previous_description' => $requirement->description,
+            'new_description' => $validated['new_description'] ?? null,
+            'change_description' => $validated['change_description'],
+            'reason' => $validated['reason'] ?? null,
+            'previous_document_path' => $requirement->document_path,
+            'new_document_path' => $validated['new_document_path'] ?? null,
+            'requested_by' => $userId,
+            // requester()/approver() on the model both query `changed_by` (a leftover
+            // column from an earlier, abandoned refactor) rather than requested_by/
+            // approved_by. Populating it here is only a compatibility workaround so
+            // those existing relationships keep resolving to a real user — not a
+            // schema requirement. Not fixing the model, per instruction.
             'changed_by' => $userId,
+            // No approval endpoint exists anywhere in this codebase today, so a
+            // logged change is recorded but not approved — matches the schema's
+            // nullable approved_by/approved_at, which are left untouched here.
+            'status' => 'pending',
+            'changed_on' => $validated['changed_on'] ?? now(),
         ]);
+        // project_id is a required (NOT NULL) column but is not listed in the
+        // model's $fillable array, so it can't go through the array above — set
+        // directly instead of adding it to $fillable, since no model change was
+        // approved.
+        $change->project_id = $project->id;
+        $change->save();
 
         return response()->json([
             'message' => 'Requirement change recorded successfully',

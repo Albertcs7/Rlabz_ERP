@@ -13,6 +13,7 @@ let cachedMeetings = [];
 let cachedGithub = [];
 let cachedChatMessages = [];
 let cachedNotifications = [];
+let cachedCertificates = [];
 let cachedProfile = null;
 let cachedDashboard = null;
 
@@ -58,6 +59,7 @@ export async function ensureDataLoaded(force = false) {
     cachedGithub = [];
     cachedChatMessages = [];
     cachedNotifications = [];
+    cachedCertificates = [];
     cachedProfile = null;
     cachedDashboard = null;
     dataLoaded = false;
@@ -108,6 +110,16 @@ export async function ensureDataLoaded(force = false) {
     } catch (err) {
       console.warn('Could not load notifications:', err);
       cachedNotifications = [];
+    }
+
+    // 9. Fetch the authenticated student's own certificates (backend-scoped by
+    // the JWT subject — never trust a client-side project/name match).
+    try {
+      const certResponse = await apiFetch('/certificates/mine');
+      cachedCertificates = Array.isArray(certResponse?.data) ? certResponse.data : [];
+    } catch (err) {
+      console.warn('Could not load certificates:', err);
+      cachedCertificates = [];
     }
 
     // 10. Fetch unified dashboard (contains assigned tasks, projects, modules, meetings, stats)
@@ -179,6 +191,10 @@ export function getSprints() {
 
 export function getReports() {
   return cachedReports;
+}
+
+export function getCertificates() {
+  return cachedCertificates;
 }
 
 export function getWorkLogs() {
