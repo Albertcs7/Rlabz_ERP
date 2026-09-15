@@ -36,4 +36,9 @@ Route::group(['prefix' => 'coordinator', 'middleware' => ['auth.jwt']], function
     Route::post('/meetings/{id}/status', [CoordinatorController::class, 'updateMeetingStatus']);
 
     Route::post('/projects/{project}/close', [CoordinatorController::class, 'close']);
+
+    Route::get('/reports', [CoordinatorController::class, 'reports']);
+    Route::post('/reports/{id}/review', [CoordinatorController::class, 'reviewReport']);
+    Route::get('/reports/{id}/download', [CoordinatorController::class, 'downloadReportFile']);
+    Route::post('/reports/weekly/generate', [CoordinatorController::class, 'generateWeeklyReport']);
 });

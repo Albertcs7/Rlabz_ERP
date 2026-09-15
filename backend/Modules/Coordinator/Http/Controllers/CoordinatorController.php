@@ -7,6 +7,9 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 use Modules\Auth\Models\User;
 use Modules\Coordinator\Models\ClientRequirement;
 use Modules\Coordinator\Models\ProjectClosure;
@@ -17,6 +20,7 @@ use Modules\Coordinator\Models\StudentRole;
 use Modules\Project\Models\Module;
 use Modules\Project\Models\Project;
 use Modules\Project\Models\Task;
+use Modules\Student\Models\StudentReport;
 
 class CoordinatorController extends Controller
 {
@@ -899,6 +903,278 @@ class CoordinatorController extends Controller
             'success' => true,
             'message' => 'Meeting status updated to cancelled.',
             'status' => 'cancelled',
+        ]);
+    }
+
+    /**
+     * List student daily/weekly reports, optionally filtered by project, student,
+     * report type, approval status, and date range. Coordinators are global in this
+     * app (no per-coordinator project assignment table exists — every other
+     * coordinator endpoint is unscoped the same way), so this intentionally returns
+     * across all projects rather than a restricted subset.
+     */
+    public function reports(Request $request)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $query = DB::table('student_reports')
+            ->leftJoin('projects', 'projects.id', '=', 'student_reports.project_id')
+            ->leftJoin('users', 'users.id', '=', 'student_reports.student_id');
+
+        if ($request->filled('project_id')) {
+            $query->where('student_reports.project_id', $request->input('project_id'));
+        }
+        if ($request->filled('student_id')) {
+            $query->where('student_reports.student_id', $request->input('student_id'));
+        }
+        if ($request->filled('report_type')) {
+            $query->where('student_reports.report_type', strtolower($request->input('report_type')));
+        }
+        if ($request->filled('status')) {
+            $query->where('student_reports.approval_status', strtolower($request->input('status')));
+        }
+        if ($request->filled('date_from')) {
+            $query->where('student_reports.report_date', '>=', $request->input('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->where('student_reports.report_date', '<=', $request->input('date_to'));
+        }
+
+        $reports = $query->select(
+            'student_reports.id',
+            'student_reports.project_id',
+            'projects.title as project_title',
+            'student_reports.student_id',
+            'users.name as student_name',
+            'users.email as student_email',
+            'student_reports.report_type',
+            'student_reports.report_date',
+            'student_reports.week_start',
+            'student_reports.week_end',
+            'student_reports.work_done',
+            'student_reports.tasks_completed',
+            'student_reports.next_plan',
+            'student_reports.challenges',
+            'student_reports.remarks',
+            'student_reports.hours_worked',
+            'student_reports.report_file',
+            'student_reports.approval_status',
+            'student_reports.feedback',
+            'student_reports.submitted_at'
+        )
+        ->orderBy('student_reports.submitted_at', 'desc')
+        ->get()
+        ->map(function ($r) {
+            $fileName = $r->report_file ? basename($r->report_file) : null;
+
+            $dailyCount = null;
+            if (strtolower($r->report_type) === 'weekly' && $r->week_start && $r->week_end) {
+                $dailyCount = DB::table('student_reports')
+                    ->where('student_id', $r->student_id)
+                    ->where('project_id', $r->project_id)
+                    ->where('report_type', 'daily')
+                    ->whereBetween('report_date', [$r->week_start, $r->week_end])
+                    ->count();
+            }
+
+            return [
+                'id' => $r->id,
+                'project_id' => $r->project_id,
+                'project_title' => $r->project_title ?: 'General Project',
+                'student_id' => $r->student_id,
+                'student_name' => $r->student_name ?: 'Student',
+                'student_email' => $r->student_email ?: '',
+                'report_type' => ucfirst($r->report_type),
+                'report_date' => $r->report_date,
+                'week_start' => $r->week_start,
+                'week_end' => $r->week_end,
+                'daily_report_count' => $dailyCount,
+                'work_done' => $r->work_done,
+                'tasks_completed' => $r->tasks_completed,
+                'pending_work' => $r->next_plan,
+                'blockers' => $r->challenges,
+                'remarks' => $r->remarks,
+                'hours_worked' => $r->hours_worked !== null ? (float) $r->hours_worked : null,
+                'approval_status' => ucfirst($r->approval_status ?: 'pending'),
+                'feedback' => $r->feedback,
+                'submitted_at' => $r->submitted_at,
+                'report_file' => $r->report_file,
+                'file_name' => $fileName,
+                'file_url' => $r->report_file ? asset('storage/' . $r->report_file) : null,
+                'download_url' => $r->report_file ? url('api/coordinator/reports/' . $r->id . '/download') : null,
+            ];
+        });
+
+        return response()->json($reports);
+    }
+
+    /**
+     * Approve/reject/reset a student daily or weekly report, with optional remarks.
+     * Mirrors FacultyController::reviewReport() exactly.
+     */
+    public function reviewReport(Request $request, $id)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:approved,rejected,pending,Approved,Rejected,Pending',
+            'feedback' => 'nullable|string|max:2000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $report = DB::table('student_reports')->where('id', $id)->first();
+        if (!$report) {
+            return response()->json(['error' => 'Student report not found.'], 404);
+        }
+
+        $statusLower = strtolower($request->input('status'));
+
+        DB::table('student_reports')->where('id', $id)->update([
+            'approval_status' => $statusLower,
+            'feedback' => $request->filled('feedback') ? $request->input('feedback') : $report->feedback,
+            'updated_at' => now(),
+        ]);
+
+        if (Schema::hasTable('notifications')) {
+            $statusText = ucfirst($statusLower);
+            $reportType = ucfirst($report->report_type);
+            $msg = "Your {$reportType} Report for {$report->report_date} was {$statusText} by your coordinator.";
+            if ($request->filled('feedback')) {
+                $msg .= " Feedback: " . $request->input('feedback');
+            }
+
+            DB::table('notifications')->insert([
+                'user_id' => $report->student_id,
+                'type' => 'report_review',
+                'message' => $msg,
+                'is_read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Report status updated successfully.',
+            'status' => ucfirst($statusLower),
+            'feedback' => $request->input('feedback') ?: $report->feedback,
+        ]);
+    }
+
+    /**
+     * Download a report's attached file. Mirrors Faculty/Student downloadReportFile().
+     */
+    public function downloadReportFile(Request $request, $id)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $report = DB::table('student_reports')->where('id', $id)->first();
+        if (!$report || !$report->report_file) {
+            return response()->json(['error' => 'Report file not found'], 404);
+        }
+
+        if (!Storage::disk('public')->exists($report->report_file)) {
+            return response()->json(['error' => 'File not found on storage'], 404);
+        }
+
+        $filePath = Storage::disk('public')->path($report->report_file);
+        $ext = pathinfo($report->report_file, PATHINFO_EXTENSION);
+        $studentName = DB::table('users')->where('id', $report->student_id)->value('name') ?: 'Student';
+        $safeStudentName = preg_replace('/[^A-Za-z0-9_]/', '_', $studentName);
+        $downloadName = "Report_{$safeStudentName}_{$report->report_date}_{$report->id}.{$ext}";
+
+        return response()->download($filePath, $downloadName);
+    }
+
+    /**
+     * Explicitly generate (or refresh) a weekly report for a chosen student/project/
+     * week from their real daily reports. Reuses StudentReport::syncWeekly() — the
+     * same function the automatic per-submission rollup uses — so manual and
+     * automatic generation can never produce conflicting/duplicate weekly rows
+     * (enforced by the unique weekly_key constraint).
+     */
+    public function generateWeeklyReport(Request $request)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'student_id' => 'required|integer|exists:users,id',
+            'project_id' => 'required|integer|exists:projects,id',
+            'week_start' => 'required|date',
+            'week_end' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $studentId = (int) $request->input('student_id');
+        $projectId = (int) $request->input('project_id');
+        $canonicalWeekStart = Carbon::parse($request->input('week_start'))->startOfWeek(Carbon::MONDAY);
+        $canonicalWeekEnd = $canonicalWeekStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        if ($request->filled('week_end')) {
+            $requestedWeekEnd = Carbon::parse($request->input('week_end'))->toDateString();
+            if ($requestedWeekEnd !== $canonicalWeekEnd->toDateString()) {
+                return response()->json([
+                    'error' => "Weeks must run Monday to Sunday. For week_start {$canonicalWeekStart->toDateString()}, week_end must be {$canonicalWeekEnd->toDateString()}."
+                ], 422);
+            }
+        }
+
+        $isAssigned = DB::table('project_student')
+            ->where('project_id', $projectId)
+            ->where('student_id', $studentId)
+            ->exists();
+        if (!$isAssigned) {
+            return response()->json(['error' => 'Selected student is not assigned to this project.'], 422);
+        }
+
+        $weekly = StudentReport::syncWeekly($studentId, $projectId, $canonicalWeekStart->toDateString());
+
+        if (!$weekly) {
+            return response()->json([
+                'success' => false,
+                'message' => "No daily reports found for this student/project between {$canonicalWeekStart->toDateString()} and {$canonicalWeekEnd->toDateString()}.",
+            ]);
+        }
+
+        $dailyCount = DB::table('student_reports')
+            ->where('student_id', $studentId)
+            ->where('project_id', $projectId)
+            ->where('report_type', 'daily')
+            ->whereBetween('report_date', [$canonicalWeekStart->toDateString(), $canonicalWeekEnd->toDateString()])
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Weekly report generated from {$dailyCount} daily report(s).",
+            'data' => [
+                'id' => $weekly->id,
+                'student_id' => $weekly->student_id,
+                'project_id' => $weekly->project_id,
+                'week_start' => $weekly->week_start,
+                'week_end' => $weekly->week_end,
+                'daily_report_count' => $dailyCount,
+                'work_done' => $weekly->work_done,
+                'tasks_completed' => $weekly->tasks_completed,
+                'pending_work' => $weekly->next_plan,
+                'blockers' => $weekly->challenges,
+                'remarks' => $weekly->remarks,
+                'hours_worked' => $weekly->hours_worked !== null ? (float) $weekly->hours_worked : null,
+                'approval_status' => ucfirst($weekly->approval_status ?: 'pending'),
+            ],
         ]);
     }
 }

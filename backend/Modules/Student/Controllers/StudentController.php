@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Modules\Student\Models\StudentReport;
 
 class StudentController extends Controller
 {
@@ -518,6 +519,11 @@ class StudentController extends Controller
                     'weekEnd' => $r->week_end,
                     'weekLabel' => $weekLabel,
                     'workDone' => $r->work_done,
+                    'tasksCompleted' => $r->tasks_completed,
+                    'pendingWork' => $r->next_plan,
+                    'blockers' => $r->challenges,
+                    'remarks' => $r->remarks,
+                    'hoursWorked' => $r->hours_worked !== null ? (float) $r->hours_worked : null,
                     'status' => ucfirst($r->approval_status ?: 'pending'),
                     'feedback' => $r->feedback,
                     'reportFile' => $r->report_file,
@@ -550,11 +556,18 @@ class StudentController extends Controller
             'taskId' => 'required|integer',
             'date' => 'required|date',
             'workDone' => 'required|string|min:3',
+            'tasksCompleted' => 'nullable|string|max:5000',
+            'pendingWork' => 'nullable|string|max:5000',
+            'blockers' => 'nullable|string|max:5000',
+            'hoursWorked' => 'nullable|numeric|min:0|max:24',
+            'remarks' => 'nullable|string|max:5000',
+            'reportFile' => 'nullable|file|max:10240',
         ], [
             'projectId.required' => 'Please select a project.',
             'taskId.required' => 'Please select an assigned task.',
             'date.required' => 'Report date is required.',
             'workDone.required' => 'Work done description is required.',
+            'hoursWorked.max' => 'Hours worked cannot exceed 24 for a single day.',
         ]);
 
         if ($validator->fails()) {
@@ -570,6 +583,16 @@ class StudentController extends Controller
         $project = DB::table('projects')->where('id', $projectId)->first();
         if (!$project) {
             return response()->json(['error' => 'Selected project does not exist.'], 422);
+        }
+
+        // Verify the student is actually assigned to this project (project-level check,
+        // in addition to the task-level ownership check below).
+        $isAssignedToProject = DB::table('project_student')
+            ->where('project_id', $projectId)
+            ->where('student_id', $studentId)
+            ->exists();
+        if (!$isAssignedToProject) {
+            return response()->json(['error' => 'You are not assigned to this project.'], 403);
         }
 
         // Verify task exists, belongs to project, assigned to student, and is active or rework
@@ -592,10 +615,28 @@ class StudentController extends Controller
             return response()->json(['error' => 'This task is already completed and cannot accept reports unless rework is requested.'], 422);
         }
 
+        // Prevent an accidental duplicate submission for the same student+project+task+
+        // date. Different tasks on the same day remain allowed (existing per-task design).
+        $duplicate = DB::table('student_reports')
+            ->where('student_id', $studentId)
+            ->where('project_id', $projectId)
+            ->where('task_id', $taskId)
+            ->where('report_type', 'daily')
+            ->where('report_date', $reportDate)
+            ->exists();
+        if ($duplicate) {
+            return response()->json(['error' => 'You have already submitted a daily report for this task on this date.'], 422);
+        }
+
         // Calculate week boundaries for this daily report
         $dateCarbon = Carbon::parse($reportDate);
         $weekStart = $dateCarbon->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
         $weekEnd = $dateCarbon->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
+
+        $storedFilePath = null;
+        if ($request->hasFile('reportFile')) {
+            $storedFilePath = $request->file('reportFile')->store('reports', 'public');
+        }
 
         // Insert Daily Report
         $reportId = DB::table('student_reports')->insertGetId([
@@ -608,7 +649,12 @@ class StudentController extends Controller
             'week_end' => $weekEnd,
             'weekly_key' => null, // Daily reports have NULL weekly_key
             'work_done' => $workDone,
-            'report_file' => null,
+            'tasks_completed' => $request->input('tasksCompleted') ?: null,
+            'next_plan' => $request->input('pendingWork') ?: null,
+            'challenges' => $request->input('blockers') ?: null,
+            'remarks' => $request->input('remarks') ?: null,
+            'hours_worked' => $request->filled('hoursWorked') ? (float) $request->input('hoursWorked') : null,
+            'report_file' => $storedFilePath,
             'approval_status' => 'pending',
             'feedback' => null,
             'submitted_at' => now(),
@@ -617,7 +663,7 @@ class StudentController extends Controller
         ]);
 
         // Automatically create or update the corresponding Weekly Progress Report
-        $this->syncWeeklyProgressReport($studentId, $projectId, $reportDate);
+        StudentReport::syncWeekly($studentId, $projectId, $reportDate);
 
         if (Schema::hasTable('notifications')) {
             DB::table('notifications')->insert([
@@ -635,116 +681,6 @@ class StudentController extends Controller
             'report_id' => $reportId,
             'message' => "Daily report submitted successfully and weekly progress updated.",
         ]);
-    }
-
-    /**
-     * Automatically creates or updates the Weekly Progress Report for a student, project, and week.
-     * Prevents duplicates with a database-level unique constraint on weekly_key.
-     */
-    private function syncWeeklyProgressReport($studentId, $projectId, $reportDate)
-    {
-        $dateCarbon = Carbon::parse($reportDate);
-        $weekStart = $dateCarbon->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
-        $weekEnd = $dateCarbon->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
-        $weeklyKey = "std_{$studentId}_proj_{$projectId}_wk_{$weekStart}";
-
-        // Fetch all daily reports for this student, project, and week range
-        $dailyReports = DB::table('student_reports')
-            ->leftJoin('tasks', 'tasks.id', '=', 'student_reports.task_id')
-            ->where('student_reports.student_id', $studentId)
-            ->where('student_reports.project_id', $projectId)
-            ->where('student_reports.report_type', 'daily')
-            ->whereBetween('student_reports.report_date', [$weekStart, $weekEnd])
-            ->select(
-                'student_reports.id',
-                'student_reports.report_date',
-                'student_reports.work_done',
-                'student_reports.task_id',
-                'tasks.title as task_title',
-                'tasks.status as task_status'
-            )
-            ->orderBy('student_reports.report_date', 'asc')
-            ->orderBy('student_reports.id', 'asc')
-            ->get();
-
-        if ($dailyReports->isEmpty()) {
-            return;
-        }
-
-        // Group daily reports by task
-        $tasksGrouped = [];
-        foreach ($dailyReports as $dr) {
-            $tId = $dr->task_id ?: 'general';
-            if (!isset($tasksGrouped[$tId])) {
-                $statusMap = [
-                    'todo' => 'Todo',
-                    'in_progress' => 'In Progress',
-                    'completed' => 'Completed',
-                    'blocked' => 'Blocked',
-                ];
-                $tasksGrouped[$tId] = [
-                    'taskId' => $dr->task_id,
-                    'taskCode' => $dr->task_id ? 'T-' . $dr->task_id : 'General',
-                    'taskTitle' => $dr->task_title ?: 'General Work',
-                    'taskStatus' => $statusMap[strtolower($dr->task_status ?: 'todo')] ?? ucfirst($dr->task_status ?: 'Todo'),
-                    'entries' => [],
-                ];
-            }
-            $tasksGrouped[$tId]['entries'][] = [
-                'date' => $dr->report_date,
-                'work' => $dr->work_done,
-            ];
-        }
-
-        // Generate formatted readable text summary
-        $formattedText = "Tasks Worked On:\n\n";
-        foreach ($tasksGrouped as $tg) {
-            $formattedText .= "{$tg['taskCode']} — {$tg['taskTitle']}\n";
-            $formattedText .= "Status: {$tg['taskStatus']}\n";
-            foreach ($tg['entries'] as $entry) {
-                $formattedDate = date('M j', strtotime($entry['date']));
-                $formattedText .= "• [{$formattedDate}] {$entry['work']}\n";
-            }
-            $formattedText .= "\n";
-        }
-        $formattedText = trim($formattedText);
-
-        // Check if weekly report already exists for this weekly_key
-        $existingWeekly = DB::table('student_reports')
-            ->where('weekly_key', $weeklyKey)
-            ->first();
-
-        if ($existingWeekly) {
-            // Update existing weekly report
-            DB::table('student_reports')
-                ->where('id', $existingWeekly->id)
-                ->update([
-                    'work_done' => $formattedText,
-                    'report_date' => $weekEnd,
-                    'week_start' => $weekStart,
-                    'week_end' => $weekEnd,
-                    'updated_at' => now(),
-                ]);
-        } else {
-            // Insert new weekly report
-            DB::table('student_reports')->insert([
-                'student_id' => $studentId,
-                'project_id' => $projectId,
-                'task_id' => null,
-                'report_type' => 'weekly',
-                'report_date' => $weekEnd,
-                'week_start' => $weekStart,
-                'week_end' => $weekEnd,
-                'weekly_key' => $weeklyKey,
-                'work_done' => $formattedText,
-                'report_file' => null,
-                'approval_status' => 'pending',
-                'feedback' => null,
-                'submitted_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
     }
 
     public function downloadReportFile(Request $request, $id)

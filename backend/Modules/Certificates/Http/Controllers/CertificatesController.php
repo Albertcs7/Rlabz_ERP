@@ -100,6 +100,26 @@ class CertificatesController extends Controller
         return response()->json(['data' => $certificates]);
     }
 
+    /**
+     * The authenticated student's own certificates. Student identity comes only from
+     * the JWT (auth_user['sub']), never a route parameter, so a student can never
+     * request another student's certificates by manipulating a URL.
+     */
+    public function myCertificates(Request $request)
+    {
+        $studentId = $this->currentUserId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $certificates = Certificate::with(['project', 'module', 'issuer'])
+            ->where('student_id', $studentId)
+            ->orderBy('issue_date', 'desc')
+            ->get();
+
+        return response()->json(['data' => $certificates]);
+    }
+
     public function studentCertificates(Request $request, User $student)
     {
         if (!$this->isAuthorized($request)) {
