@@ -11,10 +11,12 @@ Route::group(['prefix' => 'coordinator', 'middleware' => ['auth.jwt']], function
     Route::get('/students/eligible', [CoordinatorController::class, 'eligibleStudents']);
     Route::post('/projects/{project}/students', [CoordinatorController::class, 'assignStudent']);
     Route::delete('/projects/{project}/students/{studentId}', [CoordinatorController::class, 'removeStudent']);
-    Route::post('/projects/{project}/modules', [CoordinatorController::class, 'storeModule']);
-    Route::put('/projects/{project}/modules/{module}', [CoordinatorController::class, 'updateModule']);
-    Route::post('/projects/{project}/modules/{module}/students', [CoordinatorController::class, 'assignStudentToModule']);
-    Route::post('/projects/{project}/modules/{module}/tasks', [CoordinatorController::class, 'storeTask']);
+
+    // Module/task creation, editing, and student-to-module assignment are a Faculty
+    // responsibility (see Modules\Faculty\Http\Controllers\FacultyController) — the
+    // Coordinator module intentionally has no write endpoints for modules or tasks.
+    // Read-only module/task data remains available via GET /projects/{project}
+    // (project.modules.tasks, eager-loaded in show()).
 
     // Faculty assignment is a Director responsibility (see Modules\Dashboard) — the
     // Coordinator module intentionally has no faculty assignment/removal endpoint.

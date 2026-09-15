@@ -17,7 +17,6 @@ use Modules\Coordinator\Models\ProjectFaculty;
 use Modules\Coordinator\Models\ProjectStudent;
 use Modules\Coordinator\Models\RequirementChange;
 use Modules\Coordinator\Models\StudentRole;
-use Modules\Project\Models\Module;
 use Modules\Project\Models\Project;
 use Modules\Project\Models\Task;
 use Modules\Student\Models\StudentReport;
@@ -66,7 +65,11 @@ class CoordinatorController extends Controller
             }
         }
 
-        $completion = $taskCount > 0 ? round(($completedTaskCount / $taskCount) * 100, 2) : 0;
+        // Matches Modules\Faculty\Http\Controllers\FacultyController::getDashboardData()'s
+        // progress formula exactly: completed tasks / total tasks across all of the
+        // project's modules, rounded to a whole percent (no decimals) — same data
+        // source (modules.tasks), same ratio, same rounding.
+        $completion = $taskCount > 0 ? round(($completedTaskCount / $taskCount) * 100) : 0;
 
         return [
             'module_count' => $project->modules->count(),
@@ -296,159 +299,15 @@ class CoordinatorController extends Controller
     // The Project::faculty() relationship and project_faculty table remain untouched and
     // are still used above (index/show) to let the Coordinator VIEW assigned faculty.
 
-    /**
-     * Assign a student to a module (module_student). The student must already be
-     * assigned to the module's parent project via project_student.
-     */
-    public function assignStudentToModule(Request $request, Project $project, Module $module)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        if ((int) $module->project_id !== (int) $project->id) {
-            return response()->json(['error' => 'Selected module does not belong to this project'], 422);
-        }
-
-        $validated = $request->validate([
-            'student_id' => ['required', 'integer', 'exists:users,id'],
-            'assigned_date' => 'nullable|date',
-        ]);
-
-        $onProject = $project->students()->where('student_id', $validated['student_id'])->exists();
-        if (!$onProject) {
-            return response()->json(['error' => 'Student must be assigned to this project before being assigned to a module'], 422);
-        }
-
-        if ($module->students()->where('student_id', $validated['student_id'])->exists()) {
-            return response()->json(['error' => 'Student is already assigned to this module'], 422);
-        }
-
-        $module->students()->attach($validated['student_id'], [
-            'assigned_date' => $validated['assigned_date'] ?? now()->toDateString(),
-        ]);
-
-        if (Schema::hasTable('notifications')) {
-            DB::table('notifications')->insert([
-                'user_id' => $validated['student_id'],
-                'type' => 'module_assigned',
-                'message' => "Coordinator assigned you to module '{$module->module_name}' in project '{$project->title}'.",
-                'is_read' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        $record = $module->students()->where('users.id', $validated['student_id'])->first();
-
-        return response()->json([
-            'message' => 'Student assigned to module successfully',
-            'data' => $record,
-        ], 201);
-    }
-
-    public function storeModule(Request $request, Project $project)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        $validated = $request->validate([
-            'module_name' => 'required|string|max:150',
-            'description' => 'nullable|string',
-            'weight_percentage' => 'nullable|numeric|min:0|max:100',
-            'status' => 'nullable|in:not_started,in_progress,completed',
-        ]);
-
-        $module = Module::create([
-            'project_id' => $project->id,
-            'module_name' => $validated['module_name'],
-            'description' => $validated['description'] ?? null,
-            'weight_percentage' => $validated['weight_percentage'] ?? null,
-            'status' => $validated['status'] ?? 'not_started',
-            'created_by' => $this->currentUserId($request) ?? $request->user()?->id,
-        ]);
-
-        return response()->json([
-            'message' => 'Module created successfully',
-            'data' => $module,
-        ], 201);
-    }
-
-    public function updateModule(Request $request, Project $project, Module $module)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        if ((int) $module->project_id !== (int) $project->id) {
-            return response()->json(['error' => 'Selected module does not belong to this project'], 422);
-        }
-
-        $validated = $request->validate([
-            'module_name' => 'sometimes|required|string|max:150',
-            'description' => 'nullable|string',
-            'weight_percentage' => 'nullable|numeric|min:0|max:100',
-            'status' => 'sometimes|required|in:not_started,in_progress,completed',
-        ]);
-
-        $module->update($validated);
-
-        return response()->json([
-            'message' => 'Module updated successfully',
-            'data' => $module->fresh(),
-        ]);
-    }
-
-    public function storeTask(Request $request, Project $project, Module $module)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        if ((int) $module->project_id !== (int) $project->id) {
-            return response()->json(['error' => 'Selected module does not belong to this project'], 422);
-        }
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'assigned_to' => ['required', 'integer', 'exists:users,id'],
-            'status' => 'nullable|in:todo,in_progress,completed,blocked',
-            'due_date' => 'nullable|date',
-        ]);
-
-        $assigneeOnProject = $project->students()->where('users.id', $validated['assigned_to'])->exists();
-        if (!$assigneeOnProject) {
-            return response()->json(['error' => 'Task can only be assigned to a student already assigned to this project'], 422);
-        }
-
-        $task = Task::create([
-            'module_id' => $module->id,
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'assigned_to' => $validated['assigned_to'],
-            'status' => $validated['status'] ?? 'todo',
-            'due_date' => $validated['due_date'] ?? null,
-            'created_by' => $this->currentUserId($request) ?? $request->user()?->id,
-        ]);
-
-        if (Schema::hasTable('notifications')) {
-            DB::table('notifications')->insert([
-                'user_id' => $validated['assigned_to'],
-                'type' => 'task_assigned',
-                'message' => "Coordinator assigned you task '{$validated['title']}' under module '{$module->module_name}'.",
-                'is_read' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Task created successfully',
-            'data' => $task,
-        ], 201);
-    }
+    // Module/task creation, editing, and student-to-module assignment (previously
+    // storeModule/updateModule/assignStudentToModule/storeTask) have been removed —
+    // that is a Faculty responsibility (Modules\Faculty\Http\Controllers\FacultyController,
+    // which owns module_student and task assignment). Their routes were also removed
+    // from Modules\Coordinator\Routes\api.php, so this isn't just a hidden UI control —
+    // the endpoints no longer exist for the Coordinator. Read-only access to module/task
+    // data (module status, tasks, assigned students) is preserved via GET
+    // /coordinator/projects/{project} (show(), which eager-loads modules.tasks and
+    // modules.students below).
 
     public function requirements(Request $request, Project $project)
     {

@@ -16,11 +16,14 @@ class ProjectTaskController extends Controller
         $user = $request->input('auth_user');
         $role = $user['role'] ?? '';
         
-        // Allow role-based bypass for specific permissions
-        if (in_array($permission, ['project.module.create', 'project.task.create']) && in_array($role, ['coordinator', 'faculty'])) {
+        // Allow role-based bypass for specific permissions. Module/task creation and
+        // status updates are a Faculty responsibility — Coordinator is intentionally
+        // excluded here (see Modules\Coordinator\Http\Controllers\CoordinatorController,
+        // which no longer has any module/task write endpoints either).
+        if (in_array($permission, ['project.module.create', 'project.task.create']) && in_array($role, ['faculty'])) {
             return;
         }
-        if ($permission === 'project.task.update' && in_array($role, ['coordinator', 'faculty', 'student'])) {
+        if ($permission === 'project.task.update' && in_array($role, ['faculty', 'student'])) {
             return;
         }
 
@@ -178,9 +181,11 @@ class ProjectTaskController extends Controller
         $user = $request->input('auth_user');
         $role = $user['role'] ?? '';
 
-        // Only allow faculty, coordinator, and director
-        if (!in_array($role, ['faculty', 'coordinator', 'director'])) {
-            return response()->json(['error' => 'Forbidden: Only faculty or coordinators can update module status.'], 403);
+        // Only allow faculty and director — module status changes are a Faculty
+        // responsibility; Coordinator intentionally excluded (see comment in
+        // checkPermission() above).
+        if (!in_array($role, ['faculty', 'director'])) {
+            return response()->json(['error' => 'Forbidden: Only faculty can update module status.'], 403);
         }
 
         $request->validate([
