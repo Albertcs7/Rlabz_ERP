@@ -81,7 +81,7 @@
 }
 
 .faculty-stat-card {
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 22px;
@@ -95,7 +95,7 @@
     width: 45px;
     height: 45px;
     border-radius: 10px;
-    background: #e8f7f1;
+    background: #E0F2F1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -138,7 +138,7 @@
 
 .faculty-view-btn {
     border: none;
-    background: #087f5b;
+    background: #009688;
     color: white;
     padding: 9px 16px;
     border-radius: 7px;
@@ -147,7 +147,7 @@
 }
 
 .faculty-view-btn:hover {
-    background: #066b4d;
+    background: #00897B;
 }
 
 
@@ -161,7 +161,7 @@
 }
 
 .faculty-project-card {
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 22px;
@@ -197,8 +197,8 @@
 }
 
 .faculty-status.active {
-    background: #e7f7ef;
-    color: #087f5b;
+    background: #E0F2F1;
+    color: #009688;
 }
 
 
@@ -227,7 +227,7 @@
 }
 
 .progress-header strong {
-    color: #087f5b;
+    color: #009688;
 }
 
 .progress-bar {
@@ -240,7 +240,7 @@
 
 .progress-fill {
     height: 100%;
-    background: #08a875;
+    background: #00897B;
     border-radius: 10px;
 }
 
@@ -256,7 +256,7 @@
 }
 
 .faculty-project-detail-card {
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     padding: 22px;
@@ -295,7 +295,7 @@
 }
 
 .project-information div {
-    background: #f7faf9;
+    background: #F0FAF9;
     border-radius: 8px;
     padding: 12px;
 }
@@ -321,7 +321,7 @@
     width: 100%;
     margin-top: 20px;
     border: none;
-    background: #087f5b;
+    background: #009688;
     color: white;
     padding: 11px;
     border-radius: 8px;
@@ -330,7 +330,7 @@
 }
 
 .faculty-project-view:hover {
-    background: #066b4d;
+    background: #00897B;
 }
 
 
@@ -340,7 +340,7 @@
 
 .faculty-project-details {
     margin-top: 30px;
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     padding: 25px;
@@ -386,7 +386,7 @@
 
 .faculty-project-info div {
     padding: 15px;
-    background: #f7faf9;
+    background: #F0FAF9;
     border-radius: 8px;
 }
 
@@ -435,7 +435,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 20px;
-    background: #ffffff;
+    background: var(--surface-card);
 }
 
 .faculty-assignment-card h3 {
@@ -460,7 +460,7 @@
     justify-content: center;
     font-weight: 700;
     color: white;
-    background: #087f5b;
+    background: #009688;
 }
 
 
@@ -479,7 +479,7 @@
 
 .faculty-student-select:focus {
     outline: none;
-    border-color: #087f5b;
+    border-color: #009688;
 }
 
 
@@ -491,7 +491,7 @@
 
 .faculty-assign-button {
     border: none;
-    background: #087f5b;
+    background: #009688;
     color: white;
     padding: 11px 20px;
     border-radius: 8px;
@@ -500,7 +500,7 @@
 }
 
 .faculty-assign-button:hover {
-    background: #066b4d;
+    background: #00897B;
 }
 
 
@@ -511,9 +511,9 @@
 }
 
 .assignment-success {
-    background: #e7f7ef;
-    border: 1px solid #b7e4ce;
-    color: #087f5b;
+    background: #E0F2F1;
+    border: 1px solid #B2DFDB;
+    color: #009688;
     padding: 11px 15px;
     border-radius: 8px;
     font-size: 13px;
@@ -580,7 +580,7 @@
     width: 100%;
     max-width: 400px;
     padding: 12px 16px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     font-size: 14px;
     outline: none;
@@ -589,13 +589,13 @@
 }
 
 #faculty-student-search:focus {
-    border-color: #059669;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 18, 32, 0.1);
 }
 
 .faculty-student-table-container {
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -609,18 +609,18 @@
 
 .faculty-student-table thead,
 .faculty-student-table th {
-    background: #e8f7f1;
+    background: #E0F2F1;
     padding: 14px 20px;
     font-size: 13px;
     font-weight: 700;
-    color: #065f46;
+    color: var(--primary);
     text-transform: uppercase;
-    border-bottom: 2px solid #a7f3d0;
+    border-bottom: 2px solid var(--border-color);
 }
 
 .faculty-student-table td {
     padding: 16px 20px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-subtle);
     font-size: 14px;
     color: #334155;
 }
@@ -630,7 +630,7 @@
 }
 
 .faculty-student-table tbody tr:hover {
-    background: #f8fafc;
+    background: var(--bg-canvas-light);
 }
 
 .faculty-designation {
@@ -668,7 +668,7 @@
 }
 
 .faculty-student-view:hover {
-    background: #e2e8f0;
+    background: var(--border-subtle);
     color: #1e293b;
 }
 
@@ -706,8 +706,8 @@
 
 /* Calendar Styles */
 .calendar-wrapper {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -726,7 +726,7 @@
 }
 .calendar-day-label {
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 13px;
     padding: 8px 0;
 }
@@ -747,7 +747,7 @@
     background: #f1f5f9;
 }
 .calendar-day.selected {
-    background: #087f5b;
+    background: #009688;
     color: white;
     font-weight: bold;
 }
@@ -761,7 +761,7 @@
     background: #ef4444;
 }
 .calendar-day.selected.has-meeting::after {
-    background: #ffffff;
+    background: var(--surface-card);
 }
 
 /* Meeting Schedule Form & List */
@@ -777,8 +777,8 @@
     }
 }
 .meeting-form-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -803,11 +803,11 @@
     transition: border-color 0.2s;
 }
 .meeting-form-input:focus, .meeting-form-select:focus {
-    border-color: #087f5b;
+    border-color: #009688;
 }
 .meeting-team-preview {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-canvas-light);
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     padding: 12px;
     font-size: 13px;
@@ -815,7 +815,7 @@
 }
 .meeting-submit-btn {
     width: 100%;
-    background: #087f5b;
+    background: #009688;
     color: white;
     border: none;
     padding: 12px;
@@ -825,11 +825,11 @@
     transition: background 0.2s;
 }
 .meeting-submit-btn:hover {
-    background: #066b4d;
+    background: #00897B;
 }
 .meetings-list-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -848,7 +848,7 @@
 }
 .meeting-item-meta {
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-muted);
     margin-top: 4px;
     display: flex;
     gap: 15px;
@@ -859,8 +859,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 20px;
     margin-bottom: 25px;
@@ -874,8 +874,8 @@
     }
 }
 .sprints-project-progress-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 20px;
     margin-bottom: 25px;
@@ -887,8 +887,8 @@
     gap: 20px;
 }
 .sprint-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -934,13 +934,13 @@
 }
 .sprint-info-row span {
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
     display: inline-block;
     width: 120px;
 }
 .sprint-feedback-box {
-    background: #f8fafc;
-    border-left: 4px solid #087f5b;
+    background: var(--bg-canvas-light);
+    border-left: 4px solid #009688;
     padding: 12px;
     border-radius: 0 8px 8px 0;
     margin-top: 10px;
@@ -952,7 +952,7 @@
     justify-content: flex-end;
 }
 .btn-verify {
-    background: #087f5b;
+    background: #009688;
     color: white;
     border: none;
     padding: 8px 16px;
@@ -961,7 +961,7 @@
     cursor: pointer;
 }
 .btn-verify:hover {
-    background: #066b4d;
+    background: #00897B;
 }
 .btn-edit {
     background: #f1f5f9;
@@ -973,7 +973,7 @@
     cursor: pointer;
 }
 .btn-edit:hover {
-    background: #e2e8f0;
+    background: var(--border-subtle);
 }
 
 /* Modal and Form overlay style */
@@ -1000,14 +1000,14 @@
 
 /* Reports and Notifications page styles */
 .report-table-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     overflow: hidden;
 }
 .report-btn-download {
-    background: #087f5b;
+    background: #009688;
     color: white;
     border: none;
     padding: 8px 14px;
@@ -1019,11 +1019,11 @@
     gap: 6px;
 }
 .report-btn-download:hover {
-    background: #066b4d;
+    background: #00897B;
 }
 .notification-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     padding: 18px;
     margin-bottom: 14px;
@@ -1034,8 +1034,8 @@
     border-left: 4px solid #cbd5e1;
 }
 .notification-card.unread {
-    border-left-color: #087f5b;
-    background: #f7fdfa;
+    border-left-color: #009688;
+    background: #F0FAF9;
 }
 .notification-card-content h4 {
     margin: 0 0 6px;
@@ -1049,7 +1049,7 @@
 }
 .notification-card-time {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--text-secondary);
 }
 
 /* Github integration style additions */
@@ -1057,7 +1057,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: #087f5b;
+    color: #009688;
     font-weight: 600;
     font-size: 13px;
     margin-left: 10px;
@@ -1071,9 +1071,9 @@
 .git-message-box {
     margin-top: 15px;
     padding: 12px;
-    background: #f8fafc;
+    background: var(--bg-canvas-light);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
 }
 .git-message-box textarea {
     width: 100%;
@@ -1086,11 +1086,11 @@
     resize: none;
 }
 .git-message-box textarea:focus {
-    border-color: #087f5b;
+    border-color: #009688;
 }
 .git-message-btn {
     margin-top: 8px;
-    background: #087f5b;
+    background: #009688;
     color: white;
     border: none;
     padding: 6px 12px;
@@ -1100,15 +1100,15 @@
     font-weight: 600;
 }
 .git-message-btn:hover {
-    background: #066b4d;
+    background: #00897B;
 }
 .git-log-container {
     max-height: 250px;
     overflow-y: auto;
     margin-top: 15px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
-    background: #0f172a;
+    background: var(--text-primary);
     color: #cbd5e1;
     font-family: monospace;
     padding: 12px;
@@ -1138,7 +1138,7 @@
 .faculty-sprints,
 .faculty-meetings {
     font-family: var(--font-family, 'Plus Jakarta Sans', sans-serif);
-    color: var(--text-main, #0f172a);
+    color: var(--text-main, var(--text-primary));
     max-width: 1280px;
     margin: 0 auto;
     padding: 24px;
@@ -1148,21 +1148,21 @@
 .faculty-meetings .page-header h1 {
     font-size: 1.6rem;
     font-weight: 700;
-    color: var(--text-main, #0f172a);
+    color: var(--text-main, var(--text-primary));
     margin: 0 0 0.4rem;
 }
 
 .faculty-sprints .page-header p,
 .faculty-meetings .page-header p {
     font-size: 0.92rem;
-    color: var(--text-muted, #64748b);
+    color: var(--text-muted, var(--text-muted));
     margin: 0;
 }
 
 /* Card panels matching My Project */
 .faculty-card-panel {
-    background: var(--bg-card, #ffffff);
-    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-card, var(--surface-card));
+    border: 1px solid var(--border-color, var(--border-subtle));
     border-radius: var(--radius-lg, 12px);
     box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
     padding: 1.5rem;
@@ -1175,19 +1175,19 @@
     padding: 0.7rem 0.95rem;
     font-size: 0.92rem;
     font-family: inherit;
-    border: 1px solid var(--border-color, #e2e8f0);
+    border: 1px solid var(--border-color, var(--border-subtle));
     border-radius: var(--radius-md, 8px);
-    background: var(--bg-main, #f8fafc);
-    color: var(--text-main, #0f172a);
+    background: var(--bg-main, var(--bg-canvas-light));
+    color: var(--text-main, var(--text-primary));
     transition: var(--transition, all 0.2s ease);
 }
 
 .faculty-sprints .premium-input:focus,
 .faculty-meetings .premium-input:focus {
     outline: none;
-    border-color: var(--primary, #059669);
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    border-color: var(--primary, var(--primary));
+    background: var(--surface-card);
+    box-shadow: 0 0 0 3px rgba(0, 18, 32, 0.15);
 }
 
 /* Buttons matching My Project */
@@ -1218,7 +1218,7 @@
 .faculty-sprints .btn-primary,
 .faculty-meetings .btn-primary,
 .faculty-verify-tasks .btn-primary {
-    background: var(--primary, #059669);
+    background: var(--primary, var(--primary));
     color: #ffffff;
 }
 
@@ -1231,7 +1231,7 @@
 .faculty-sprints .btn-primary.shadow-hover:hover,
 .faculty-meetings .btn-primary.shadow-hover:hover,
 .faculty-verify-tasks .btn-primary.shadow-hover:hover {
-    background: var(--primary-hover, #047857);
+    background: var(--primary-hover, var(--primary-hover));
     box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1));
     transform: translateY(-2px);
 }
@@ -1240,16 +1240,16 @@
 .faculty-meetings .btn-outline,
 .faculty-verify-tasks .btn-outline {
     background: transparent;
-    border: 1px solid var(--border-color, #e2e8f0);
-    color: var(--text-main, #0f172a);
+    border: 1px solid var(--border-color, var(--border-subtle));
+    color: var(--text-main, var(--text-primary));
 }
 
 .faculty-sprints .btn-outline:hover,
 .faculty-meetings .btn-outline:hover,
 .faculty-verify-tasks .btn-outline:hover {
-    border-color: var(--primary, #059669);
-    color: var(--primary, #059669);
-    background: var(--primary-light, #ecfdf5);
+    border-color: var(--primary, var(--primary));
+    color: var(--primary, var(--primary));
+    background: var(--primary-light, var(--primary-light));
 }
 
 /* Status Badges matching My Project */
@@ -1268,13 +1268,13 @@
 
 .faculty-sprints .status-badge.todo,
 .faculty-meetings .status-badge.todo,
-.faculty-verify-tasks .status-badge.todo { background: #dbeafe; color: #2563eb; }
+.faculty-verify-tasks .status-badge.todo { background: #E0F2F1; color: #009688; }
 .faculty-sprints .status-badge.in_progress,
 .faculty-meetings .status-badge.in_progress,
 .faculty-verify-tasks .status-badge.in_progress { background: #fce7f3; color: #db2777; }
 .faculty-sprints .status-badge.completed,
 .faculty-meetings .status-badge.completed,
-.faculty-verify-tasks .status-badge.completed { background: #d1fae5; color: #059669; }
+.faculty-verify-tasks .status-badge.completed { background: var(--border-color); color: var(--primary); }
 .faculty-sprints .status-badge.scheduled,
 .faculty-meetings .status-badge.scheduled,
 .faculty-verify-tasks .status-badge.scheduled { background: #fef3c7; color: #d97706; }
@@ -1297,14 +1297,14 @@
 .faculty-stat-card-interactive:hover {
     transform: translateY(-3px) !important;
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08) !important;
-    border-color: var(--primary, #059669) !important;
+    border-color: var(--primary, var(--primary)) !important;
 }
 .faculty-kpi-card-clickable:active,
 .faculty-stat-card-interactive:active {
     transform: translateY(-1px) !important;
 }
 
-/* My Projects Table Hover: Make project name green like Assign Module & Task, keep background neutral #f8fafc */
+/* My Projects Table Hover: Make project name green like Assign Module & Task, keep background neutral var(--bg-canvas-light) */
 .premium-table tbody tr.project-row-clickable,
 .project-table-container table tbody tr {
     cursor: pointer;
@@ -1318,9 +1318,9 @@
 .faculty-student-table thead th,
 .project-table-container table thead,
 .project-table-container table thead th {
-    background: #e8f7f1 !important;
-    color: #065f46 !important;
-    border-bottom: 2px solid #a7f3d0 !important;
+    background: #E0F2F1 !important;
+    color: var(--primary) !important;
+    border-bottom: 2px solid var(--border-color) !important;
     font-weight: 700 !important;
 }
 
@@ -1328,24 +1328,24 @@
 .premium-table tbody tr,
 .faculty-student-table tbody tr,
 .project-table-container table tbody tr {
-    background: #ffffff !important;
+    background: var(--surface-card) !important;
 }
 .premium-table tbody tr:nth-child(even),
 .faculty-student-table tbody tr:nth-child(even),
 .project-table-container table tbody tr:nth-child(even) {
-    background: #ffffff !important;
+    background: var(--surface-card) !important;
 }
 .premium-table tbody tr:nth-child(odd),
 .faculty-student-table tbody tr:nth-child(odd),
 .project-table-container table tbody tr:nth-child(odd) {
-    background: #ffffff !important;
+    background: var(--surface-card) !important;
 }
 
 .premium-table tbody tr.project-row-clickable:hover,
 .premium-table tbody tr:hover,
 .faculty-student-table tbody tr:hover,
 .project-table-container table tbody tr:hover {
-    background: #f8fafc !important;
+    background: var(--bg-canvas-light) !important;
 }
 .premium-table tbody tr.project-row-clickable:hover td,
 .premium-table tbody tr:hover td,
@@ -1358,7 +1358,7 @@
 .project-table-container table tbody tr:hover td:first-child,
 .premium-table tbody tr.project-row-clickable:hover td:first-child *,
 .project-table-container table tbody tr:hover td:first-child * {
-    color: #059669 !important;
+    color: var(--primary) !important;
     background: transparent !important;
     transition: color 0.15s ease;
 }
@@ -1371,8 +1371,8 @@
 }
 
 .simple-profile-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     padding: 24px;
     display: flex;
@@ -1401,14 +1401,14 @@
     width: 95px;
     height: 95px;
     border-radius: 50%;
-    background: #059669;
+    background: var(--primary);
     color: #ffffff;
     font-size: 32px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 3px solid #e8f7f1;
+    border: 3px solid #E0F2F1;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -1437,17 +1437,17 @@
     margin: 0;
     font-size: 20px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .simple-profile-badge {
-    background: #e8f7f1;
-    color: #065f46;
+    background: #E0F2F1;
+    color: var(--primary);
     padding: 3px 10px;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
-    border: 1px solid #a7f3d0;
+    border: 1px solid var(--border-color);
 }
 
 .simple-profile-grid {
@@ -1463,7 +1463,7 @@
 }
 
 .simple-profile-field {
-    background: #f8fafc;
+    background: var(--bg-canvas-light);
     border: 1px solid #f1f5f9;
     border-radius: 8px;
     padding: 10px 14px;
@@ -1473,7 +1473,7 @@
     display: block;
     font-size: 11px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     margin-bottom: 3px;
@@ -1484,4 +1484,4 @@
     font-weight: 600;
     color: #1e293b;
     word-break: break-word;
-}
+}

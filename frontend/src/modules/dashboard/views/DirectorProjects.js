@@ -9,7 +9,9 @@ export function DirectorProjects(route, router) {
   const container = document.createElement('div');
   container.className = 'director-dashboard';
 
-  let currentTab = 'proposals'; // 'proposals', 'active', 'all'
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = (route && route.query && route.query.tab) || urlParams.get('tab') || 'proposals';
+  let currentTab = ['proposals', 'active', 'all'].includes(initialTab.toLowerCase()) ? initialTab.toLowerCase() : 'proposals';
   let selectedProposal = null;
 
   // proposals/projects can be passed in directly (fresh from a just-completed API fetch)
@@ -54,9 +56,21 @@ export function DirectorProjects(route, router) {
     `;
 
     // Attach Tab Events
-    container.querySelector('#tab-proposals')?.addEventListener('click', async () => { currentTab = 'proposals'; await render(); });
-    container.querySelector('#tab-active')?.addEventListener('click', async () => { currentTab = 'active'; await render(); });
-    container.querySelector('#tab-all')?.addEventListener('click', async () => { currentTab = 'all'; await render(); });
+    container.querySelector('#tab-proposals')?.addEventListener('click', async () => { 
+      currentTab = 'proposals'; 
+      window.history.replaceState({}, '', '/dashboard/projects?tab=proposals');
+      await render(); 
+    });
+    container.querySelector('#tab-active')?.addEventListener('click', async () => { 
+      currentTab = 'active'; 
+      window.history.replaceState({}, '', '/dashboard/projects?tab=active');
+      await render(); 
+    });
+    container.querySelector('#tab-all')?.addEventListener('click', async () => { 
+      currentTab = 'all'; 
+      window.history.replaceState({}, '', '/dashboard/projects?tab=all');
+      await render(); 
+    });
 
     attachActionEvents(faculties);
   }
@@ -172,12 +186,7 @@ export function DirectorProjects(route, router) {
                   <td>
                     ₹${formatMoney(p.spent)} / ₹${formatMoney(p.budget)}
                   </td>
-                  <td style="display:flex; flex-direction:column; gap:0.35rem;">
-                    ${p.status === 'accepted' ? `
-                      <button class="btn-director btn-director-success btn-start-project" data-id="${p.id}">
-                        Start Project
-                      </button>
-                    ` : ''}
+                  <td>
                     <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
                       Reassign Faculty
                     </button>
@@ -237,21 +246,6 @@ export function DirectorProjects(route, router) {
       });
     });
 
-    // Start Project (accepted -> in_progress)
-    container.querySelectorAll('.btn-start-project').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const id = e.target.getAttribute('data-id');
-        const project = DirectorService.getProjects().find(p => p.id === id);
-        if (!project) return;
-        if (!confirm(`Start "${project.title}"? This will move it from Accepted to In Progress.`)) return;
-        try {
-          await DirectorService.startProjectAsync(project.raw_id);
-          await render();
-        } catch (err) {
-          alert(err.message || 'Failed to start project');
-        }
-      });
-    });
 
     // Open Assign Faculty Modal
     container.querySelectorAll('.btn-assign-faculty').forEach(btn => {
@@ -269,7 +263,7 @@ export function DirectorProjects(route, router) {
     popupOverlay.className = 'director-modal-overlay';
     popupOverlay.style.zIndex = '1050';
     popupOverlay.innerHTML = `
-      <div class="director-modal" style="max-width: 440px; border-top: 4px solid #10b981;">
+      <div class="director-modal" style="max-width: 440px; border-top: 4px solid var(--primary-accent);">
         <div class="director-modal-header">
           <h3 style="margin:0; font-size:1.1rem; color:#111827;">Active Projects — ${faculty.name}</h3>
           <button class="btn-director btn-director-outline btn-close-popup">✕</button>
@@ -329,7 +323,7 @@ export function DirectorProjects(route, router) {
                 const count = f.activeProjectsCount !== undefined ? f.activeProjectsCount : projectsList.length;
                 const isSelected = String(f.id) === String(defaultFacId);
                 return `
-                  <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:#ffffff; border:1px solid ${isSelected ? '#10b981' : '#e5e7eb'}; border-radius:6px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
                       <input type="radio" name="proposal_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} />
                       <div>
@@ -337,7 +331,7 @@ export function DirectorProjects(route, router) {
                         <div style="font-size:0.75rem; color:#6b7280;">${f.department || 'Computer Applications'}</div>
                       </div>
                     </label>
-                    <button type="button" class="btn-director btn-director-outline btn-view-faculty-projects" data-id="${f.id}" title="Click to view assigned project names" style="font-size:0.75rem; padding:0.25rem 0.6rem; color:#047857; border-color:#a7f3d0; background:#ecfdf5; border-radius:6px; cursor:pointer;">
+                    <button type="button" class="btn-director btn-director-outline btn-view-faculty-projects" data-id="${f.id}" title="Click to view assigned project names" style="font-size:0.75rem; padding:0.25rem 0.6rem; color:var(--primary-hover); border-color:var(--border-color); background:var(--primary-light); border-radius:6px; cursor:pointer;">
                       📊 ${count} Active Project${count === 1 ? '' : 's'}
                     </button>
                   </div>
@@ -412,7 +406,7 @@ export function DirectorProjects(route, router) {
                 const count = f.activeProjectsCount !== undefined ? f.activeProjectsCount : projectsList.length;
                 const isSelected = String(f.id) === String(defaultFacId);
                 return `
-                  <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:#ffffff; border:1px solid ${isSelected ? '#10b981' : '#e5e7eb'}; border-radius:6px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
                       <input type="radio" name="project_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} />
                       <div>
@@ -420,7 +414,7 @@ export function DirectorProjects(route, router) {
                         <div style="font-size:0.75rem; color:#6b7280;">${f.department || 'Computer Applications'}</div>
                       </div>
                     </label>
-                    <button type="button" class="btn-director btn-director-outline btn-view-faculty-projects" data-id="${f.id}" title="Click to view assigned project names" style="font-size:0.75rem; padding:0.25rem 0.6rem; color:#047857; border-color:#a7f3d0; background:#ecfdf5; border-radius:6px; cursor:pointer;">
+                    <button type="button" class="btn-director btn-director-outline btn-view-faculty-projects" data-id="${f.id}" title="Click to view assigned project names" style="font-size:0.75rem; padding:0.25rem 0.6rem; color:var(--primary-hover); border-color:var(--border-color); background:var(--primary-light); border-radius:6px; cursor:pointer;">
                       📊 ${count} Active Project${count === 1 ? '' : 's'}
                     </button>
                   </div>
@@ -464,7 +458,7 @@ export function DirectorProjects(route, router) {
     // Sequential, not Promise.all: DirectorService caches each of these in the same
     // shared localStorage blob via an independent load/modify/save cycle, so running
     // them concurrently would let whichever finishes last discard the others' writes.
-    // Click handlers below (Reassign Faculty, Start Project) read that cache directly
+    // Click handlers below (Reassign Faculty) read that cache directly
     // at click time, so it must end up fully consistent, not just this render() call.
     const projects = await DirectorService.getProjectsAsync();
     const proposals = await DirectorService.getProposalsAsync();

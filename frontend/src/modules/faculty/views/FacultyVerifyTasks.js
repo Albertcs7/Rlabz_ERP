@@ -65,26 +65,26 @@ export function FacultyVerifyTasks() {
                         value="${searchQuery}" 
                         style="padding-left: 2.25rem; font-size: 0.88rem; height: 40px; border-radius: 8px;"
                     />
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: var(--text-secondary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
             </div>
 
             ${actionMessage ? `
-                <div style="background: #ecfdf5; border: 1px solid #86efac; color: #166534; padding: 0.85rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; justify-content: space-between;">
+                <div style="background: var(--primary-light); border: 1px solid #86efac; color: #166534; padding: 0.85rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; justify-content: space-between;">
                     <span>${actionMessage}</span>
                     <button class="btn-close-msg" style="background:none; border:none; color: #166534; cursor: pointer; font-size: 1.1rem; line-height: 1;">&times;</button>
                 </div>
             ` : ''}
 
-            <div class="faculty-card-panel" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="faculty-card-panel" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; background: var(--surface-card); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                 <table class="premium-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                     <thead>
-                        <tr style="background: var(--bg-main, #f8fafc); border-bottom: 2px solid var(--border-color, #e2e8f0);">
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Project Title</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Client Name</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Type</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;">Action</th>
+                        <tr style="background: var(--bg-main, var(--bg-canvas-light)); border-bottom: 2px solid var(--border-color, var(--border-subtle));">
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Project Title</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Client Name</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Type</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="verify-projects-table-body">
@@ -94,10 +94,10 @@ export function FacultyVerifyTasks() {
             </div>
             <style>
                 .faculty-verify-tasks .project-row-clickable:hover {
-                    background: var(--bg-surface, #f8fafc) !important;
+                    background: var(--bg-surface, var(--bg-canvas-light)) !important;
                 }
                 .faculty-verify-tasks .project-row-clickable:hover td:first-child > div:first-child {
-                    color: var(--primary, #059669) !important;
+                    color: var(--primary, var(--primary)) !important;
                 }
             </style>
         `;
@@ -107,7 +107,7 @@ export function FacultyVerifyTasks() {
 
     function renderProjectRows() {
         if (isLoadingProjects) {
-            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, #64748b); padding: 3rem; font-size: 0.95rem;">Loading assigned projects...</td></tr>`;
+            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, var(--text-muted)); padding: 3rem; font-size: 0.95rem;">Loading assigned projects...</td></tr>`;
         }
 
         const query = searchQuery.trim().toLowerCase();
@@ -116,7 +116,7 @@ export function FacultyVerifyTasks() {
             : assignedProjects;
 
         if (!filteredProjects || filteredProjects.length === 0) {
-            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 3rem; font-size: 0.95rem;">${query ? `No projects found matching "${searchQuery}".` : 'No projects currently assigned to you.'}</td></tr>`;
+            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, var(--text-secondary)); padding: 3rem; font-size: 0.95rem;">${query ? `No projects found matching "${searchQuery}".` : 'No projects currently assigned to you.'}</td></tr>`;
         }
 
         return filteredProjects.map(project => {
@@ -127,16 +127,16 @@ export function FacultyVerifyTasks() {
             const status = (project.status || 'in_progress').toLowerCase();
 
             return `
-                <tr class="project-row-clickable" data-project-id="${project.id}" style="border-bottom: 1px solid var(--border-color, #e2e8f0); transition: background 0.15s ease; cursor: pointer;">
+                <tr class="project-row-clickable" data-project-id="${project.id}" style="border-bottom: 1px solid var(--border-color, var(--border-subtle)); transition: background 0.15s ease; cursor: pointer;">
                     <td style="padding: 1.15rem 1.5rem;">
-                        <div style="font-weight: 600; color: var(--text-main, #0f172a); font-size: 0.95rem;">
+                        <div style="font-weight: 600; color: var(--text-main, var(--text-primary)); font-size: 0.95rem;">
                             ${projectTitle}
                         </div>
                     </td>
                     <td style="padding: 1.15rem 1.5rem; font-size: 0.9rem; color: var(--text-main, #334155);">
                         ${clientName}
                     </td>
-                    <td style="padding: 1.15rem 1.5rem; font-size: 0.9rem; color: var(--text-muted, #64748b);">
+                    <td style="padding: 1.15rem 1.5rem; font-size: 0.9rem; color: var(--text-muted, var(--text-muted));">
                         ${projectType}
                     </td>
                     <td style="padding: 1.15rem 1.5rem;">
@@ -197,8 +197,8 @@ export function FacultyVerifyTasks() {
     function renderWorkLogsView() {
         if (isLoadingWorkLogs || !projectDetail) {
             container.innerHTML = `
-                <div style="padding: 4rem; text-align: center; color: var(--text-muted, #64748b);">
-                    <div class="spinner" style="border-top-color: var(--primary, #059669); margin: 0 auto 1rem; width: 32px; height: 32px;"></div>
+                <div style="padding: 4rem; text-align: center; color: var(--text-muted, var(--text-muted));">
+                    <div class="spinner" style="border-top-color: var(--primary, var(--primary)); margin: 0 auto 1rem; width: 32px; height: 32px;"></div>
                     <p style="font-size: 0.95rem;">Loading student submissions for project...</p>
                 </div>
             `;
@@ -231,12 +231,29 @@ export function FacultyVerifyTasks() {
         }
 
         const behindScheduleModules = projectDetail.behind_schedule_modules || [];
+        const overrunLogs = workLogs.filter(l => (parseFloat(l.hours_worked || 0) > parseFloat(l.task_weight || 0)) || l.is_time_exceeded);
 
         container.innerHTML = `
             ${actionMessage ? `
-                <div style="background: #ecfdf5; border: 1px solid #86efac; color: #166534; padding: 0.85rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; justify-content: space-between;">
+                <div style="background: var(--primary-light); border: 1px solid #86efac; color: #166534; padding: 0.85rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; justify-content: space-between;">
                     <span>${actionMessage}</span>
                     <button class="btn-close-msg" style="background:none; border:none; color: #166534; cursor: pointer; font-size: 1.1rem; line-height: 1;">&times;</button>
+                </div>
+            ` : ''}
+
+            ${overrunLogs.length > 0 ? `
+                <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 1.1rem 1.35rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #ffedd5; color: #ea580c; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">⚠️</div>
+                            <div>
+                                <div style="font-weight: 700; color: #9a3412; font-size: 0.92rem;">Task Time Overrun Detected</div>
+                                <p style="margin: 2px 0 0; font-size: 0.84rem; color: #c2410c; line-height: 1.4;">
+                                    ${overrunLogs.length} student log${overrunLogs.length > 1 ? 's have' : ' has'} exceeded planned task hours. You can click <strong>"Notify Coordinator"</strong> on the respective task in the table below to alert the coordinator.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ` : ''}
 
@@ -251,10 +268,10 @@ export function FacultyVerifyTasks() {
                     </p>
                     <div style="display: flex; flex-direction: column; gap: 0.45rem;">
                         ${behindScheduleModules.map(bm => `
-                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: #ffffff; padding: 0.65rem 1rem; border-radius: 8px; border: 1px solid #fef3c7; font-size: 0.86rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: var(--surface-card); padding: 0.65rem 1rem; border-radius: 8px; border: 1px solid #fef3c7; font-size: 0.86rem;">
                                 <div>
-                                    <strong style="color: #0f172a;">${bm.module_name || 'Module'}</strong>
-                                    <span style="color: #64748b; font-size: 0.82rem; margin-left: 0.5rem;">(${bm.reason || 'Actual hours exceed planned weight'})</span>
+                                    <strong style="color: var(--text-primary);">${bm.module_name || 'Module'}</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.82rem; margin-left: 0.5rem;">(${bm.reason || 'Actual hours exceed planned weight'})</span>
                                 </div>
                                 <div style="display: flex; gap: 0.75rem; font-size: 0.82rem;">
                                     <span style="color: #0284c7; font-weight: 600;">Planned: ${bm.completed_weight || 0}/${bm.total_weight || 0} hrs</span>
@@ -267,17 +284,17 @@ export function FacultyVerifyTasks() {
             ` : ''}
 
             <!-- Project Summary Banner with Back button on top right -->
-            <div class="faculty-card-panel" style="padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="faculty-card-panel" style="padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; background: var(--surface-card); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
-                            <h1 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-main, #0f172a);">${projectTitle}</h1>
+                            <h1 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-main, var(--text-primary));">${projectTitle}</h1>
                             <span class="status-badge ${status.replace(' ', '_')}">
                                 ${status.replace('_', ' ').toUpperCase()}
                             </span>
                         </div>
-                        <p style="margin: 0; font-size: 0.88rem; color: var(--text-muted, #64748b);">
-                            Client: <strong style="color: var(--text-main, #334155);">${clientName}</strong> &bull; Type: ${projectType} &bull; Total Work Logs: <strong style="color: var(--primary, #059669);">${totalLogs}</strong>
+                        <p style="margin: 0; font-size: 0.88rem; color: var(--text-muted, var(--text-muted));">
+                            Client: <strong style="color: var(--text-main, #334155);">${clientName}</strong> &bull; Type: ${projectType} &bull; Total Work Logs: <strong style="color: var(--primary, var(--primary));">${totalLogs}</strong>
                         </p>
                     </div>
                     <div>
@@ -296,39 +313,39 @@ export function FacultyVerifyTasks() {
             <div style="margin-bottom: 2rem;">
                     <!-- Metrics Cards (Polished Modern ERP Cards) -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
-                        <div class="faculty-stat-card-interactive" style="background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
+                        <div class="faculty-stat-card-interactive" style="background: var(--surface-card); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle)); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
                             <div>
-                                <span style="font-size: 0.76rem; color: var(--text-muted, #64748b); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Total Logs</span>
-                                <div style="font-size: 1.6rem; font-weight: 700; color: #0f172a; line-height: 1.1;">${totalLogs}</div>
+                                <span style="font-size: 0.76rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Total Logs</span>
+                                <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); line-height: 1.1;">${totalLogs}</div>
                             </div>
                             <div style="width: 44px; height: 44px; border-radius: 10px; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                                 ${iconFile}
                             </div>
                         </div>
 
-                        <div class="faculty-stat-card-interactive" style="background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
+                        <div class="faculty-stat-card-interactive" style="background: var(--surface-card); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle)); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
                             <div>
-                                <span style="font-size: 0.76rem; color: var(--text-muted, #64748b); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Total Hours</span>
-                                <div style="font-size: 1.6rem; font-weight: 700; color: #059669; line-height: 1.1;">${totalHours} <span style="font-size: 0.95rem; font-weight: 600; color: #64748b;">hrs</span></div>
+                                <span style="font-size: 0.76rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Total Hours</span>
+                                <div style="font-size: 1.6rem; font-weight: 700; color: var(--primary); line-height: 1.1;">${totalHours} <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-muted);">hrs</span></div>
                             </div>
-                            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                                 ${iconClock}
                             </div>
                         </div>
 
-                        <div class="faculty-stat-card-interactive" style="background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
+                        <div class="faculty-stat-card-interactive" style="background: var(--surface-card); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle)); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
                             <div>
-                                <span style="font-size: 0.76rem; color: var(--text-muted, #64748b); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Approved</span>
+                                <span style="font-size: 0.76rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Approved</span>
                                 <div style="font-size: 1.6rem; font-weight: 700; color: #16a34a; line-height: 1.1;">${approvedLogsCount}</div>
                             </div>
-                            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--bg-main); color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                                 ${iconCheckCircle}
                             </div>
                         </div>
 
-                        <div class="faculty-stat-card-interactive" style="background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
+                        <div class="faculty-stat-card-interactive" style="background: var(--surface-card); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle)); box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: space-between;">
                             <div>
-                                <span style="font-size: 0.76rem; color: var(--text-muted, #64748b); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Pending Approval</span>
+                                <span style="font-size: 0.76rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem;">Pending Approval</span>
                                 <div style="font-size: 1.6rem; font-weight: 700; color: #d97706; line-height: 1.1;">${pendingLogsCount}</div>
                             </div>
                             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fffbeb; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
@@ -338,39 +355,39 @@ export function FacultyVerifyTasks() {
                     </div>
 
                     <!-- Filter Tabs -->
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0; flex-wrap: wrap;">
-                        <button class="log-tab-btn ${logFilter === 'all' ? 'active-tab' : ''}" data-filter="all" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'all' ? 'var(--primary, #059669)' : '#64748b'}; border-bottom: 2px solid ${logFilter === 'all' ? 'var(--primary, #059669)' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 2px solid var(--border-subtle); padding-bottom: 0; flex-wrap: wrap;">
+                        <button class="log-tab-btn ${logFilter === 'all' ? 'active-tab' : ''}" data-filter="all" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'all' ? 'var(--primary, var(--primary))' : 'var(--text-muted)'}; border-bottom: 2px solid ${logFilter === 'all' ? 'var(--primary, var(--primary))' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
                             All Work Logs (${totalLogs})
                         </button>
-                        <button class="log-tab-btn ${logFilter === 'pending' ? 'active-tab' : ''}" data-filter="pending" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'pending' ? 'var(--primary, #059669)' : '#64748b'}; border-bottom: 2px solid ${logFilter === 'pending' ? 'var(--primary, #059669)' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
+                        <button class="log-tab-btn ${logFilter === 'pending' ? 'active-tab' : ''}" data-filter="pending" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'pending' ? 'var(--primary, var(--primary))' : 'var(--text-muted)'}; border-bottom: 2px solid ${logFilter === 'pending' ? 'var(--primary, var(--primary))' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
                             Pending Approval (${pendingLogsCount})
                         </button>
-                        <button class="log-tab-btn ${logFilter === 'approved' ? 'active-tab' : ''}" data-filter="approved" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'approved' ? 'var(--primary, #059669)' : '#64748b'}; border-bottom: 2px solid ${logFilter === 'approved' ? 'var(--primary, #059669)' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
+                        <button class="log-tab-btn ${logFilter === 'approved' ? 'active-tab' : ''}" data-filter="approved" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'approved' ? 'var(--primary, var(--primary))' : 'var(--text-muted)'}; border-bottom: 2px solid ${logFilter === 'approved' ? 'var(--primary, var(--primary))' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
                             Approved Logs (${approvedLogsCount})
                         </button>
                         ${rejectedLogsCount > 0 ? `
-                            <button class="log-tab-btn ${logFilter === 'rejected' ? 'active-tab' : ''}" data-filter="rejected" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'rejected' ? '#dc2626' : '#64748b'}; border-bottom: 2px solid ${logFilter === 'rejected' ? '#dc2626' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
+                            <button class="log-tab-btn ${logFilter === 'rejected' ? 'active-tab' : ''}" data-filter="rejected" style="background: none; border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; color: ${logFilter === 'rejected' ? '#dc2626' : 'var(--text-muted)'}; border-bottom: 2px solid ${logFilter === 'rejected' ? '#dc2626' : 'transparent'}; margin-bottom: -2px; transition: all 0.15s ease;">
                                 Rejected Logs (${rejectedLogsCount})
                             </button>
                         ` : ''}
                     </div>
 
                     <!-- Work Logs Table Panel -->
-                    <div class="faculty-card-panel" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div class="faculty-card-panel" style="padding: 0; overflow-x: auto; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; background: var(--surface-card); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                         ${filteredLogs.length === 0 ? `
-                            <div style="padding: 3.5rem 2rem; text-align: center; color: var(--text-muted, #64748b);">
+                            <div style="padding: 3.5rem 2rem; text-align: center; color: var(--text-muted, var(--text-muted));">
                                 <p style="margin: 0; font-size: 0.95rem;">No student work logs found for this filter.</p>
                             </div>
                         ` : `
                             <table class="premium-table" style="width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed;">
                                 <thead>
-                                    <tr style="background: var(--bg-main, #f8fafc); border-bottom: 2px solid var(--border-color, #e2e8f0);">
-                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 17%;">Student</th>
-                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 14%;">Date & Hours</th>
-                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 23%;">Task & Module</th>
-                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 18%;">Work Description</th>
-                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 13%;">Rating</th>
-                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 15%; text-align: right;">Status & Action</th>
+                                    <tr style="background: var(--bg-main, var(--bg-canvas-light)); border-bottom: 2px solid var(--border-color, var(--border-subtle));">
+                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 15%;">Student</th>
+                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 11%;">Date & Hours</th>
+                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 23%;">Task & Module</th>
+                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 18%;">Work Description</th>
+                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 11%;">Rating</th>
+                                        <th style="padding: 1rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 22%; min-width: 215px; text-align: right;">Status & Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -399,13 +416,13 @@ export function FacultyVerifyTasks() {
                                         const currentRating = parseInt(l.ratings, 10) || 0;
 
                                         return `
-                                            <tr style="border-bottom: 1px solid var(--border-color, #e2e8f0); transition: background 0.15s ease;">
+                                            <tr style="border-bottom: 1px solid var(--border-color, var(--border-subtle)); transition: background 0.15s ease;">
                                                 <!-- Student -->
                                                 <td style="padding: 1.15rem 1.25rem; vertical-align: top;">
-                                                    <div style="font-weight: 700; color: var(--text-main, #0f172a); font-size: 0.92rem; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    <div style="font-weight: 700; color: var(--text-main, var(--text-primary)); font-size: 0.92rem; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                                         ${iconUser} <span>${studentName}</span>
                                                     </div>
-                                                    <div style="font-size: 0.78rem; color: var(--text-muted, #64748b); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    <div style="font-size: 0.78rem; color: var(--text-muted, var(--text-muted)); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                                         ${l.student_email || ''}
                                                     </div>
                                                 </td>
@@ -416,7 +433,7 @@ export function FacultyVerifyTasks() {
                                                         ${iconCalendar} <span>${l.work_date}</span>
                                                     </div>
                                                     <div style="margin-top: 6px;">
-                                                        <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; white-space: nowrap;">
+                                                        <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-color); white-space: nowrap;">
                                                             ${iconClock} ${parseFloat(l.hours_worked || 0).toFixed(1)} hrs
                                                         </span>
                                                     </div>
@@ -424,35 +441,55 @@ export function FacultyVerifyTasks() {
 
                                                 <!-- Task, Module & Deadline -->
                                                 <td style="padding: 1.15rem 1.25rem; vertical-align: top;">
-                                                    <div style="font-weight: 700; color: var(--text-main, #0f172a); font-size: 0.92rem; margin-bottom: 0.25rem; line-height: 1.35; word-break: break-word;">
+                                                    <div style="font-weight: 700; color: var(--text-main, var(--text-primary)); font-size: 0.92rem; margin-bottom: 0.25rem; line-height: 1.35; word-break: break-word;">
                                                         ${taskTitle}
                                                     </div>
-                                                    <div style="font-size: 0.8rem; color: var(--text-muted, #64748b); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.45rem; word-break: break-word;">
+                                                    <div style="font-size: 0.8rem; color: var(--text-muted, var(--text-muted)); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.45rem; word-break: break-word;">
                                                         ${iconFolder} <span>${moduleName}</span>
                                                     </div>
                                                     <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;">
-                                                        <span style="display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: ${taskStatus === 'completed' ? '#ecfdf5' : '#f1f5f9'}; color: ${taskStatus === 'completed' ? '#059669' : '#475569'}; border: 1px solid ${taskStatus === 'completed' ? '#a7f3d0' : '#e2e8f0'}; text-transform: uppercase;">
+                                                        <span style="display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: ${taskStatus === 'completed' ? 'var(--primary-light)' : '#f1f5f9'}; color: ${taskStatus === 'completed' ? 'var(--primary)' : '#475569'}; border: 1px solid ${taskStatus === 'completed' ? 'var(--border-color)' : 'var(--border-subtle)'}; text-transform: uppercase;">
                                                             TASK: ${taskStatus.replace('_', ' ')}
                                                         </span>
                                                         <span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd;" title="Planned weight/estimated hours">
                                                             Weight: ${l.task_weight || 1} hrs
                                                         </span>
+                                                        ${(parseFloat(l.hours_worked || 0) > parseFloat(l.task_weight || 0) || l.is_time_exceeded) ? `
+                                                            <span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;" title="Time logged (${parseFloat(l.hours_worked).toFixed(1)} hrs) exceeds planned task hours (${parseFloat(l.task_weight || 1).toFixed(1)} hrs)">
+                                                                ⚠️ Overrun (${parseFloat(l.hours_worked).toFixed(1)} / ${parseFloat(l.task_weight || 1).toFixed(1)} hrs)
+                                                            </span>
+                                                        ` : ''}
                                                         ${isLate ? `
                                                             <span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;" title="Submitted after task deadline of ${dueDate}">
                                                                 ⚠ Late (${daysLate}d &bull; Due: ${dueDate})
                                                             </span>
                                                         ` : dueDate ? `
-                                                            <span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;" title="Submitted on time">
+                                                            <span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: var(--bg-main); color: #16a34a; border: 1px solid #bbf7d0;" title="Submitted on time">
                                                                 ✓ On Time (${dueDate})
                                                             </span>
+                                                        ` : ''}
+                                                        ${(l.branch_name || l.github_pr_url) ? `
+                                                            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-top: 0.35rem; width: 100%;">
+                                                                ${l.branch_name ? `
+                                                                    <a href="${l.branch_url || '#'}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; text-decoration: none;" title="Open GitHub branch">
+                                                                        <span>🌿</span> <span>${l.branch_name}</span>
+                                                                    </a>
+                                                                ` : ''}
+                                                                ${l.github_pr_url ? `
+                                                                    <a href="${l.github_pr_url}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; text-decoration: none;" title="View Pull Request">
+                                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                                                        <span>PR ↗</span>
+                                                                    </a>
+                                                                ` : ''}
+                                                            </div>
                                                         ` : ''}
                                                     </div>
                                                 </td>
 
                                                 <!-- Work Description -->
                                                 <td style="padding: 1.15rem 1.25rem; vertical-align: top;">
-                                                    <div style="font-size: 0.85rem; color: var(--text-main, #334155); line-height: 1.5; background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0; max-height: 110px; overflow-y: auto; word-break: break-word;">
-                                                        ${l.description || '<span style="color: #94a3b8; font-style: italic;">No description provided.</span>'}
+                                                    <div style="font-size: 0.85rem; color: var(--text-main, #334155); line-height: 1.5; background: var(--bg-canvas-light); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-subtle); max-height: 110px; overflow-y: auto; word-break: break-word;">
+                                                        ${l.description || '<span style="color: var(--text-secondary); font-style: italic;">No description provided.</span>'}
                                                     </div>
                                                 </td>
 
@@ -469,49 +506,71 @@ export function FacultyVerifyTasks() {
                                                                 `;
                                                             }).join('')}
                                                         </div>
-                                                        <div class="star-rating-feedback" style="font-size: 0.75rem; font-weight: 600; color: ${currentRating > 0 ? '#b45309' : '#94a3b8'}; margin-top: 4px;">
+                                                        <div class="star-rating-feedback" style="font-size: 0.75rem; font-weight: 600; color: ${currentRating > 0 ? '#b45309' : 'var(--text-secondary)'}; margin-top: 4px;">
                                                             ${currentRating > 0 ? `${currentRating}/5 Stars` : 'Click to Rate'}
                                                         </div>
                                                     </div>
                                                 </td>
 
-                                                <!-- Status & Action (Grouped cleanly) -->
+                                                <!-- Status & Action (Clean Structured Toolbar) -->
                                                 <td style="padding: 1.15rem 1.25rem; vertical-align: top; text-align: right;">
-                                                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                                                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.45rem; width: 100%; max-width: 215px; margin-left: auto;">
                                                         <!-- Status Badge -->
-                                                        <div>
+                                                        <div style="margin-bottom: 0.1rem;">
                                                             ${isApproved ? `
-                                                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 9px; border-radius: 9999px; font-size: 0.76rem; font-weight: 700; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+                                                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 10px; border-radius: 9999px; font-size: 0.76rem; font-weight: 700; background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-color); white-space: nowrap;">
                                                                     ${iconCheckCircle} Approved
                                                                 </span>
                                                             ` : isRejected ? `
-                                                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 9px; border-radius: 9999px; font-size: 0.76rem; font-weight: 700; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5;">
+                                                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 10px; border-radius: 9999px; font-size: 0.76rem; font-weight: 700; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; white-space: nowrap;">
                                                                     ${iconAlert} Rejected
                                                                 </span>
                                                             ` : `
-                                                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 9px; border-radius: 9999px; font-size: 0.76rem; font-weight: 700; background: #fef3c7; color: #d97706; border: 1px solid #fde68a;">
+                                                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 3px 10px; border-radius: 9999px; font-size: 0.76rem; font-weight: 700; background: #fef3c7; color: #d97706; border: 1px solid #fde68a; white-space: nowrap;">
                                                                     Pending
                                                                 </span>
                                                             `}
                                                         </div>
 
-                                                        <!-- Action Buttons -->
-                                                        <div style="display: flex; gap: 0.35rem; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                                                        <!-- Action Buttons Container -->
+                                                        <div style="display: flex; flex-direction: column; gap: 0.35rem; width: 100%;">
                                                             ${isApproved ? `
-                                                                <button class="btn btn-sm btn-outline btn-open-feedback-modal" data-task-id="${l.task_id || ''}" data-task-title="${(taskTitle || '').replace(/"/g, '&quot;')}" data-student-id="${l.student_id || ''}" data-student-name="${(studentName || '').replace(/"/g, '&quot;')}" title="Add Feedback for Student" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.75rem; font-size: 0.78rem; color: #2563eb; border-color: #bfdbfe; background: #eff6ff; border-radius: 6px; font-weight: 600;">
-                                                                    Feedback
+                                                                <button class="btn btn-sm btn-outline btn-open-feedback-modal" data-task-id="${l.task_id || ''}" data-task-title="${(taskTitle || '').replace(/"/g, '&quot;')}" data-student-id="${l.student_id || ''}" data-student-name="${(studentName || '').replace(/"/g, '&quot;')}" title="Add Feedback for Student" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.38rem 0.6rem; font-size: 0.78rem; color: #2563eb; border-color: #bfdbfe; background: #eff6ff; border-radius: 6px; font-weight: 600; box-sizing: border-box; white-space: nowrap;">
+                                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                                                    <span>Feedback</span>
                                                                 </button>
                                                             ` : `
-                                                                <button class="btn btn-sm btn-primary shadow-hover btn-approve-log" data-id="${l.id}" data-status="approved" title="Approve Work Log & Complete Task" style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; border-radius: 6px;">
-                                                                    ${iconCheck} Approve
-                                                                </button>
-                                                                <button class="btn btn-sm btn-outline btn-approve-log" data-id="${l.id}" data-status="rejected" title="Reject Log" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5; background: #fff; border-radius: 6px; font-weight: 600;">
-                                                                    Reject
-                                                                </button>
-                                                                <button class="btn btn-sm btn-outline btn-open-feedback-modal" data-task-id="${l.task_id || ''}" data-task-title="${(taskTitle || '').replace(/"/g, '&quot;')}" data-student-id="${l.student_id || ''}" data-student-name="${(studentName || '').replace(/"/g, '&quot;')}" title="Add Feedback for Student" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; color: #2563eb; border-color: #bfdbfe; background: #fff; border-radius: 6px; font-weight: 600;">
-                                                                    Feedback
+                                                                <!-- Row 1: Approve and Reject side-by-side -->
+                                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; width: 100%;">
+                                                                    <button class="btn btn-sm btn-primary shadow-hover btn-approve-log" data-id="${l.id}" data-status="approved" title="Approve Work Log & Complete Task" style="display: flex; align-items: center; justify-content: center; gap: 0.3rem; padding: 0.4rem 0.5rem; font-size: 0.78rem; font-weight: 600; border-radius: 6px; white-space: nowrap; box-sizing: border-box;">
+                                                                        ${iconCheck} Approve
+                                                                    </button>
+                                                                    <button class="btn btn-sm btn-outline btn-approve-log" data-id="${l.id}" data-status="rejected" title="Reject Log" style="display: flex; align-items: center; justify-content: center; padding: 0.4rem 0.5rem; font-size: 0.78rem; color: #dc2626; border-color: #fca5a5; background: #fff; border-radius: 6px; font-weight: 600; white-space: nowrap; box-sizing: border-box;">
+                                                                        Reject
+                                                                    </button>
+                                                                </div>
+
+                                                                <!-- Row 2: Feedback button -->
+                                                                <button class="btn btn-sm btn-outline btn-open-feedback-modal" data-task-id="${l.task_id || ''}" data-task-title="${(taskTitle || '').replace(/"/g, '&quot;')}" data-student-id="${l.student_id || ''}" data-student-name="${(studentName || '').replace(/"/g, '&quot;')}" title="Add Feedback for Student" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.38rem 0.6rem; font-size: 0.78rem; color: #2563eb; border-color: #bfdbfe; background: #fff; border-radius: 6px; font-weight: 600; box-sizing: border-box; white-space: nowrap;">
+                                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                                                    <span>Feedback</span>
                                                                 </button>
                                                             `}
+
+                                                            <!-- Row 3 / Overrun Action: Notify Coordinator -->
+                                                            ${(parseFloat(l.hours_worked || 0) > parseFloat(l.task_weight || 0) || isLate || l.is_time_exceeded) ? `
+                                                                <button class="btn btn-sm btn-notify-coordinator ${l.coordinator_notified ? 'btn-coordinator-notified' : ''}" 
+                                                                    data-id="${l.id}" 
+                                                                    data-task-title="${(taskTitle || '').replace(/"/g, '&quot;')}"
+                                                                    title="${l.coordinator_notified ? 'Coordinator has been alerted. Click to send another alert.' : 'Notify the coordinator about this task time overrun'}"
+                                                                    style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.4rem 0.5rem; font-size: 0.74rem; font-weight: 600; border-radius: 6px; ${l.coordinator_notified ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;'} cursor: pointer; transition: all 0.15s ease; box-sizing: border-box; white-space: nowrap;">
+                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink: 0;">
+                                                                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                                                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                                                    </svg>
+                                                                    <span>${l.coordinator_notified ? '✓ Coordinator Notified' : 'Notify Coordinator'}</span>
+                                                                </button>
+                                                            ` : ''}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -560,6 +619,15 @@ export function FacultyVerifyTasks() {
                 const logId = btn.getAttribute('data-id');
                 const targetStatus = btn.getAttribute('data-status');
                 await handleApproveWorkLog(logId, targetStatus, btn);
+            });
+        });
+
+        // Notify Coordinator action button
+        container.querySelectorAll('.btn-notify-coordinator').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const logId = btn.getAttribute('data-id');
+                await handleNotifyCoordinator(logId, btn);
             });
         });
 
@@ -688,13 +756,13 @@ export function FacultyVerifyTasks() {
         modalOverlay.style.zIndex = '10000';
 
         modalOverlay.innerHTML = `
-            <div style="background: #ffffff; border-radius: 12px; width: 480px; max-width: 92%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border: 1px solid #e2e8f0; overflow: hidden;">
-                <div style="padding: 1.15rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+            <div style="background: var(--surface-card); border-radius: 12px; width: 480px; max-width: 92%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border: 1px solid var(--border-subtle); overflow: hidden;">
+                <div style="padding: 1.15rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: var(--bg-canvas-light);">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #2563eb;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                         Add Task Feedback
                     </h3>
-                    <button id="btn-close-task-feedback-modal" style="background: none; border: none; font-size: 1.3rem; color: #64748b; cursor: pointer; line-height: 1;">&times;</button>
+                    <button id="btn-close-task-feedback-modal" style="background: none; border: none; font-size: 1.3rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
                 </div>
                 <form id="form-task-feedback" style="padding: 1.5rem;">
                     <div style="margin-bottom: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem 1rem;">
@@ -821,7 +889,52 @@ export function FacultyVerifyTasks() {
     }
 
     // ==========================================
-    // 5. DATA FETCHING HELPERS
+    // 6. NOTIFY COORDINATOR ACTION
+    // ==========================================
+    async function handleNotifyCoordinator(logId, btn) {
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `
+            <span class="spinner-small" style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+            <span>Alerting...</span>
+        `;
+
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            };
+
+            const res = await fetch(`${apiBase}/faculty/work-logs/${logId}/notify-coordinator`, {
+                method: 'POST',
+                headers
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                // Update in-memory log
+                if (projectDetail && projectDetail.work_logs) {
+                    const logObj = projectDetail.work_logs.find(l => String(l.id) === String(logId));
+                    if (logObj) {
+                        logObj.coordinator_notified = true;
+                    }
+                }
+
+                actionMessage = `✓ ${data.message || 'Coordinator notified successfully.'}`;
+                render();
+            } else {
+                throw new Error(data.error || data.message || 'Failed to notify coordinator.');
+            }
+        } catch (err) {
+            console.error('Notify coordinator error:', err);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            showFacultyErrorPopup('Notification Error', err.message || 'Could not notify coordinator. Please try again.');
+        }
+    }
+
+    // ==========================================
+    // 7. DATA FETCHING HELPERS
     // ==========================================
     async function loadAssignedProjects() {
         isLoadingProjects = true;

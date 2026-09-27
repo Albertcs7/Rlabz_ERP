@@ -28,9 +28,9 @@ export async function StudentPayroll(route, router) {
     printEl.innerHTML = `
       <div style="font-family: Arial, sans-serif; color: #1a1a1a; padding: 40px; max-width: 700px; margin: 0 auto;">
         <!-- Header -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 3px solid #059669; padding-bottom: 18px; margin-bottom: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 3px solid var(--primary); padding-bottom: 18px; margin-bottom: 24px;">
           <div>
-            <div style="font-size:24px; font-weight:900; color:#059669; letter-spacing:-0.5px;">RLabZ</div>
+            <div style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:-0.5px;">RLabZ</div>
             <div style="font-size:12px; color:#666; margin-top:4px;">Modular Enterprise Resource Planning<br>Rajagiri College of Social Sciences, Kochi</div>
           </div>
           <div style="text-align:right;">
@@ -61,24 +61,24 @@ export async function StudentPayroll(route, router) {
         <table style="width:100%; border-collapse:collapse; margin-bottom:24px; font-size:13px;">
           <thead>
             <tr style="background:#f1f5f9;">
-              <th style="padding:10px 14px; text-align:left; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid #e2e8f0;">Description</th>
-              <th style="padding:10px 14px; text-align:right; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid #e2e8f0;">Value</th>
+              <th style="padding:10px 14px; text-align:left; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid var(--border-subtle);">Description</th>
+              <th style="padding:10px 14px; text-align:right; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid var(--border-subtle);">Value</th>
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid #e2e8f0;">
+            <tr style="border-bottom:1px solid var(--border-subtle);">
               <td style="padding:10px 14px;">Payroll Period</td>
               <td style="padding:10px 14px; text-align:right; font-weight:600;">${pr.period}</td>
             </tr>
-            <tr style="border-bottom:1px solid #e2e8f0;">
+            <tr style="border-bottom:1px solid var(--border-subtle);">
               <td style="padding:10px 14px;">Logged Hours</td>
               <td style="padding:10px 14px; text-align:right; color:#666;">${pr.loggedHours} hrs</td>
             </tr>
-            <tr style="border-bottom:1px solid #e2e8f0;">
+            <tr style="border-bottom:1px solid var(--border-subtle);">
               <td style="padding:10px 14px; font-weight:600;">Approved Hours</td>
               <td style="padding:10px 14px; text-align:right; font-weight:600;">${pr.approvedHours} hrs</td>
             </tr>
-            <tr style="border-bottom:1px solid #e2e8f0;">
+            <tr style="border-bottom:1px solid var(--border-subtle);">
               <td style="padding:10px 14px;">Applicable Rate (${pr.designation})</td>
               <td style="padding:10px 14px; text-align:right; font-weight:600;">₹${pr.rate}/hr</td>
             </tr>
@@ -88,18 +88,18 @@ export async function StudentPayroll(route, router) {
         <!-- Total -->
         <div style="display:flex; justify-content:flex-end; margin-bottom:28px;">
           <table style="width:280px; font-size:14px;">
-            <tr style="border-top:2px solid #059669;">
+            <tr style="border-top:2px solid var(--primary);">
               <td style="padding:12px 14px; font-size:16px; font-weight:800;">Total Paid</td>
-              <td style="padding:12px 14px; text-align:right; font-size:18px; font-weight:800; color:#059669;">${fmt(pr.grossAmount)}</td>
+              <td style="padding:12px 14px; text-align:right; font-size:18px; font-weight:800; color:var(--primary);">${fmt(pr.grossAmount)}</td>
             </tr>
           </table>
         </div>
 
         <!-- Payment Status -->
-        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:16px 20px;">
-          <div style="font-size:11px; text-transform:uppercase; color:#065f46; letter-spacing:0.05em; margin-bottom:6px;">Payment Status</div>
-          <div style="font-size:17px; font-weight:800; color:#059669;">PAID</div>
-          <div style="font-size:13px; color:#065f46; margin-top:6px;">
+        <div style="background:var(--primary-light); border:1px solid var(--border-color); border-radius:8px; padding:16px 20px;">
+          <div style="font-size:11px; text-transform:uppercase; color:var(--primary); letter-spacing:0.05em; margin-bottom:6px;">Payment Status</div>
+          <div style="font-size:17px; font-weight:800; color:var(--primary);">PAID</div>
+          <div style="font-size:13px; color:var(--primary); margin-top:6px;">
             Paid on: <strong>${pr.paymentDate}</strong>&nbsp;&nbsp;|&nbsp;&nbsp;
             Transaction Ref: <strong style="font-family:monospace;">${pr.txRef}</strong>
           </div>
@@ -445,7 +445,7 @@ export async function StudentPayroll(route, router) {
           
           <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
             <div style="flex:1; min-width:200px;">
-              <div style="background:#f8fafb; border:1px solid #e2e8f0; border-radius:6px; padding:1rem; margin-bottom:1rem;">
+              <div style="background:#f8fafb; border:1px solid var(--border-subtle); border-radius:6px; padding:1rem; margin-bottom:1rem;">
                 <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.25rem;">Current Rate</div>
                 <div style="font-size:1.5rem; font-weight:700; color:var(--primary);" id="modal-current-rate">₹${currentGlobalRate}/hour</div>
               </div>

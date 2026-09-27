@@ -31,8 +31,8 @@
 }
 
 .coordinator-role-badge {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #E0F2F1;
+  color: #00897B;
   padding: 0.4rem 0.9rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -105,7 +105,7 @@
   display: block;
   margin: 0.5rem 0;
   font-size: 1.8rem;
-  color: #1d4ed8;
+  color: #00897B;
 }
 
 .coordinator-kpi-card small {
@@ -149,12 +149,12 @@
 }
 
 .coord-btn-primary {
-  background: #2563eb;
+  background: #009688;
   color: white;
 }
 
 .coord-btn-primary:hover {
-  background: #1d4ed8;
+  background: #00897B;
 }
 
 .coord-btn-secondary {
@@ -180,7 +180,7 @@
 .coordinator-table th {
   text-align: left;
   padding: 0.75rem 1rem;
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
   color: #475569;
   font-weight: 600;
   border-bottom: 1px solid #e5e7eb;
@@ -193,7 +193,7 @@
 }
 
 .coordinator-table tbody tr:hover {
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
 }
 
 .designation-badge {
@@ -210,8 +210,8 @@
 }
 
 .designation-badge.orbit {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #E0F2F1;
+  color: #00897B;
 }
 
 .designation-badge.spark {
@@ -235,7 +235,7 @@
 
 .progress-fill {
   height: 100%;
-  background: #2563eb;
+  background: #009688;
   border-radius: 10px;
 }
 
@@ -251,8 +251,8 @@
 .priority-badge.in_progress,
 .priority-badge.accepted,
 .priority-badge.proposed {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #E0F2F1;
+  color: #009688;
 }
 
 .priority-badge.urgent {
@@ -321,7 +321,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 1.25rem;
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
 }
 
 .coordinator-detail-card h2,
@@ -391,7 +391,7 @@
 }
 
 .coordinator-project-summary div {
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 1rem;
@@ -425,7 +425,7 @@
   border-radius: 10px;
   padding: 0.9rem 1rem;
   margin-bottom: 0.7rem;
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
 }
 
 .coordinator-requirement-item strong {
@@ -526,7 +526,7 @@
 .coordinator-table th {
   text-align: left;
   padding: 0.8rem;
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
   color: #6b7280;
   font-weight: 600;
   border-bottom: 1px solid #e5e7eb;
@@ -558,7 +558,7 @@
 
 .coordinator-progress-fill {
   height: 100%;
-  background: #2563eb;
+  background: #009688;
   border-radius: 5px;
 }
 
@@ -572,8 +572,8 @@
 }
 
 .priority-badge.normal {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #E0F2F1;
+  color: #009688;
 }
 
 .priority-badge.urgent {
@@ -582,8 +582,8 @@
 }
 
 .project-status.in-progress {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #E0F2F1;
+  color: #009688;
 }
 
 .project-status.review {
@@ -592,7 +592,7 @@
 }
 
 .project-status.completed {
-  background: #f0fdf4;
+  background: var(--bg-main);
   color: #16a34a;
 }
 
@@ -687,7 +687,7 @@
 .coordinator-form-group select:focus,
 .coordinator-form-group textarea:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: #009688;
 }
 
 .coordinator-radio-group {
@@ -721,12 +721,12 @@
 }
 
 .coordinator-primary-btn {
-  background: #2563eb;
+  background: #009688;
   color: white;
 }
 
 .coordinator-primary-btn:hover {
-  background: #1d4ed8;
+  background: #00897B;
 }
 
 .coordinator-secondary-btn {
@@ -782,16 +782,16 @@
 }
 
 .student-track.spark {
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--primary-light);
+  color: var(--primary-hover);
 }
 
 .project-status.active {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #E0F2F1;
+  color: #009688;
 }
 
 .project-status.completed {
-  background: #f0fdf4;
+  background: var(--bg-main);
   color: #16a34a;
 }

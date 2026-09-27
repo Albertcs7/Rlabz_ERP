@@ -6,6 +6,8 @@ use Modules\Faculty\Http\Controllers\FacultyController;
 Route::prefix('faculty')->group(function () {
     Route::get('/dashboard', [FacultyController::class, 'getDashboardData']);
     Route::get('/profile', [FacultyController::class, 'getProfile']);
+    Route::put('/profile', [FacultyController::class, 'updateProfile']);
+    Route::post('/profile', [FacultyController::class, 'updateProfile']);
     Route::get('/projects', [FacultyController::class, 'getProjects']);
     Route::get('/projects/{id}/report', [FacultyController::class, 'getProjectReport']);
     Route::get('/projects/{id}/modules-tasks', [FacultyController::class, 'getProjectModulesAndTasks']);
@@ -16,6 +18,7 @@ Route::prefix('faculty')->group(function () {
     Route::get('/projects/{id}/work-logs', [FacultyController::class, 'getProjectWorkLogs']);
     Route::post('/work-logs/{id}/approve', [FacultyController::class, 'approveWorkLog']);
     Route::post('/work-logs/{id}/rate', [FacultyController::class, 'rateWorkLog']);
+    Route::post('/work-logs/{id}/notify-coordinator', [FacultyController::class, 'notifyCoordinator']);
     Route::get('/projects/{id}/client-requirements', [FacultyController::class, 'getProjectClientRequirements']);
     Route::get('/projects/{id}/requirement-changes', [FacultyController::class, 'getProjectRequirementChanges']);
     Route::get('/students', [FacultyController::class, 'getStudents']);

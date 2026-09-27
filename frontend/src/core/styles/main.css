@@ -1,34 +1,58 @@
-/* RLABZ ERP - Modern Design System */
+/* RLABZ ERP - Modern Design System · Material Teal Theme */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
 :root {
   --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  /* Palette */
-  --primary: #059669;
-  --primary-hover: #047857;
-  --primary-light: #ecfdf5;
-  --primary-accent: #10b981;
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-light: #94a3b8;
-  --border-color: #e2e8f0;
-  
-  /* Sidebar */
-  --sidebar-bg: #064e3b;
-  --sidebar-hover: #047857;
-  --sidebar-active: #059669;
-  --sidebar-text: #e2e8f0;
-  
-  /* Status Colors */
-  --danger: #ef4444;
-  --danger-light: #fef2f2;
-  --success: #10b981;
-  --warning: #f59e0b;
-  
-  /* Elevations & Shadows */
+
+  /* ── Material Teal Palette ───────────────────────────── */
+  --teal-50:  #E0F2F1;
+  --teal-100: #B2DFDB;
+  --teal-200: #80CBC4;
+  --teal-300: #4DB6AC;
+  --teal-400: #26A69A;
+  --teal-500: #009688;   /* Core Brand / primary */
+  --teal-600: #00897B;
+  --teal-700: #00796B;
+  --teal-800: #00695C;
+  --teal-900: #004D40;
+
+  /* ── Semantic Design Tokens ──────────────────────────── */
+  --bg-canvas-dark:  var(--teal-900);   /* #004D40  — deep teal for sidebar bg */
+  --bg-canvas-light: #F0FAF9;           /* soft teal-tinted off-white canvas   */
+  --surface-card:    #FFFFFF;
+  --surface-panel:   var(--teal-50);    /* #E0F2F1  — light teal for panels    */
+  --border-subtle:   var(--teal-100);   /* #B2DFDB  — delicate teal borders    */
+  --text-primary:    #1A2E2B;           /* near-black with teal undertone      */
+  --text-secondary:  #3E5853;           /* dark muted teal                     */
+  --text-muted:      #5E7B76;           /* muted teal-grey                     */
+
+  /* ── Legacy Palette Alias → Teal Tokens ─────────────── */
+  /* Primary actions & interactive elements                 */
+  --primary:         var(--teal-500);   /* #009688  — core action color        */
+  --primary-hover:   var(--teal-600);   /* #00897B  — hover state              */
+  --primary-light:   var(--teal-50);    /* #E0F2F1  — soft icon/badge bg       */
+  --primary-accent:  var(--teal-600);   /* #00897B  — accent / success proxy   */
+
+  /* Canvas / Card / Text shorthands */
+  --bg-main:         var(--bg-canvas-light);
+  --bg-card:         var(--surface-card);
+  --text-main:       var(--text-primary);
+  --text-light:      var(--text-secondary);
+  --border-color:    var(--border-subtle);
+
+  /* ── Sidebar ─────────────────────────────────────────── */
+  --sidebar-bg:      var(--teal-900);   /* #004D40  — high-contrast sidebar    */
+  --sidebar-hover:   var(--teal-800);   /* #00695C                             */
+  --sidebar-active:  var(--teal-500);   /* #009688  — active item highlight    */
+  --sidebar-text:    var(--surface-card);
+
+  /* ── Status / Semantic Colors ────────────────────────── */
+  --danger:          #ef4444;
+  --danger-light:    #fef2f2;
+  --success:         var(--teal-600);   /* maps to #00897B                     */
+  --warning:         #f59e0b;
+
+  /* ── Elevations & Radius ─────────────────────────────── */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -65,18 +89,18 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, #065f46, #064e3b 40%, #022c22);
+  background: linear-gradient(135deg, var(--teal-200) 0%, var(--teal-800) 100%);
   padding: 20px;
 }
 
 .login-box {
-  background: var(--bg-card);
+  background: var(--surface-card);
   padding: 44px 36px;
   border-radius: var(--radius-lg);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   width: 100%;
   max-width: 420px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -105,20 +129,20 @@ body {
   border-radius: var(--radius-md);
   font-weight: 800;
   font-size: 1.4rem;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.35);
   margin-bottom: 12px;
 }
 
 .login-brand h2 {
   font-size: 1.6rem;
   font-weight: 700;
-  color: var(--text-main);
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .login-brand p.hint {
   font-size: 0.875rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-top: 6px;
 }
 
@@ -148,18 +172,22 @@ body {
   padding: 12px 14px;
   font-size: 0.95rem;
   font-family: inherit;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: #f8fafc;
-  color: var(--text-main);
+  background: var(--bg-canvas-light);
+  color: var(--text-primary);
   transition: var(--transition);
+}
+
+.form-group input::placeholder {
+  color: var(--text-muted);
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: var(--primary);
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  border-color: var(--teal-500);
+  background: var(--surface-card);
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.15);
 }
 
 .btn-primary {
@@ -174,7 +202,7 @@ body {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+  box-shadow: 0 4px 10px rgba(0, 150, 136, 0.3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -183,7 +211,7 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
+  box-shadow: 0 6px 16px rgba(0, 150, 136, 0.4);
 }
 
 .btn-primary:active {
@@ -228,7 +256,7 @@ body {
 .sidebar {
   width: 260px;
   height: 100vh;
-  background: var(--sidebar-bg);
+  background: var(--teal-800);
   color: var(--sidebar-text);
   display: flex;
   flex-direction: column;
@@ -243,7 +271,7 @@ body {
 }
 
 .sidebar-header {
-  padding: 24px 20px;
+  padding: 16px 20px 14px 2px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -257,13 +285,13 @@ body {
   letter-spacing: 0.05em;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .sidebar-watermark {
-  height: 38px;
+  height: 84px;
   width: auto;
-  max-height: 42px;
+  max-height: 88px;
   object-fit: contain;
   display: block;
 }
@@ -310,10 +338,10 @@ body {
 }
 
 .sidebar-nav a.active {
-  background: linear-gradient(135deg, var(--primary-accent), var(--primary));
+  background: linear-gradient(135deg, var(--teal-600), var(--teal-500));
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.35);
 }
 
 .sidebar-footer {
@@ -343,6 +371,28 @@ body {
   background: var(--danger);
   color: #ffffff;
   border-color: var(--danger);
+}
+
+.logout-icon-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-radius: var(--radius-full);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-left: 8px;
+}
+
+.logout-icon-btn:hover {
+  background: var(--danger);
+  color: #ffffff;
+  border-color: var(--danger);
+  transform: scale(1.05);
 }
 
 /* Main Content Wrapper */
@@ -384,7 +434,7 @@ body {
 }
 
 .user-profile:hover {
-  background-color: #f1f5f9;
+  background-color: var(--teal-50);
 }
 
 /* Floating Profile Popover */
@@ -393,7 +443,7 @@ body {
   top: calc(100% + 8px);
   right: 0;
   width: 320px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -417,18 +467,18 @@ body {
   justify-content: center;
   width: 42px;
   height: 42px;
-  background: #f1f5f9;
+  background: var(--teal-50);
   border: 1px solid var(--border-color);
   border-radius: 50%;
-  color: #1e293b;
+  color: var(--teal-800);
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .noti-bell-btn:hover,
 .noti-bell-btn:focus-visible {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
+  background: var(--teal-100);
+  border-color: var(--teal-300);
   outline: none;
 }
 
@@ -449,7 +499,7 @@ body {
   justify-content: center;
   background: #dc2626;
   color: #ffffff;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--surface-card);
   border-radius: 9999px;
   font-size: 0.68rem;
   font-weight: 700;
@@ -461,7 +511,7 @@ body {
   position: fixed;
   width: 360px;
   max-width: calc(100vw - 24px);
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -475,7 +525,7 @@ body {
   align-items: center;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-color);
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
 }
 
 .noti-dropdown-header h4 {
@@ -503,7 +553,7 @@ body {
   align-items: flex-start;
   padding: 12px 18px;
   border-bottom: 1px solid #f1f5f9;
-  background: #ffffff;
+  background: var(--surface-card);
 }
 
 .noti-item:last-child {
@@ -511,12 +561,12 @@ body {
 }
 
 .noti-item[data-unread="1"] {
-  background: #eff6ff;
+  background: var(--teal-50);
   cursor: pointer;
 }
 
 .noti-item[data-unread="1"]:hover {
-  background: #dbeafe;
+  background: var(--teal-100);
 }
 
 .noti-item-dot {
@@ -529,7 +579,7 @@ body {
 }
 
 .noti-item[data-unread="1"] .noti-item-dot {
-  background: #2563eb;
+  background: var(--teal-500);
 }
 
 .noti-item[data-urgency="urgent"][data-unread="1"] .noti-item-dot {
@@ -574,7 +624,7 @@ body {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-accent), var(--sidebar-bg));
+  background: linear-gradient(135deg, var(--teal-600), var(--teal-900));
   color: white;
   display: flex;
   align-items: center;
@@ -637,7 +687,7 @@ body {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-accent), var(--sidebar-bg));
+  background: linear-gradient(135deg, var(--teal-600), var(--teal-900));
   color: white;
   display: flex;
   align-items: center;
@@ -670,7 +720,7 @@ body {
   overflow-x: hidden;
   background-color: var(--bg-main);
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 rgba(0, 0, 0, 0.03);
+  scrollbar-color: var(--teal-200) rgba(0, 0, 0, 0.03);
 }
 
 .content-outlet::-webkit-scrollbar {
@@ -682,12 +732,12 @@ body {
 }
 
 .content-outlet::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--teal-200);
   border-radius: 4px;
 }
 
 .content-outlet::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--teal-400);
 }
 
 /* ==========================================================================
@@ -731,7 +781,7 @@ body {
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-md);
-  border-color: var(--primary-accent);
+  border-color: var(--teal-400);
 }
 
 .stat-card::before {
@@ -741,7 +791,7 @@ body {
   left: 0;
   width: 100%;
   height: 4px;
-  background: linear-gradient(90deg, var(--primary-accent), var(--primary));
+  background: linear-gradient(90deg, var(--teal-400), var(--teal-500));
   opacity: 0;
   transition: var(--transition);
 }
@@ -861,9 +911,9 @@ body {
   font-size: 0.875rem;
   font-weight: 600;
   font-family: var(--font-family);
-  color: var(--text-main, #0f172a);
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-main, var(--text-primary));
+  background: var(--bg-card, var(--surface-card));
+  border: 1px solid var(--border-color, var(--border-subtle));
   border-radius: var(--radius-md, 10px);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   cursor: pointer;
@@ -873,10 +923,10 @@ body {
 }
 
 .btn-back-nav:hover {
-  color: var(--primary, #059669);
-  border-color: var(--primary, #059669);
-  background: var(--primary-light, #ecfdf5);
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);
+  color: var(--teal-600);
+  border-color: var(--teal-400);
+  background: var(--teal-50);
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.15);
   transform: translateX(-3px);
 }
 
