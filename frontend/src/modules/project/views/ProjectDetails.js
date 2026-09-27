@@ -183,7 +183,7 @@ export async function ProjectDetails(route, router) {
                 </div>
               </div>
               <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 0.85rem 1rem;">
-                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Planned Task Weight</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Planned Task Hours</span>
                 <div style="font-size: 1.3rem; font-weight: 700; color: #0284c7; margin: 0.25rem 0;" id="val-overview-weight">-</div>
                 <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted));" id="val-overview-weight-sub">Completed: - hrs</span>
               </div>
@@ -212,8 +212,18 @@ export async function ProjectDetails(route, router) {
           
           <div id="module-form-container" style="display:none; margin-bottom: 1rem; padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface, var(--surface-card)); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <form id="form-module" style="display: flex; flex-direction: column; gap: 1rem;">
-              <input type="text" name="name" placeholder="Module Name (e.g. Sprint 1: Project Setup & Auth Flow)" class="premium-input" required />
-              <textarea name="description" placeholder="Description of module deliverables..." class="premium-input" rows="2"></textarea>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Module Name *</label>
+                <input type="text" name="name" placeholder="Module Name (e.g. Sprint 1: Project Setup & Auth Flow)" class="premium-input" style="width: 100%; box-sizing: border-box; min-height: 42px; padding: 0.45rem 0.85rem; font-size: 0.88rem;" required />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Document URL (Optional)</label>
+                <input type="url" name="document_path" placeholder="Documentation / Requirement URL (e.g. Google Docs, Notion, or Spec URL)" class="premium-input" style="width: 100%; box-sizing: border-box; min-height: 42px; padding: 0.45rem 0.85rem; font-size: 0.88rem;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Module Description (Optional)</label>
+                <textarea name="description" placeholder="Description of module deliverables..." class="premium-input" rows="2" style="width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.88rem; padding: 0.5rem 0.85rem;"></textarea>
+              </div>
               <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button type="button" id="btn-cancel-module" class="btn btn-outline btn-sm">Cancel</button>
                 <button type="submit" class="btn btn-primary btn-sm">Save Module</button>
@@ -254,22 +264,22 @@ export async function ProjectDetails(route, router) {
               <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 220px;">
                   <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Target Module *</label>
-                  <select id="inline-task-module-select" name="module_id" class="premium-input" style="width: 100%; box-sizing: border-box; height: 40px; font-size: 0.88rem;" required>
+                  <select id="inline-task-module-select" name="module_id" class="premium-input" style="width: 100%; box-sizing: border-box; min-height: 42px; padding: 0.45rem 0.85rem; font-size: 0.88rem; line-height: normal;" required>
                     <option value="">-- Select Module --</option>
                   </select>
                 </div>
                 <div style="flex: 2; min-width: 260px;">
                   <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Task Title *</label>
-                  <input type="text" id="inline-task-title" name="title" placeholder="Task Title (e.g. Implement authentication flow)" class="premium-input" style="width: 100%; box-sizing: border-box; height: 40px; font-size: 0.88rem;" required />
+                  <input type="text" id="inline-task-title" name="title" placeholder="Task Title (e.g. Implement authentication flow)" class="premium-input" style="width: 100%; box-sizing: border-box; min-height: 42px; padding: 0.45rem 0.85rem; font-size: 0.88rem; line-height: normal;" required />
                 </div>
                 <div style="width: 130px;">
-                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Weight</label>
-                  <input type="number" id="inline-task-weight" name="weight" min="1" max="1000" value="1" placeholder="1" class="premium-input" style="width: 100%; box-sizing: border-box; height: 40px; font-size: 0.88rem;" />
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Hours</label>
+                  <input type="number" id="inline-task-weight" name="weight" min="1" max="1000" value="1" placeholder="Hours (e.g. 4)" class="premium-input" style="width: 100%; box-sizing: border-box; min-height: 42px; padding: 0.45rem 0.85rem; font-size: 0.88rem; line-height: normal;" />
                 </div>
               </div>
               <div>
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main, #334155);">Task Description (Optional)</label>
-                <textarea id="inline-task-desc" name="description" placeholder="Description of task deliverables and scope..." class="premium-input" rows="2" style="width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.88rem;"></textarea>
+                <textarea id="inline-task-desc" name="description" placeholder="Description of task deliverables and scope..." class="premium-input" rows="2" style="width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.88rem; padding: 0.5rem 0.85rem;"></textarea>
               </div>
               <div style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center;">
                 <button type="button" id="btn-cancel-task-inline" class="btn btn-outline btn-sm" style="padding: 0.45rem 1rem;">Cancel</button>
@@ -278,11 +288,11 @@ export async function ProjectDetails(route, router) {
             </form>
           </div>
 
-          <div class="project-table-container animate-fade-in" style="margin-top: 0; background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle));">
-            <table class="premium-table" style="width: 100%; border-collapse: collapse;">
+          <div class="project-table-container animate-fade-in" style="margin-top: 0; background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle)); overflow-x: auto;">
+            <table class="premium-table" style="width: 100%; border-collapse: collapse; min-width: 650px;">
               <thead>
                 <tr>
-                  <th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">TASK & MODULE</th>
+                  <th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); min-width: 250px;">TASK & MODULE</th>
                   <th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">ASSIGNEE</th>
                   <th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">STATUS</th>
                   ${canViewAssignments || role === 'faculty' || role === 'coordinator' || role === 'director' ? `<th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); text-align: right;">ACTIONS</th>` : ''}
@@ -702,8 +712,8 @@ export async function ProjectDetails(route, router) {
         const p = data.data;
         projectModules = p.modules || [];
         const rawTitle = p.title || 'Project Details';
-        const cleanTitle = rawTitle.replace(/Student Portal/gi, 'Modules & Tasks').replace(/student portal/gi, 'Modules & Tasks');
-        container.querySelector('#project-title').textContent = cleanTitle;
+        const cleanTitle = rawTitle.replace(/\s*-\s*(student portal|modules\s*&\s*tasks)/gi, '').trim();
+        container.querySelector('#project-title').textContent = cleanTitle || rawTitle;
         const typeEl = container.querySelector('#val-type');
         if (typeEl) typeEl.textContent = p.project_type || 'N/A';
         container.querySelector('#val-client').textContent = p.client_name || 'N/A';
@@ -811,7 +821,7 @@ export async function ProjectDetails(route, router) {
               alertBoxEl.innerHTML = `
                 <div style="font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
                   <span>⚠️ Schedule Alert:</span>
-                  <span>Module(s) taking longer than estimated task weights</span>
+                  <span>Module(s) taking longer than estimated task hours</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                   ${behindModules.map(bm => `
@@ -825,7 +835,7 @@ export async function ProjectDetails(route, router) {
               alertBoxEl.style.border = '1px solid #fcd34d';
               alertBoxEl.style.color = '#92400e';
               alertBoxEl.innerHTML = `
-                <div style="font-weight: 700;">⚠️ Schedule Warning: Total hours logged (${totalHoursLogged.toFixed(1)} hrs) exceeds planned completion weight (${completedProjWeight} hrs).</div>
+                <div style="font-weight: 700;">⚠️ Schedule Warning: Total hours logged (${totalHoursLogged.toFixed(1)} hrs) exceeds planned completion hours (${completedProjWeight} hrs).</div>
               `;
             } else {
               alertBoxEl.style.display = 'none';
@@ -945,6 +955,7 @@ export async function ProjectDetails(route, router) {
             const modTasks = selectedModule.tasks || [];
             const modTitle = selectedModule.module_name || selectedModule.name || 'Module';
             const modDesc = selectedModule.description || '';
+            const modDocPath = selectedModule.document_path || '';
             const mStatus = (selectedModule.status || 'not_started').toLowerCase();
             const isModBlocked = mStatus === 'blocked';
             const isModCompleted = mStatus === 'completed';
@@ -988,10 +999,24 @@ export async function ProjectDetails(route, router) {
                   <h3 style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted, var(--text-muted)); letter-spacing: 0.05em; margin: 0 0 0.6rem;">
                     Module Description
                   </h3>
-                  <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 1.25rem; font-size: 0.92rem; line-height: 1.6; color: var(--text-main, #334155); min-height: 100px; white-space: pre-line;">
+                  <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 1.25rem; font-size: 0.92rem; line-height: 1.6; color: var(--text-main, #334155); min-height: 80px; white-space: pre-line;">
                     ${modDesc ? modDesc : '<span style="color: var(--text-muted, var(--text-secondary)); font-style: italic;">No description provided for this module.</span>'}
                   </div>
                 </div>
+
+                ${modDocPath ? `
+                  <div style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted, var(--text-muted)); letter-spacing: 0.05em; margin: 0 0 0.6rem;">
+                      Documentation / Requirements
+                    </h3>
+                    <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 0.85rem 1.25rem; font-size: 0.9rem;">
+                      <a href="${modDocPath.startsWith('http') ? modDocPath : 'https://' + modDocPath}" target="_blank" rel="noopener noreferrer" style="color: var(--primary, #059669); text-decoration: underline; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; word-break: break-all;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        <span>${modDocPath}</span>
+                      </a>
+                    </div>
+                  </div>
+                ` : ''}
 
                 <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border-color, var(--border-subtle));">
                   <div style="font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
@@ -1181,9 +1206,10 @@ export async function ProjectDetails(route, router) {
 
             return `
               <tr style="border-bottom: 1px solid var(--border-color, var(--border-subtle)); transition: background 0.15s ease;">
-                <td style="padding: 1.15rem 1.25rem;">
-                  <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-primary);">${t.title}</div>
-                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <td style="padding: 1.15rem 1.25rem; max-width: 480px; word-break: break-word;">
+                  <div style="font-weight: 700; font-size: 0.93rem; color: var(--text-primary); word-break: break-word; line-height: 1.45; white-space: normal;">${t.title}</div>
+                  ${t.description ? `<div style="font-size: 0.82rem; color: var(--text-secondary, #475569); margin-top: 5px; word-break: break-word; line-height: 1.45; white-space: normal;">${t.description}</div>` : ''}
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span style="display: flex; align-items: center; gap: 4px;">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       <span>${t.moduleName}</span>
@@ -1191,7 +1217,7 @@ export async function ProjectDetails(route, router) {
                     <span style="color: #cbd5e1;">&bull;</span>
                     <span style="display: inline-flex; align-items: center; gap: 3px; color: #475569; font-weight: 600;">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                      Time/Weight: ${t.weight || 1}
+                      Hours: ${t.weight || 1} hrs
                     </span>
                   </div>
                 </td>
@@ -1428,6 +1454,7 @@ export async function ProjectDetails(route, router) {
         const formData = new FormData(formModule);
         const modName = (formData.get('name') || '').trim();
         const modDesc = (formData.get('description') || '').trim();
+        const modDoc = (formData.get('document_path') || '').trim() || null;
 
         if (!modName) {
           alert('Please enter a module name.');
@@ -1446,6 +1473,7 @@ export async function ProjectDetails(route, router) {
               module_id: 'new',
               new_module_name: modName,
               new_description: modDesc,
+              document_path: modDoc,
               student_ids: []
             })
           });

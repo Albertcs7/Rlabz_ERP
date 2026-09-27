@@ -187,6 +187,21 @@
   box-shadow: 0 0 0 3px rgba(62, 75, 85, 0.15);
 }
 
+select.premium-input {
+  padding: 0.45rem 0.85rem;
+  line-height: normal;
+  min-height: 42px;
+}
+
+#inline-task-module-select,
+#inline-task-title,
+#inline-task-weight {
+  min-height: 42px !important;
+  padding: 0.45rem 0.85rem !important;
+  line-height: normal !important;
+  box-sizing: border-box !important;
+}
+
 .form-group label {
   display: block;
   font-size: 0.85rem;

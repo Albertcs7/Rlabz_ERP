@@ -885,8 +885,26 @@ class StudentController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $projectId = $request->input('projectId');
-        $projectTitle = $request->input('project');
+        $taskId = intval($request->input('taskId'));
+        $task = null;
+
+        if ($taskId) {
+            $task = DB::table('tasks')
+                ->join('modules', 'modules.id', '=', 'tasks.module_id')
+                ->where('tasks.id', $taskId)
+                ->select('tasks.*', 'modules.project_id as module_project_id')
+                ->first();
+
+            if (!$task) {
+                return response()->json(['error' => 'Selected task not found.'], 404);
+            }
+
+            if ($task->assigned_to != $studentId) {
+                return response()->json(['error' => 'You can only log hours for tasks assigned to you.'], 403);
+            }
+
+            $projectId = $task->module_project_id;
+        }
 
         $projectQuery = DB::table('projects');
         if ($projectId) {
@@ -905,27 +923,18 @@ class StudentController extends Controller
             ->first();
 
         if (!$ps) {
-            return response()->json(['error' => 'Student not assigned to this project'], 403);
+            $psId = DB::table('project_student')->insertGetId([
+                'project_id' => $project->id,
+                'student_id' => $studentId,
+                'role' => 'developer',
+                'assigned_date' => now()->toDateString(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            $ps = (object)['id' => $psId];
         }
 
-        $taskId = intval($request->input('taskId'));
-
-        if ($taskId) {
-            $task = DB::table('tasks')
-                ->join('modules', 'modules.id', '=', 'tasks.module_id')
-                ->where('tasks.id', $taskId)
-                ->where('modules.project_id', $project->id)
-                ->select('tasks.*')
-                ->first();
-
-            if (!$task) {
-                return response()->json(['error' => 'Selected task does not belong to this project.'], 422);
-            }
-
-            if ($task->assigned_to != $studentId) {
-                return response()->json(['error' => 'You can only log hours for tasks assigned to you.'], 403);
-            }
-        } else {
+        if (!$taskId) {
             // Find or create active module
             $module = DB::table('modules')->where('project_id', $project->id)->first();
             if (!$module) {
@@ -978,12 +987,94 @@ class StudentController extends Controller
         if (Schema::hasTable('notifications')) {
             DB::table('notifications')->insert([
                 'user_id' => $studentId,
+                'project_id' => $project->id,
                 'type' => 'work_log',
                 'message' => "Daily Work Log for {$workDate} successfully submitted",
                 'is_read' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // If expected time exceeds for the task in worklog, alert the corresponding coordinator
+            if ($taskId) {
+                $taskRecord = DB::table('tasks')->where('id', $taskId)->first();
+                if ($taskRecord) {
+                    $expectedHours = floatval($taskRecord->weight ?? 0);
+                    $totalLoggedHours = floatval(
+                        DB::table('student_work_logs')
+                            ->where('task_id', $taskId)
+                            ->sum('hours_worked')
+                    );
+                    $totalLoggedHours = round($totalLoggedHours, 2);
+
+                    $hoursExceeded = ($expectedHours > 0 && $totalLoggedHours > $expectedHours);
+                    $dateExceeded = (!empty($taskRecord->due_date) && $workDate > $taskRecord->due_date);
+
+                    if ($hoursExceeded || $dateExceeded) {
+                        // Find the corresponding coordinator who oversees/created this project
+                        $coordinatorIds = [];
+                        if (!empty($project->created_by)) {
+                            $creator = DB::table('users')->where('id', $project->created_by)->first();
+                            if ($creator && $creator->role === 'coordinator') {
+                                $coordinatorIds[] = $creator->id;
+                            }
+                        }
+                        if (empty($coordinatorIds)) {
+                            $coordinatorIds = DB::table('users')
+                                ->where('role', 'coordinator')
+                                ->pluck('id')
+                                ->toArray();
+                        }
+
+                        $studentUser = DB::table('users')->where('id', $studentId)->first();
+                        $studentName = $studentUser ? $studentUser->name : 'Student';
+                        $taskTitle = $taskRecord->title ?? 'Assigned Task';
+                        $projTitle = $project->title ?? 'Project';
+
+                        if ($hoursExceeded) {
+                            $diff = round($totalLoggedHours - $expectedHours, 2);
+                            $alertMessage = "Alert: Expected time exceeded for task '{$taskTitle}' in project '{$projTitle}'. {$totalLoggedHours} hrs logged out of {$expectedHours} hrs planned (+{$diff} hrs) by {$studentName}.";
+                            if ($dateExceeded) {
+                                $alertMessage .= " Also logged past due date ({$taskRecord->due_date}).";
+                            }
+                        } else {
+                            $alertMessage = "Alert: Work logged past expected due date for task '{$taskTitle}' in project '{$projTitle}'. Date: {$workDate} (due: {$taskRecord->due_date}) by {$studentName}.";
+                        }
+
+                        foreach (array_unique($coordinatorIds) as $coordId) {
+                            // Check if an unread notification for this task already exists to prevent duplicate spam
+                            $existingAlert = DB::table('notifications')
+                                ->where('user_id', $coordId)
+                                ->where('project_id', $project->id)
+                                ->where('type', 'task_time_exceeded')
+                                ->where('message', 'like', "%task '{$taskTitle}'%")
+                                ->where('is_read', 0)
+                                ->first();
+
+                            if ($existingAlert) {
+                                DB::table('notifications')
+                                    ->where('id', $existingAlert->id)
+                                    ->update([
+                                        'message' => $alertMessage,
+                                        'urgency' => 'high',
+                                        'updated_at' => now(),
+                                    ]);
+                        } else {
+                                DB::table('notifications')->insert([
+                                    'user_id' => $coordId,
+                                    'project_id' => $project->id,
+                                    'type' => 'task_time_exceeded',
+                                    'urgency' => 'high',
+                                    'message' => $alertMessage,
+                                    'is_read' => 0,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         return response()->json(['success' => true]);

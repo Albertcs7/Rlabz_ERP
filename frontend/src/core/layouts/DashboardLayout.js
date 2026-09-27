@@ -364,12 +364,15 @@ export async function DashboardLayout(contentChild, route, router) {
 
     bellBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const isShown = notiDropdown.style.display === 'block';
-      if (isShown) {
-        closeDropdown();
+      e.preventDefault();
+      closeDropdown();
+      const notiRoute = (currentPath.startsWith('/faculty') || authStore.role === 'faculty')
+        ? '/faculty/notifications'
+        : `/${authStore.role || 'faculty'}/notifications`;
+      if (router && typeof router.push === 'function') {
+        router.push(notiRoute);
       } else {
-        notiDropdown.style.display = 'block';
-        positionDropdown();
+        window.location.href = notiRoute;
       }
     });
 
@@ -405,65 +408,81 @@ export async function DashboardLayout(contentChild, route, router) {
     router.push('/auth/login');
   });
 
-  // Bind User Profile Popover Click
+  // Bind User Profile Header Click
   const userProfileHeader = wrapper.querySelector('#user-profile-header');
   const profilePopover = wrapper.querySelector('#profile-popover');
-  if (userProfileHeader && profilePopover && authStore.role === 'student') {
-    userProfileHeader.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isVisible = window.getComputedStyle(profilePopover).display === 'block';
-      profilePopover.style.display = isVisible ? 'none' : 'block';
-    });
+  if (userProfileHeader) {
+    if (authStore.role === 'student' && profilePopover) {
+      userProfileHeader.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = window.getComputedStyle(profilePopover).display === 'block';
+        profilePopover.style.display = isVisible ? 'none' : 'block';
+      });
 
-    // Close popover when clicking anywhere else
-    document.addEventListener('click', () => {
-      profilePopover.style.display = 'none';
-    });
+      // Close popover when clicking anywhere else
+      document.addEventListener('click', () => {
+        profilePopover.style.display = 'none';
+      });
 
-    // Prevent popover inside click from closing it
-    profilePopover.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+      // Prevent popover inside click from closing it
+      profilePopover.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
 
-    // Sync live profile from database
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetch(`${API_BASE}/student/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      // Sync live profile from database
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch(`${API_BASE}/student/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(r => r.ok ? r.json() : null)
+        .then(p => {
+          if (!p) return;
+          const desEl = wrapper.querySelector('#popover-designation');
+          const emailEl = wrapper.querySelector('#popover-email');
+          const deptEl = wrapper.querySelector('#popover-department');
+          const courseEl = wrapper.querySelector('#popover-course');
+          const semEl = wrapper.querySelector('#popover-semester');
+          const nameEl = wrapper.querySelector('#popover-name');
+          
+          if (desEl && p.designation) desEl.textContent = p.designation;
+          if (emailEl && p.email) emailEl.textContent = p.email;
+          if (deptEl && p.department) deptEl.textContent = p.department;
+          if (courseEl && p.course) courseEl.textContent = p.course;
+          if (semEl && (p.semester_text || p.semester)) {
+            semEl.textContent = p.semester_text || `${p.semester}th Semester`;
+          }
+          if (nameEl && p.name) nameEl.textContent = p.name;
+
+          if (user) {
+            user.name = p.name || user.name;
+            user.designation = p.designation || user.designation;
+            user.course = p.course || user.course;
+            user.semester = p.semester || user.semester;
+            user.semester_text = p.semester_text || user.semester_text;
+            user.department = p.department || user.department;
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+        })
+        .catch(() => {});
+      }
+    } else {
+      userProfileHeader.style.cursor = 'pointer';
+      userProfileHeader.title = 'View Profile';
+      userProfileHeader.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const profileRoute = (currentPath.startsWith('/faculty') || authStore.role === 'faculty')
+          ? '/faculty/profile'
+          : `/${authStore.role || 'faculty'}/profile`;
+        if (router && typeof router.push === 'function') {
+          router.push(profileRoute);
+        } else {
+          window.location.href = profileRoute;
         }
-      })
-      .then(r => r.ok ? r.json() : null)
-      .then(p => {
-        if (!p) return;
-        const desEl = wrapper.querySelector('#popover-designation');
-        const emailEl = wrapper.querySelector('#popover-email');
-        const deptEl = wrapper.querySelector('#popover-department');
-        const courseEl = wrapper.querySelector('#popover-course');
-        const semEl = wrapper.querySelector('#popover-semester');
-        const nameEl = wrapper.querySelector('#popover-name');
-        
-        if (desEl && p.designation) desEl.textContent = p.designation;
-        if (emailEl && p.email) emailEl.textContent = p.email;
-        if (deptEl && p.department) deptEl.textContent = p.department;
-        if (courseEl && p.course) courseEl.textContent = p.course;
-        if (semEl && (p.semester_text || p.semester)) {
-          semEl.textContent = p.semester_text || `${p.semester}th Semester`;
-        }
-        if (nameEl && p.name) nameEl.textContent = p.name;
-
-        if (user) {
-          user.name = p.name || user.name;
-          user.designation = p.designation || user.designation;
-          user.course = p.course || user.course;
-          user.semester = p.semester || user.semester;
-          user.semester_text = p.semester_text || user.semester_text;
-          user.department = p.department || user.department;
-          localStorage.setItem('user', JSON.stringify(user));
-        }
-      })
-      .catch(() => {});
+      });
     }
   }
 

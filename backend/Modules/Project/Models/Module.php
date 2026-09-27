@@ -16,6 +16,8 @@ class Module extends Model
         'module_name',
         'description',
         'status',
+        'document_path',
+        'document_name',
         'created_by',
     ];
 

@@ -16,6 +16,7 @@ export function FacultyProfile() {
 
     const token = localStorage.getItem('token');
     let facultyPhoto = localStorage.getItem('faculty_profile_photo') || storedUser?.avatar || null;
+    let isEditing = false;
 
     // Default state derived from logged in user if available
     let facultyData = {
@@ -52,6 +53,17 @@ export function FacultyProfile() {
         }
     }
 
+    function updateTopbarUserName(newName) {
+        const topbarName = document.querySelector('.topbar .user-name');
+        if (topbarName) {
+            topbarName.textContent = newName;
+        }
+        const profileHeaderName = document.querySelector('#user-profile-header .user-name');
+        if (profileHeaderName) {
+            profileHeaderName.textContent = newName;
+        }
+    }
+
     function renderUI() {
         const initials = (facultyData.name || 'Faculty Member')
             .split(' ')
@@ -81,7 +93,7 @@ export function FacultyProfile() {
                         <input type="file" id="faculty-photo-file-input" accept="image/*" style="display: none;" />
 
                         <div style="display: flex; flex-direction: column; gap: 5px; align-items: center; width: 100%;">
-                            <button type="button" id="btn-upload-photo" class="btn btn-sm" style="font-size: 0.75rem; padding: 0.32rem 0.7rem; background: var(--surface-card); border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
+                            <button type="button" id="btn-upload-photo" class="btn btn-sm" style="font-size: 0.75rem; padding: 0.32rem 0.7rem; background: #ffffff; border: 1px solid #059669; color: #059669; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                                 ${facultyPhoto ? 'Change Photo' : 'Upload Photo'}
                             </button>
@@ -95,9 +107,15 @@ export function FacultyProfile() {
                     </div>
 
                     <div class="simple-profile-details">
-                        <div class="simple-profile-header">
-                            <h2>${facultyData.name}</h2>
-                            <span class="simple-profile-badge">${facultyData.role}</span>
+                        <div class="simple-profile-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <h2>${facultyData.name}</h2>
+                                <span class="simple-profile-badge">${facultyData.role}</span>
+                            </div>
+                            <button type="button" id="btn-edit-profile" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.8rem; background: #ffffff; border: 1px solid #059669; color: #059669; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                Edit Profile
+                            </button>
                         </div>
 
                         <div class="simple-profile-grid">
@@ -128,14 +146,65 @@ export function FacultyProfile() {
 
                             <div class="simple-profile-field">
                                 <span class="label">Account Status</span>
-                                <div class="value" style="color: var(--primary); display: flex; align-items: center; gap: 6px;">
-                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-accent); display: inline-block;"></span>
+                                <div class="value" style="color: #059669; display: flex; align-items: center; gap: 6px;">
+                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
                                     Active
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            <!-- Edit Profile Modal Overlay -->
+            <div id="edit-profile-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(2px); z-index: 9999; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
+                <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 520px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); border: 1px solid #e2e8f0; overflow: hidden; animation: fadeInModal 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #f1f5f9; background: #f8fafc;">
+                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            Edit Faculty Profile
+                        </h3>
+                        <button type="button" id="btn-close-edit-modal" style="background: none; border: none; font-size: 1.3rem; color: #64748b; cursor: pointer; line-height: 1;">&times;</button>
+                    </div>
+
+                    <form id="edit-profile-form" style="padding: 22px 24px;">
+                        <div style="display: flex; flex-direction: column; gap: 14px;">
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Full Name *</label>
+                                <input type="text" id="edit-name" required value="${facultyData.name}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                            </div>
+
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Email Address *</label>
+                                <input type="email" id="edit-email" required value="${facultyData.email}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                            </div>
+
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Phone Number</label>
+                                <input type="text" id="edit-phone" value="${facultyData.phone || ''}" placeholder="+91 484 2660605" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Department</label>
+                                    <input type="text" id="edit-department" value="${facultyData.department}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                                </div>
+
+                                <div>
+                                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Designation</label>
+                                    <input type="text" id="edit-designation" value="${facultyData.designation}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
+                            <button type="button" id="btn-cancel-edit" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">Cancel</button>
+                            <button type="submit" id="btn-save-profile" style="padding: 8px 18px; border: none; background: #059669; color: #ffffff; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         `;
@@ -145,6 +214,11 @@ export function FacultyProfile() {
         const btnUpload = container.querySelector('#btn-upload-photo');
         const fileInput = container.querySelector('#faculty-photo-file-input');
         const btnRemove = container.querySelector('#btn-remove-photo');
+        const btnEdit = container.querySelector('#btn-edit-profile');
+        const editModal = container.querySelector('#edit-profile-modal');
+        const btnCloseModal = container.querySelector('#btn-close-edit-modal');
+        const btnCancelEdit = container.querySelector('#btn-cancel-edit');
+        const editForm = container.querySelector('#edit-profile-form');
 
         if (btnUpload && fileInput) {
             btnUpload.addEventListener('click', () => {
@@ -195,6 +269,112 @@ export function FacultyProfile() {
                 showFacultySuccessPopup('Photo Removed', 'Profile photo removed. Default initials avatar restored.');
                 renderUI();
                 setupListeners();
+            });
+        }
+
+        // Edit Profile modal handlers
+        if (btnEdit && editModal) {
+            btnEdit.addEventListener('click', () => {
+                editModal.style.display = 'flex';
+            });
+        }
+
+        if (btnCloseModal && editModal) {
+            btnCloseModal.addEventListener('click', () => {
+                editModal.style.display = 'none';
+            });
+        }
+
+        if (btnCancelEdit && editModal) {
+            btnCancelEdit.addEventListener('click', () => {
+                editModal.style.display = 'none';
+            });
+        }
+
+        if (editModal) {
+            editModal.addEventListener('click', (e) => {
+                if (e.target === editModal) {
+                    editModal.style.display = 'none';
+                }
+            });
+        }
+
+        if (editForm) {
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const nameInput = container.querySelector('#edit-name');
+                const emailInput = container.querySelector('#edit-email');
+                const phoneInput = container.querySelector('#edit-phone');
+                const deptInput = container.querySelector('#edit-department');
+                const desigInput = container.querySelector('#edit-designation');
+                const btnSave = container.querySelector('#btn-save-profile');
+
+                const payload = {
+                    name: (nameInput?.value || '').trim(),
+                    email: (emailInput?.value || '').trim(),
+                    phone: (phoneInput?.value || '').trim(),
+                    department: (deptInput?.value || '').trim(),
+                    designation: (desigInput?.value || '').trim(),
+                };
+
+                if (!payload.name || !payload.email) {
+                    showFacultyErrorPopup('Validation Error', 'Full Name and Email Address are required.');
+                    return;
+                }
+
+                if (btnSave) {
+                    btnSave.disabled = true;
+                    btnSave.textContent = 'Saving...';
+                }
+
+                try {
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    };
+
+                    const res = await fetch(`${API_BASE}/faculty/profile`, {
+                        method: 'PUT',
+                        headers,
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && (data.status === 'success' || data.name || data.data)) {
+                        const updated = data.data || data;
+                        facultyData.name = updated.name || payload.name;
+                        facultyData.email = updated.email || payload.email;
+                        facultyData.phone = updated.phone || payload.phone;
+                        if (updated.department) facultyData.department = updated.department;
+                        if (updated.designation) facultyData.designation = updated.designation;
+
+                        // Persist in localStorage stored user
+                        if (storedUser) {
+                            storedUser.name = facultyData.name;
+                            storedUser.email = facultyData.email;
+                            storedUser.phone = facultyData.phone;
+                            localStorage.setItem('user', JSON.stringify(storedUser));
+                        }
+
+                        updateTopbarUserName(facultyData.name);
+                        showFacultySuccessPopup('Profile Updated', 'Your profile details have been successfully updated in the database.');
+                        editModal.style.display = 'none';
+                        renderUI();
+                        setupListeners();
+                    } else {
+                        showFacultyErrorPopup('Update Error', data.error || data.message || 'Could not update profile details.');
+                    }
+                } catch (err) {
+                    console.error('Failed to update faculty profile:', err);
+                    showFacultyErrorPopup('Network Error', 'Failed to connect to server to update profile.');
+                } finally {
+                    if (btnSave) {
+                        btnSave.disabled = false;
+                        btnSave.textContent = 'Save Changes';
+                    }
+                }
             });
         }
     }

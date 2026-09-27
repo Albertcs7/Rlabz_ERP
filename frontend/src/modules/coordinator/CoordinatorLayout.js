@@ -69,6 +69,13 @@ export async function CoordinatorLayout(contentChild, route, router) {
     <line x1="17" y1="17" x2="17" y2="6"></line>
   </svg>`;
 
+      const iconNotifications = `
+  <svg width="18" height="18" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+  </svg>`;
+
     const navItems = [
       {
         title: 'Coordinator Overview',
@@ -100,12 +107,16 @@ export async function CoordinatorLayout(contentChild, route, router) {
         path: '/coordinator/reports',
         icon: iconReports
       },
-
       {
   title: 'Finance',
   path: '/coordinator/finance',
   icon: iconFinance
-}
+},
+      {
+        title: 'Notifications',
+        path: '/coordinator/notifications',
+        icon: iconNotifications
+      }
     ];
 
     const navHTML = navItems.map(item => `

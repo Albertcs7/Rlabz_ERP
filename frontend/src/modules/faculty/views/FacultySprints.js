@@ -365,6 +365,18 @@ export function FacultySprints() {
                                 />
                             </div>
 
+                            <div class="form-group" style="margin-bottom: 0.75rem;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.35rem;">
+                                    Document / Requirement URL (Optional)
+                                </label>
+                                <input
+                                    type="url"
+                                    id="input-new-module-doc"
+                                    class="premium-input"
+                                    placeholder="e.g. Google Docs, Notion, or Specification URL"
+                                />
+                            </div>
+
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.35rem;">
                                     Description (Optional)
@@ -654,6 +666,13 @@ export function FacultySprints() {
                                         <p style="margin: 0 0 1rem; font-size: 0.86rem; color: var(--text-muted, var(--text-muted)); line-height: 1.45;">
                                             ${m.description || 'No description provided.'}
                                         </p>
+                                        ${m.document_path ? `
+                                            <div style="margin-bottom: 0.85rem;">
+                                                <a href="${m.document_path.startsWith('http') ? m.document_path : 'https://' + m.document_path}" target="_blank" rel="noopener noreferrer" style="font-size: 0.82rem; color: var(--primary, #059669); text-decoration: underline; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; word-break: break-all;">
+                                                    📄 Document URL: ${m.document_path} ↗
+                                                </a>
+                                            </div>
+                                        ` : ''}
                                     </div>
 
                                     <div style="border-top: 1px solid var(--border-color, #f1f5f9); padding-top: 0.85rem; margin-top: auto;">
@@ -878,6 +897,7 @@ export function FacultySprints() {
         const selectModule = container.querySelector('#select-module-dropdown');
         const containerNewModule = container.querySelector('#container-new-module');
         const newModuleNameInput = container.querySelector('#input-new-module-name');
+        const newModuleDocInput = container.querySelector('#input-new-module-doc');
         const newModuleDescInput = container.querySelector('#input-new-module-desc');
 
         // Multi-select dropdown elements
@@ -1106,6 +1126,7 @@ export function FacultySprints() {
                         module_id: moduleIdVal,
                         new_module_name: moduleIdVal === 'new' ? newModuleNameInput.value.trim() : null,
                         new_description: moduleIdVal === 'new' ? newModuleDescInput.value.trim() : null,
+                        document_path: moduleIdVal === 'new' ? (newModuleDocInput?.value?.trim() || null) : null,
                         student_ids: checkedStudentIds
                     };
 
@@ -1677,7 +1698,7 @@ export function FacultySprints() {
             }
         } catch (err) {
             console.error('Error loading project detail:', err);
-            alert('Could not load project modules and student assignments.');
+            showFacultyErrorPopup('Load Error', 'Could not load project modules and student assignments.');
             currentView = 'project-list';
         } finally {
             isLoadingDetail = false;
