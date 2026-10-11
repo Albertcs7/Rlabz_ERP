@@ -20,8 +20,15 @@ Route::group(['prefix' => 'student', 'middleware' => ['auth.jwt']], function () 
     Route::post('/tasks/{id}/github', [StudentController::class, 'updateTaskGithub']);
     Route::get('/certificates', [StudentController::class, 'getCertificates']);
     Route::get('/meetings', [StudentController::class, 'getMeetings']);
+    Route::get('/calendar-events', [StudentController::class, 'getCalendarEvents']);
     Route::get('/notifications', [StudentController::class, 'getNotifications']);
+    Route::post('/notifications/{id}/read', [StudentController::class, 'markNotificationRead']);
+    Route::post('/notifications/mark-all-read', [StudentController::class, 'markAllNotificationsRead']);
     Route::get('/profile', [StudentController::class, 'getProfile']);
+    Route::get('/password-request-status', [StudentController::class, 'getPasswordRequestStatus']);
+    Route::post('/request-password-change', [StudentController::class, 'requestPasswordChange']);
+    Route::post('/cancel-password-request', [StudentController::class, 'cancelPasswordRequest']);
+    Route::post('/change-password', [StudentController::class, 'updatePassword']);
     Route::get('/dashboard', [StudentController::class, 'getDashboard']);
     Route::post('/tasks/{id}/status', [StudentController::class, 'updateTaskStatus']);
     Route::get('/chats/{projectId}', [StudentController::class, 'getChatMessages']);

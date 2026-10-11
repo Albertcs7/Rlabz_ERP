@@ -1,6 +1,7 @@
 import { renderStudentSidebar } from './StudentSidebar.js';
-import { getProjects, getChatMessages, saveChatMessage, ensureDataLoaded } from './studentStore.js';
+import { getProjects, getChatMessages, saveChatMessage, getWorkLogs, ensureDataLoaded } from './studentStore.js';
 import { StudentSwal, showStudentWarning, showStudentError } from '../studentAlerts.js';
+import { STORAGE_BASE } from '@/core/config/api.js';
 import '../student.css';
 
 export async function StudentChat(route, router) {
@@ -11,16 +12,23 @@ export async function StudentChat(route, router) {
   container.className = 'student-portal-container animate-fade-in student-comm-view';
 
   const projects = getProjects() || [];
-  
+
   // Default select first project
   let selectedProjectTitle = projects.length > 0 ? projects[0].title : '';
   let chatSearch = '';
   let draftMessage = '';
+  let currentAttachment = null;
+
+  function formatFileSize(bytes) {
+    if (!bytes || isNaN(bytes)) return '';
+    if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / 1024).toFixed(1) + ' KB';
+  }
 
   function render() {
     const messages = getChatMessages() || [];
     const currentProject = projects.find(p => p.title === selectedProjectTitle);
-    
+
     // Filter messages for current project
     const projectMsgs = messages.filter(m => m.project === selectedProjectTitle);
 
@@ -41,7 +49,6 @@ export async function StudentChat(route, router) {
     const chatSidebarItems = filteredProjects.map(p => {
       const isSelected = p.title === selectedProjectTitle;
       const pMsgs = messages.filter(m => m.project === p.title);
-      const lastMsg = pMsgs.length > 0 ? pMsgs[pMsgs.length - 1] : null;
       const initial = (p.faculty || 'S').charAt(0).toUpperCase();
 
       return `
@@ -69,14 +76,36 @@ export async function StudentChat(route, router) {
     const messagesHtml = projectMsgs.map(m => {
       const isStudent = m.sender === 'student';
       const timeStr = new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const hasAttachment = Boolean(m.attachment && (m.attachment.url || m.attachment.dataUrl || m.attachment.name));
+
       return `
         <div class="student-comm-msg-wrap ${isStudent ? 'sent' : 'received'}">
           <div class="student-comm-bubble">
-            ${m.text}
+            ${m.text ? `
+              <div style="white-space: pre-wrap; word-break: break-word; ${hasAttachment ? 'margin-bottom: 8px;' : ''}">
+                ${m.text}
+              </div>
+            ` : ''}
+            ${hasAttachment ? `
+              <div class="student-comm-file-card" data-filename="${m.attachment.name || 'file'}" data-fileurl="${m.attachment.url || m.attachment.dataUrl || ''}" title="Click to download ${m.attachment.name || 'attachment'}">
+                <div class="student-comm-file-icon">
+                  ${(m.attachment.name || '').toLowerCase().endsWith('.pdf') ? '📄' :
+            (m.attachment.name || '').toLowerCase().endsWith('.csv') || (m.attachment.name || '').toLowerCase().endsWith('.xlsx') ? '📊' :
+              (m.attachment.type || '').startsWith('image/') ? '🖼️' : '📎'}
+                </div>
+                <div class="student-comm-file-details">
+                  <div class="student-comm-file-name">${m.attachment.name || 'Attached File'}</div>
+                  <div class="student-comm-file-size">${formatFileSize(m.attachment.size) || 'Ready to download'}</div>
+                </div>
+                <button type="button" class="student-comm-file-download-btn" title="Download">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+              </div>
+            ` : ''}
           </div>
           <div class="student-comm-meta">
             ${isStudent ? `
-              <span style="font-weight: 700; color: #0284c7;">You</span>
+              <span style="font-weight: 700; color: #00796B;">You</span>
               <span>•</span>
               <span>${timeStr}</span>
             ` : `
@@ -100,7 +129,7 @@ export async function StudentChat(route, router) {
           </div>
           <div>
             <h1 class="student-comm-title">Faculty Communication</h1>
-            <p class="student-comm-subtitle">Direct encrypted messaging and feedback exchange with your project supervisor.</p>
+            <p class="student-comm-subtitle"></p>
           </div>
         </div>
       </div>
@@ -136,16 +165,6 @@ export async function StudentChat(route, router) {
             <div class="student-comm-kpi-lbl">Messages Sent</div>
           </div>
         </div>
-
-        <div class="student-comm-kpi-card kpi-amber">
-          <div class="student-comm-kpi-icon amber">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-          </div>
-          <div class="student-comm-kpi-info">
-            <div class="student-comm-kpi-val" style="font-size: 1.15rem; font-weight: 800; color: #d97706;">Live & Direct</div>
-            <div class="student-comm-kpi-lbl">Channel Status</div>
-          </div>
-        </div>
       </div>
 
       <!-- Messenger Workspace Layout -->
@@ -155,7 +174,7 @@ export async function StudentChat(route, router) {
           <div class="student-comm-sidebar">
             <div class="student-comm-sidebar-head">
               <div class="student-comm-sidebar-title">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 <span>Project Supervisors</span>
               </div>
               <div class="student-comm-sidebar-search-wrap">
@@ -185,11 +204,6 @@ export async function StudentChat(route, router) {
                     </div>
                   </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span class="student-badge student-badge-success" style="font-size: 0.74rem; font-weight: 700;">
-                    ● Active Channel
-                  </span>
-                </div>
               </div>
 
               <!-- Message Stream -->
@@ -199,30 +213,40 @@ export async function StudentChat(route, router) {
                   <div style="text-align:center; color:var(--text-muted); margin: 60px auto 0; font-size:0.88rem; max-width: 360px;">
                     <div style="font-size: 2rem; margin-bottom: 8px;">💬</div>
                     <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">No messages in this chat yet</div>
-                    <div style="font-size: 0.8rem;">Start the conversation with your supervisor by sending a message below.</div>
+                    <div style="font-size: 0.8rem;">Start the conversation with your supervisor by sending a message or attaching a timesheet below.</div>
                   </div>
                 `}
               </div>
 
               <!-- Quick Prompt Suggestions -->
               <div class="student-comm-quick-prompts">
-                <button type="button" class="student-comm-prompt-chip" data-prompt="Hi Professor, I have pushed updates to the sprint branch.">
-                  🚀 Sprint updates pushed
-                </button>
-                <button type="button" class="student-comm-prompt-chip" data-prompt="Could you please review my pull request when convenient?">
-                  🔍 Review Pull Request
-                </button>
-                <button type="button" class="student-comm-prompt-chip" data-prompt="I need clarification regarding the database schema task.">
-                  ❓ Schema clarification
-                </button>
-                <button type="button" class="student-comm-prompt-chip" data-prompt="Can we schedule a quick 10-minute sync during your office hours?">
-                  📅 Request sync
-                </button>
+     
+              </div>
+
+              <!-- Attachment Preview Bar (shown when file is chosen) -->
+              <div id="chat-attachment-preview-bar" class="student-comm-attachment-preview-bar" style="${currentAttachment ? 'display:flex;' : 'display:none;'}">
+                <div class="student-comm-attachment-preview-chip">
+                  <span class="student-comm-chip-icon">
+                    ${currentAttachment && (currentAttachment.name || '').toLowerCase().endsWith('.pdf') ? '📄' :
+          currentAttachment && ((currentAttachment.name || '').toLowerCase().endsWith('.csv') || (currentAttachment.name || '').toLowerCase().endsWith('.xlsx')) ? '📊' : '📎'}
+                  </span>
+                  <span class="student-comm-chip-name" style="max-width: 220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${currentAttachment ? currentAttachment.name : ''}
+                  </span>
+                  <span class="student-comm-chip-size" style="color: #00796B; font-size: 0.75rem;">
+                    (${currentAttachment ? formatFileSize(currentAttachment.size) : ''})
+                  </span>
+                  <button type="button" id="btn-remove-attachment" class="student-comm-chip-remove" title="Remove attachment">×</button>
+                </div>
               </div>
 
               <!-- Footer Input -->
               <form id="chat-form" class="student-comm-footer">
-                <input type="text" id="chat-input" class="student-comm-input" placeholder="Type a message to ${currentProject.faculty}..." value="${draftMessage}" required autocomplete="off">
+                <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,.zip,.png,.jpg,.jpeg">
+                <button type="button" id="btn-attach-file" class="student-comm-attach-btn" title="Attach downloaded file (PDF, CSV, Timesheet, Docs)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                </button>
+                <input type="text" id="chat-input" class="student-comm-input" placeholder="Type a message to ${currentProject.faculty} or attach a file..." value="${draftMessage}" autocomplete="off">
                 <button type="submit" class="student-comm-send-btn">
                   <span>Send</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -246,6 +270,28 @@ export async function StudentChat(route, router) {
       chatBody.scrollTop = chatBody.scrollHeight;
     }
 
+    // Bind file download clicks on message attachment cards
+    container.querySelectorAll('.student-comm-file-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        let fileUrl = card.getAttribute('data-fileurl');
+        const filename = card.getAttribute('data-filename') || 'download';
+        if (fileUrl) {
+          if (fileUrl.startsWith('/storage')) {
+            fileUrl = `${STORAGE_BASE}${fileUrl.replace(/^\/storage/, '')}`;
+          }
+          const a = document.createElement('a');
+          a.href = fileUrl;
+          a.download = filename;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } else {
+          showStudentWarning('File Unavailable', 'This attachment does not have a valid download link.');
+        }
+      });
+    });
+
     // Bind sidebar clicks
     container.querySelectorAll('.student-comm-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -266,11 +312,94 @@ export async function StudentChat(route, router) {
       }
     });
 
+    // Bind file attachment button & input
+    const fileInput = container.querySelector('#chat-file-input');
+    const attachBtn = container.querySelector('#btn-attach-file');
+    attachBtn?.addEventListener('click', () => {
+      fileInput?.click();
+    });
+
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (file.size > 15 * 1024 * 1024) {
+        showStudentWarning('File Too Large', 'Please select a file smaller than 15MB.');
+        fileInput.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        currentAttachment = {
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          dataUrl: reader.result
+        };
+        render();
+        StudentSwal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `Attached: ${file.name}`,
+          showConfirmButton: false,
+          timer: 2000
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Bind remove attachment button
+    const removeAttachBtn = container.querySelector('#btn-remove-attachment');
+    removeAttachBtn?.addEventListener('click', () => {
+      currentAttachment = null;
+      if (fileInput) fileInput.value = '';
+      render();
+    });
+
     // Bind quick prompt chips
     container.querySelectorAll('.student-comm-prompt-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const text = chip.getAttribute('data-prompt');
         const input = container.querySelector('#chat-input');
+
+        if (text === '__WORKLOG__') {
+          const logs = getWorkLogs() || [];
+          const projectLogs = logs.filter(l => l.project === selectedProjectTitle);
+          if (projectLogs.length > 0) {
+            const totalHours = projectLogs.reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+            const approvedHours = projectLogs.filter(l => (l.status || '').toLowerCase() === 'approved').reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+            const recentLogs = [...projectLogs].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 4);
+            const entryLines = recentLogs.map(l => {
+              const taskPart = l.taskCode ? `[${l.taskCode}] ` : '';
+              return `• ${l.date}: ${taskPart}${parseFloat(l.hours || 0).toFixed(1)} hrs - ${l.description || 'Task work'}`;
+            }).join('\n');
+            const logMsg = `📋 Daily Work Log Summary (${selectedProjectTitle}):\n• Total Logged: ${totalHours.toFixed(1)} hrs (${approvedHours.toFixed(1)} hrs approved)\n${entryLines}\n\nPlease review my logged hours when convenient.`;
+            if (input) {
+              input.value = logMsg;
+              draftMessage = logMsg;
+              input.focus();
+              StudentSwal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: 'Work log summary loaded!',
+                showConfirmButton: false,
+                timer: 2000
+              });
+            }
+          } else {
+            const defaultMsg = `Hi Professor, I have logged my daily work hours on the portal for ${selectedProjectTitle}. Please review my timesheet when convenient.`;
+            if (input) {
+              input.value = defaultMsg;
+              draftMessage = defaultMsg;
+              input.focus();
+            }
+          }
+          return;
+        }
+
         if (input) {
           input.value = text;
           draftMessage = text;
@@ -291,19 +420,30 @@ export async function StudentChat(route, router) {
         return;
       }
 
-      if (!text) {
-        showStudentWarning('Empty Message', 'Please type a message before sending.');
+      if (!text && !currentAttachment) {
+        showStudentWarning('Empty Message', 'Please type a message or attach a file before sending.');
         return;
       }
 
       try {
-        await saveChatMessage(selectedProjectTitle, text);
+        const attachToSend = currentAttachment;
+        await saveChatMessage(selectedProjectTitle, text, attachToSend);
         draftMessage = '';
+        currentAttachment = null;
+        if (fileInput) fileInput.value = '';
         render();
       } catch (err) {
         showStudentError('Message Failed', 'Could not send message. Please try again.');
       }
     });
+
+    // Auto-scroll chat body so latest messages are in view
+    setTimeout(() => {
+      const chatBody = container.querySelector('.student-comm-body');
+      if (chatBody) {
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }
+    }, 60);
   }
 
   render();

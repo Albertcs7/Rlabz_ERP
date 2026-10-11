@@ -26,7 +26,7 @@ export function showStudentSuccess(title, text, timer = null) {
     icon: 'success',
     title,
     text,
-    ...(timer ? { timer, timerProgressBar: true, showConfirmButton: false } : { confirmButtonText: 'Great!' })
+    ...(timer ? { timer, timerProgressBar: true, showConfirmButton: false } : { confirmButtonText: 'OK' })
   });
 }
 

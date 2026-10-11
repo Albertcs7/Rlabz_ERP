@@ -194,6 +194,14 @@ class VanillaRouter {
       }
       // Update sidebar and active state to reflect the new route
       const currentPath = window.location.pathname;
+      const isStudentPortal = currentPath.startsWith('/student');
+      const layoutEl = this.container.querySelector('.dashboard-layout');
+      if (layoutEl) {
+        layoutEl.classList.toggle('student-layout', isStudentPortal);
+      }
+      if (outlet) {
+        outlet.classList.toggle('student-content-outlet', isStudentPortal);
+      }
       const { updateSidebar } = await import('../layouts/DashboardLayout.js');
       updateSidebar(currentPath);
       // Update topbar title

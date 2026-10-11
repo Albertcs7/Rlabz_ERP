@@ -150,7 +150,7 @@ export async function StudentCertificates(route, router) {
           </div>
           <div>
             <h1 class="student-cert-title">My Certificates</h1>
-            <p class="student-cert-subtitle">View, verify, and download official project completion certificates issued by the academy.</p>
+            <p class="student-cert-subtitle"></p>
           </div>
         </div>
       </div>

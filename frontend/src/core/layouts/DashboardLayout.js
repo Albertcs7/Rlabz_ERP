@@ -200,10 +200,15 @@ export async function DashboardLayout(contentChild, route, router) {
   const currentPath = window.location.pathname;
 
   const wrapper = document.createElement('div');
-  wrapper.className = 'dashboard-layout animate-fade-in';
+  const isStudentPortal = currentPath.startsWith('/student');
+  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
 
   const user = authStore.user;
   const isStudent = authStore.role === 'student';
+  const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
+  const studentPhoto = (isStudent && studentIdentifier)
+    ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
+    : null;
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
@@ -229,6 +234,7 @@ export async function DashboardLayout(contentChild, route, router) {
       <header class="topbar">
         <div class="topbar-title">${route.title || (route.name === 'faculty-sprints' ? 'PROJECT MODULES & TASKS' : (route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'RLABZ ERP'))}</div>
         <div style="display:flex; align-items:center; gap:0.85rem;">
+          ${!isStudentPortal ? `
           <div class="notification-container">
             <button id="noti-bell-btn" class="noti-bell-btn" title="Notifications" aria-label="Notifications">
               ${BELL_ICON}
@@ -242,9 +248,12 @@ export async function DashboardLayout(contentChild, route, router) {
               <div id="noti-list-container" class="noti-list-container"><p class="noti-empty">Loading...</p></div>
             </div>
           </div>
+          ` : ''}
 
         <div class="user-profile" id="user-profile-header">
-          <div class="avatar">${initial}</div>
+          <div class="avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+            ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+          </div>
           <div class="user-details">
             <span class="user-name">${displayName}</span>
             <span class="user-role" style="color: var(--primary-accent); font-weight: 600;">${roleName}</span>
@@ -253,7 +262,9 @@ export async function DashboardLayout(contentChild, route, router) {
           <!-- Floating Profile Popover -->
           <div class="profile-popover" id="profile-popover">
             <div class="profile-popover-header">
-              <div class="profile-popover-avatar" id="popover-avatar">${initial}</div>
+              <div class="profile-popover-avatar" id="popover-avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+                ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+              </div>
               <div class="profile-popover-meta">
                 <span class="profile-popover-name" id="popover-name">${displayName}</span>
                 <span class="profile-popover-role" id="popover-role">${roleName}</span>
@@ -281,6 +292,11 @@ export async function DashboardLayout(contentChild, route, router) {
                 <span class="profile-popover-value" id="popover-semester">${semester}</span>
               </div>
             </div>
+            <div class="profile-popover-footer" style="padding: 10px 14px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end;">
+              <a href="/student/profile" id="popover-student-profile-link" style="font-size: 0.8rem; font-weight: 600; color: #059669; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                Profile Settings & Change Password &rarr;
+              </a>
+            </div>
           </div>
         </div>
         
@@ -294,7 +310,7 @@ export async function DashboardLayout(contentChild, route, router) {
         </div>
       </header>
 
-      <main class="content-outlet" id="layout-outlet"></main>
+      <main class="content-outlet${isStudentPortal ? ' student-content-outlet' : ''}" id="layout-outlet"></main>
     </div>
   `;
 
@@ -428,6 +444,19 @@ export async function DashboardLayout(contentChild, route, router) {
       profilePopover.addEventListener('click', (e) => {
         e.stopPropagation();
       });
+
+      const profileLink = profilePopover.querySelector('#popover-student-profile-link');
+      if (profileLink) {
+        profileLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          profilePopover.style.display = 'none';
+          if (router && typeof router.push === 'function') {
+            router.push('/student/profile');
+          } else {
+            window.location.href = '/student/profile';
+          }
+        });
+      }
 
       // Sync live profile from database
       const token = localStorage.getItem('token');

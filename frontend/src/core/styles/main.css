@@ -723,6 +723,27 @@ body {
   scrollbar-color: var(--teal-200) rgba(0, 0, 0, 0.03);
 }
 
+/* Student Portal Scoped Main Content Theme - Matches Navbar Background (#FFFFFF) */
+.dashboard-layout.student-layout .content-outlet,
+.student-layout .content-outlet,
+.student-content-outlet,
+.content-outlet:has(.student-portal-container) {
+  background-color: #ffffff !important;
+}
+
+/* Student Portal Scoped: Remove Notification Bell Button without affecting other modules */
+.dashboard-layout.student-layout .notification-container,
+.dashboard-layout.student-layout #noti-bell-btn,
+.dashboard-layout.student-layout .noti-bell-btn,
+.dashboard-layout:has(.student-portal-container) .notification-container,
+.dashboard-layout:has(.student-portal-container) #noti-bell-btn,
+.dashboard-layout:has(.student-portal-container) .noti-bell-btn,
+body:has(.student-portal-container) .notification-container,
+body:has(.student-portal-container) #noti-bell-btn,
+body:has(.student-portal-container) .noti-bell-btn {
+  display: none !important;
+}
+
 .content-outlet::-webkit-scrollbar {
   width: 8px;
 }
