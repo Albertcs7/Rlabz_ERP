@@ -5,6 +5,7 @@ namespace Modules\Faculty\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -85,14 +86,39 @@ class FacultyController extends Controller
             ->select('id', 'title', 'title as name', 'client_name', 'project_type', 'status', 'requirements')
             ->get();
 
-        // Calculate progress for each project (completed tasks / total tasks)
+        // Calculate overall progress for each project based on modules and completed modules
         foreach ($projects as $p) {
-            $moduleIds = DB::table('modules')->where('project_id', $p->id)->pluck('id');
-            $totalTasks = DB::table('tasks')->whereIn('module_id', $moduleIds)->count();
-            $completedTasks = DB::table('tasks')->whereIn('module_id', $moduleIds)->where('status', 'completed')->count();
+            $modules = DB::table('modules')->where('project_id', $p->id)->get();
+            $totalModules = $modules->count();
+            $completedModules = 0;
+            $totalTasks = 0;
+            $completedTasks = 0;
+
+            if ($totalModules > 0) {
+                $moduleIds = $modules->pluck('id');
+                $tasks = DB::table('tasks')->whereIn('module_id', $moduleIds)->get();
+                $totalTasks = $tasks->count();
+                $completedTasks = $tasks->where('status', 'completed')->count();
+
+                foreach ($modules as $m) {
+                    $mTasks = $tasks->where('module_id', $m->id);
+                    $mTaskCount = $mTasks->count();
+                    $mCompletedCount = $mTasks->where('status', 'completed')->count();
+
+                    // A module is considered completed if marked as 'completed' in modules table
+                    // OR if it has tasks and all tasks inside that module are completed
+                    if (strtolower($m->status ?? '') === 'completed' || ($mTaskCount > 0 && $mCompletedCount === $mTaskCount)) {
+                        $completedModules++;
+                    }
+                }
+            }
+
+            $p->total_modules = $totalModules;
+            $p->completed_modules = $completedModules;
             $p->total_tasks = $totalTasks;
             $p->completed_tasks = $completedTasks;
-            $p->progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
+            // Overall progress based on modules inside the project
+            $p->progress = $totalModules > 0 ? round(($completedModules / $totalModules) * 100) : ($totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0);
             $p->students_count = DB::table('project_student')->where('project_id', $p->id)->count();
         }
 
@@ -360,14 +386,27 @@ class FacultyController extends Controller
             ->where('faculty_id', $facultyId)
             ->pluck('project_id');
 
+        // Identify students who belong to this faculty's assigned projects
+        $facultyStudentIds = collect();
+        if ($projectIds->isNotEmpty()) {
+            $facultyStudentIds = DB::table('project_student')
+                ->whereIn('project_id', $projectIds)
+                ->pluck('student_id')
+                ->unique();
+        }
+
         $query = DB::table('project_student')
             ->join('users', 'users.id', '=', 'project_student.student_id')
             ->leftJoin('student_profiles', 'student_profiles.student_id', '=', 'users.id')
             ->join('projects', 'projects.id', '=', 'project_student.project_id');
 
-        // Filter by assigned projects if the faculty has project assignments
+        // If faculty has assigned projects, include only students under those projects,
+        // but retrieve ALL projects those students are part of!
         if ($projectIds->isNotEmpty()) {
-            $query->whereIn('project_student.project_id', $projectIds);
+            if ($facultyStudentIds->isEmpty()) {
+                return response()->json([]);
+            }
+            $query->whereIn('project_student.student_id', $facultyStudentIds);
         }
 
         $studentRecords = $query->select(
@@ -409,11 +448,51 @@ class FacultyController extends Controller
                 return $item->student_id . '_' . $item->project_id;
             });
 
-        $students = $studentRecords->map(function ($s) use ($taskRatings) {
+        // Also calculate average ratings from student_work_logs table for each student per project
+        $workLogRatings = DB::table('student_work_logs')
+            ->join('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
+            ->where(function ($q) {
+                $q->whereNotNull('student_work_logs.rating')
+                  ->orWhereNotNull('student_work_logs.ratings');
+            })
+            ->select(
+                'project_student.student_id',
+                'project_student.project_id',
+                DB::raw('ROUND(AVG(COALESCE(student_work_logs.rating, student_work_logs.ratings)), 1) as avg_rating'),
+                DB::raw('COUNT(student_work_logs.id) as rated_tasks_count')
+            )
+            ->groupBy('project_student.student_id', 'project_student.project_id')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->student_id . '_' . $item->project_id;
+            });
+
+        $students = $studentRecords->map(function ($s) use ($taskRatings, $workLogRatings, $projectIds) {
             $key = $s->student_id . '_' . $s->project_id;
             $ratingObj = $taskRatings->get($key);
-            $avgRating = $ratingObj ? (float) $ratingObj->avg_rating : null;
-            $ratedTasksCount = $ratingObj ? (int) $ratingObj->rated_tasks_count : 0;
+            $wlRatingObj = $workLogRatings->get($key);
+            $avgRating = $ratingObj ? (float) $ratingObj->avg_rating : ($wlRatingObj ? (float) $wlRatingObj->avg_rating : null);
+            $ratedTasksCount = $ratingObj ? (int) $ratingObj->rated_tasks_count : ($wlRatingObj ? (int) $wlRatingObj->rated_tasks_count : 0);
+
+            // Calculate other projects this student is working in (excluding this faculty's assigned projects)
+            $allStudentProjectIds = DB::table('project_student')
+                ->where('student_id', $s->student_id)
+                ->pluck('project_id');
+
+            $otherProjectsQuery = DB::table('projects')
+                ->whereIn('id', $allStudentProjectIds);
+
+            if ($projectIds->isNotEmpty()) {
+                $otherProjectsQuery->whereNotIn('id', $projectIds);
+            } else {
+                $otherProjectsQuery->where('id', '!=', $s->project_id);
+            }
+
+            $otherProjects = $otherProjectsQuery
+                ->pluck('title')
+                ->unique()
+                ->values()
+                ->toArray();
 
             return [
                 'student_id' => $s->student_id,
@@ -432,6 +511,7 @@ class FacultyController extends Controller
                 'rating' => $avgRating,
                 'avg_rating' => $avgRating,
                 'rated_tasks_count' => $ratedTasksCount,
+                'other_projects' => $otherProjects,
             ];
         });
 
@@ -1810,6 +1890,187 @@ class FacultyController extends Controller
             'project' => $project,
             'work_logs' => $workLogs,
             'behind_schedule_modules' => $behindScheduleModules
+        ]);
+    }
+
+    /**
+     * Download formatted work log for a specific project.
+     * Organized hierarchically: Month -> Week -> Module -> Task, showing student work logs.
+     */
+    public function downloadProjectWorkLogs(Request $request, $id)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $project = DB::table('projects')->where('id', $id)->first();
+        if (!$project) {
+            return response()->json(['error' => 'Project not found.'], 404);
+        }
+
+        // Verify project assignment for faculty
+        $isAssigned = DB::table('project_faculty')
+            ->where('faculty_id', $facultyId)
+            ->where('project_id', $id)
+            ->exists();
+        $hasAnyAssignments = DB::table('project_faculty')->where('faculty_id', $facultyId)->exists();
+        if ($hasAnyAssignments && !$isAssigned) {
+            return response()->json(['error' => 'You are not assigned to this project.'], 403);
+        }
+
+        // Fetch student work logs related to this project
+        $logs = DB::table('student_work_logs')
+            ->leftJoin('tasks', 'tasks.id', '=', 'student_work_logs.task_id')
+            ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->leftJoin('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
+            ->leftJoin('users as student', 'student.id', '=', DB::raw('COALESCE(tasks.assigned_to, project_student.student_id)'))
+            ->leftJoin('student_profiles', 'student_profiles.student_id', '=', 'student.id')
+            ->leftJoin('users as approver', 'approver.id', '=', 'student_work_logs.approved_by')
+            ->where(function ($q) use ($id) {
+                $q->where('modules.project_id', $id)
+                  ->orWhere('project_student.project_id', $id);
+            })
+            ->select(
+                'student_work_logs.id',
+                'student_work_logs.work_date',
+                'student_work_logs.hours_worked',
+                'student_work_logs.description',
+                'student_work_logs.approval_status',
+                'student_work_logs.ratings',
+                'student_work_logs.rating',
+                'student_work_logs.created_at',
+                'student.name as student_name',
+                'student.email as student_email',
+                'student_profiles.designation as student_designation',
+                'tasks.title as task_title',
+                'tasks.weight as task_weight',
+                'tasks.status as task_status',
+                'modules.module_name',
+                'approver.name as approved_by_name'
+            )
+            ->orderBy('student_work_logs.work_date', 'asc')
+            ->orderBy('student_work_logs.id', 'asc')
+            ->get();
+
+        // Group hierarchical structure: Month -> Week -> Module -> Task
+        $structured = [];
+        $totalHours = 0;
+        foreach ($logs as $log) {
+            $dateStr = $log->work_date ?: ($log->created_at ? substr($log->created_at, 0, 10) : date('Y-m-d'));
+            $timestamp = strtotime($dateStr) ?: time();
+            $monthKey = date('F Y', $timestamp); // e.g. "October 2026"
+
+            // Calculate week of month (1 to 5)
+            $dayOfMonth = (int) date('j', $timestamp);
+            $weekNum = (int) ceil($dayOfMonth / 7);
+            $weekKey = "Week " . $weekNum;
+
+            $moduleKey = $log->module_name ?: 'General Module';
+            $taskKey = $log->task_title ?: 'General Task';
+
+            if (!isset($structured[$monthKey])) {
+                $structured[$monthKey] = [];
+            }
+            if (!isset($structured[$monthKey][$weekKey])) {
+                $structured[$monthKey][$weekKey] = [];
+            }
+            if (!isset($structured[$monthKey][$weekKey][$moduleKey])) {
+                $structured[$monthKey][$weekKey][$moduleKey] = [];
+            }
+            if (!isset($structured[$monthKey][$weekKey][$moduleKey][$taskKey])) {
+                $structured[$monthKey][$weekKey][$moduleKey][$taskKey] = [];
+            }
+
+            $structured[$monthKey][$weekKey][$moduleKey][$taskKey][] = $log;
+            $totalHours += (float) ($log->hours_worked ?? 0);
+        }
+
+        $structuredTree = [];
+        foreach ($structured as $month => $weeks) {
+            $monthData = ['month' => $month, 'weeks' => []];
+            foreach ($weeks as $week => $modules) {
+                $weekData = ['week' => $week, 'modules' => []];
+                foreach ($modules as $module => $tasks) {
+                    $moduleData = ['module_name' => $module, 'tasks' => []];
+                    foreach ($tasks as $task => $entries) {
+                        $moduleData['tasks'][] = [
+                            'task_title' => $task,
+                            'logs' => $entries
+                        ];
+                    }
+                    $weekData['modules'][] = $moduleData;
+                }
+                $monthData['weeks'][] = $weekData;
+            }
+            $structuredTree[] = $monthData;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'project' => $project,
+            'total_hours' => round($totalHours, 2),
+            'total_logs' => count($logs),
+            'hierarchical' => $structuredTree,
+        ]);
+    }
+
+    /**
+     * Change password for the logged-in faculty user.
+     * Validates current password and updates the password field in the users table.
+     */
+    public function changePassword(Request $request)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $currentPassword = $request->input('current_password');
+        $newPassword = $request->input('new_password');
+        $confirmPassword = $request->input('confirm_password') ?: $request->input('new_password_confirmation');
+
+        if (!$currentPassword) {
+            return response()->json(['error' => 'Current password is required.'], 422);
+        }
+
+        if (!$newPassword) {
+            return response()->json(['error' => 'New password is required.'], 422);
+        }
+
+        if (strlen($newPassword) < 6) {
+            return response()->json(['error' => 'New password must be at least 6 characters long.'], 422);
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            return response()->json(['error' => 'New password and confirmation do not match.'], 422);
+        }
+
+        $user = DB::table('users')->where('id', $facultyId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Faculty account not found.'], 404);
+        }
+
+        // Verify current password against users table
+        if (!Hash::check($currentPassword, $user->password)) {
+            return response()->json(['error' => 'Current password is incorrect.'], 400);
+        }
+
+        // Update password in users table
+        DB::table('users')
+            ->where('id', $facultyId)
+            ->update([
+                'password' => Hash::make($newPassword),
+                'updated_at' => now(),
+            ]);
+
+        // Audit log if table exists
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $facultyId,
+                'action' => 'Password Changed',
+                'description' => "Faculty {$user->name} changed their account password.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password updated successfully.'
         ]);
     }
 

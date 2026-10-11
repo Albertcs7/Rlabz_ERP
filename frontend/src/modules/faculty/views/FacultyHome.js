@@ -164,9 +164,9 @@ export function FacultyHome(route, router) {
                                         <div style="margin-top: 1.25rem;">
                                             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.4rem;">
                                                 <span style="color: var(--text-muted, var(--text-muted)); font-weight: 500;">
-                                                    Tasks Completion: <strong style="color: var(--text-main, var(--text-primary));">${p.completed_tasks || 0} / ${p.total_tasks || 0}</strong> Tasks
+                                                    ${p.total_modules > 0 ? `Modules Completed: <strong style="color: var(--text-main, var(--text-primary));">${p.completed_modules || 0} / ${p.total_modules}</strong> Modules (${p.completed_tasks || 0}/${p.total_tasks || 0} Tasks)` : `Tasks Completed: <strong style="color: var(--text-main, var(--text-primary));">${p.completed_tasks || 0} / ${p.total_tasks || 0}</strong> Tasks`}
                                                 </span>
-                                                <strong style="color: var(--primary, var(--primary)); font-weight: 700;">${progress}%</strong>
+                                                <strong style="color: var(--primary, var(--primary)); font-weight: 700;">${progress}% Overall</strong>
                                             </div>
                                             <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 9999px; overflow: hidden;">
                                                 <div style="width: ${progress}%; height: 100%; background: var(--primary, var(--primary)); border-radius: 9999px; transition: width 0.4s ease;"></div>

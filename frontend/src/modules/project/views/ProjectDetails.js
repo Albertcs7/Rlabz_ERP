@@ -1,6 +1,7 @@
 import { authStore } from '@/core/stores/auth.js';
 import { showFacultySuccessPopup } from '@/modules/faculty/facultyPopup.js';
 import { API_BASE } from '@/core/config/api.js';
+import html2pdf from 'html2pdf.js';
 
 export async function ProjectDetails(route, router) {
   const container = document.createElement('div');
@@ -55,10 +56,11 @@ export async function ProjectDetails(route, router) {
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         <span>Team</span>
       </button>` : ''}
+      ${role !== 'faculty' ? `
       <button class="project-tab-btn" data-tab="finance">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg>
         <span>Finance</span>
-      </button>
+      </button>` : ''}
       <button class="project-tab-btn" data-tab="client">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         <span>Client Details</span>
@@ -169,18 +171,26 @@ export async function ProjectDetails(route, router) {
         <div class="card-panel" style="background: var(--surface-card); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <!-- Project Progress & Schedule Card based on Tasks, Weight and Hours Worked -->
           <div class="project-section-card" id="overview-progress-card" style="text-align: left; margin-bottom: 0;">
-            <div class="project-section-header" style="display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.5rem;">
-              <div id="overview-schedule-badge">
-                <span class="student-badge student-badge-info" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">Calculating pace...</span>
+            <div class="project-section-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.5rem;">
+              <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--text-main);">Project Progress & Pace</h3>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div id="overview-schedule-badge">
+                  <span class="student-badge student-badge-info" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">Calculating pace...</span>
+                </div>
+                <button type="button" id="btn-download-work-log" class="btn btn-sm btn-outline shadow-hover" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; padding: 0.35rem 0.8rem; border-color: var(--primary); color: var(--primary); cursor: pointer;" title="Download Student Work Logs for this Project">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>Download Work Log</span>
+                </button>
               </div>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
               <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 0.85rem 1rem;">
-                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Task Completion</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Overall Progress</span>
                 <div style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary); margin: 0.25rem 0;" id="val-overview-tasks-ratio">-</div>
                 <div style="width: 100%; height: 6px; background: var(--border-subtle); border-radius: 9999px; overflow: hidden; margin-top: 6px;">
                   <div id="val-overview-tasks-bar" style="width: 0%; height: 100%; background: var(--primary); border-radius: 9999px; transition: width 0.4s ease;"></div>
                 </div>
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); margin-top: 4px; display: block;" id="val-overview-tasks-sub">-</span>
               </div>
               <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 0.85rem 1rem;">
                 <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Planned Task Hours</span>
@@ -342,6 +352,7 @@ export async function ProjectDetails(route, router) {
         </div>
       </div>
 
+      ${role !== 'faculty' ? `
       <!-- FINANCE TAB -->
       <div id="tab-finance" class="tab-content" style="display: none;">
         <div class="card-panel">
@@ -366,6 +377,7 @@ export async function ProjectDetails(route, router) {
           </div>
         </div>
       </div>
+      ` : ''}
 
       <!-- CLIENT DETAILS TAB -->
       <div id="tab-client" class="tab-content" style="display: none;">
@@ -756,7 +768,16 @@ export async function ProjectDetails(route, router) {
           });
 
           const totalTasksCount = allTasksList.length;
-          const taskPct = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+          // Calculate overall module-based progress
+          const totalModulesCount = (p.modules || []).length;
+          const completedModulesCount = (p.modules || []).filter(m => {
+            const mStatus = String(m.status || '').toLowerCase();
+            if (mStatus === 'completed') return true;
+            const tasks = m.tasks || [];
+            return tasks.length > 0 && tasks.every(t => String(t.status || '').toLowerCase() === 'completed');
+          }).length;
+          const overallPct = totalModulesCount > 0 ? Math.round((completedModulesCount / totalModulesCount) * 100) : 0;
 
           // Fetch work logs to get actual hours worked and behind schedule modules
           let totalHoursLogged = 0;
@@ -778,11 +799,13 @@ export async function ProjectDetails(route, router) {
             console.warn('Could not load work-logs for progress card:', e);
           }
 
-          // Populate Task Completion
+          // Populate Overall Progress (Module-based)
           const ratioEl = container.querySelector('#val-overview-tasks-ratio');
           const barEl = container.querySelector('#val-overview-tasks-bar');
-          if (ratioEl) ratioEl.textContent = `${completedTasksCount}/${totalTasksCount} (${taskPct}%)`;
-          if (barEl) barEl.style.width = `${taskPct}%`;
+          const tasksSubEl = container.querySelector('#val-overview-tasks-sub');
+          if (ratioEl) ratioEl.textContent = `${completedModulesCount}/${totalModulesCount} Modules (${overallPct}%)`;
+          if (barEl) barEl.style.width = `${overallPct}%`;
+          if (tasksSubEl) tasksSubEl.textContent = `${completedTasksCount}/${totalTasksCount} Tasks Completed`;
 
           // Populate Planned Task Weight
           const weightEl = container.querySelector('#val-overview-weight');
@@ -801,10 +824,10 @@ export async function ProjectDetails(route, router) {
           const isBehind = behindModules.length > 0 || (totalProjWeight > 0 && totalHoursLogged > completedProjWeight && completedTasksCount < totalTasksCount && (totalHoursLogged - completedProjWeight) >= 2);
 
           if (paceBadgeEl) {
-            if (totalTasksCount === 0) {
-              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-info" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">No Tasks Yet</span>';
-            } else if (completedTasksCount === totalTasksCount) {
-              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-success" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">✓ All Tasks Completed</span>';
+            if (totalModulesCount === 0) {
+              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-info" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">No Modules Yet</span>';
+            } else if (completedModulesCount === totalModulesCount) {
+              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-success" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">✓ All Modules Completed</span>';
             } else if (isBehind) {
               paceBadgeEl.innerHTML = '<span class="student-badge student-badge-danger" style="font-size: 0.78rem; padding: 0.25rem 0.75rem; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700;">⚠ Behind Schedule</span>';
             } else {
@@ -1563,6 +1586,196 @@ export async function ProjectDetails(route, router) {
     tabFinBtn.addEventListener('click', () => {
       loadFinance();
     });
+  }
+
+  // Work Log PDF Download Handler (Hierarchical: Month -> Week -> Module -> Task)
+  const downloadWorkLogsPDF = async () => {
+    const btnDownloadWorkLog = container.querySelector('#btn-download-work-log');
+    const originalHtml = btnDownloadWorkLog ? btnDownloadWorkLog.innerHTML : '';
+    try {
+      if (btnDownloadWorkLog) {
+        btnDownloadWorkLog.disabled = true;
+        btnDownloadWorkLog.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating PDF...';
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/faculty/projects/${projectId}/work-logs/download?format=json`, {
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Failed to fetch work log data.');
+      }
+
+      const resData = await response.json();
+      const proj = resData.project || currentProjectData || {};
+      const hierarchical = resData.hierarchical || [];
+      const totalHours = resData.total_hours || 0;
+      const totalLogs = resData.total_logs || 0;
+
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '820px';
+      tempContainer.style.background = '#ffffff';
+      tempContainer.style.color = '#1e293b';
+      tempContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+
+      let html = `
+        <div id="pdf-printable-work-logs" style="padding: 24px 28px; background: #ffffff;">
+          <!-- Header -->
+          <div style="border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h1 style="margin: 0 0 3px; font-size: 19px; font-weight: 800; color: #0f172a; text-transform: uppercase;">Project Work Log Report</h1>
+              <h2 style="margin: 0 0 4px; font-size: 13.5px; font-weight: 600; color: #059669;">${proj.title || 'Project'}</h2>
+              <div style="font-size: 11px; color: #64748b;">
+                <span>Client: <strong>${proj.client_name || 'N/A'}</strong></span> &bull; 
+                <span>Type: <strong>${proj.project_type || 'N/A'}</strong></span>
+              </div>
+            </div>
+            <div style="text-align: right; font-size: 10.5px; color: #64748b; line-height: 1.5;">
+              <div>Generated: <strong>${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></div>
+              <div>Total Entries: <strong>${totalLogs}</strong></div>
+              <div>Total Hours: <strong style="color: #059669; font-size: 12px;">${totalHours} hrs</strong></div>
+            </div>
+          </div>
+      `;
+
+      if (!hierarchical || hierarchical.length === 0) {
+        html += `
+          <div style="text-align: center; padding: 40px 20px; color: #64748b; font-size: 13px; border: 1px dashed #cbd5e1; border-radius: 8px;">
+            No student work logs recorded for this project yet.
+          </div>
+        `;
+      } else {
+        hierarchical.forEach(monthItem => {
+          html += `
+            <div class="pdf-month-block" style="margin-bottom: 18px;">
+              <div style="background: #0f172a; color: #ffffff; padding: 5px 10px; border-radius: 5px; font-size: 12.5px; font-weight: 700; margin-bottom: 10px;">
+                📅 ${monthItem.month}
+              </div>
+          `;
+
+          (monthItem.weeks || []).forEach(weekItem => {
+            html += `
+              <div class="pdf-week-block" style="margin-left: 6px; margin-bottom: 14px; border-left: 3px solid #10b981; padding-left: 10px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #047857; margin-bottom: 6px; text-transform: uppercase;">
+                  📌 ${weekItem.week}
+                </div>
+            `;
+
+            (weekItem.modules || []).forEach(modItem => {
+              html += `
+                <div class="pdf-module-block" style="margin-bottom: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px;">
+                  <div style="font-size: 11.5px; font-weight: 700; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
+                    <span style="background: #e0f2fe; color: #0369a1; padding: 2px 5px; border-radius: 4px; font-size: 9.5px; font-weight: 700;">MODULE</span>
+                    <span>${modItem.module_name}</span>
+                  </div>
+              `;
+
+              (modItem.tasks || []).forEach(taskItem => {
+                html += `
+                  <div class="pdf-task-card" style="margin-bottom: 8px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; page-break-inside: avoid;">
+                    <div style="background: #f1f5f9; padding: 5px 8px; border-bottom: 1px solid #e2e8f0; font-size: 10.5px; font-weight: 600; color: #334155; display: flex; justify-content: space-between;">
+                      <span>Task: <strong>${taskItem.task_title}</strong></span>
+                      <span style="color: #64748b; font-size: 9.5px;">${(taskItem.logs || []).length} log entry(ies)</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5px;">
+                      <thead>
+                        <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; text-align: left;">
+                          <th style="padding: 4px 6px; width: 68px;">Date</th>
+                          <th style="padding: 4px 6px; width: 120px;">Student</th>
+                          <th style="padding: 4px 6px; width: 45px; text-align: center;">Hours</th>
+                          <th style="padding: 4px 6px;">Work Description</th>
+                          <th style="padding: 4px 6px; width: 60px; text-align: center;">Rating</th>
+                          <th style="padding: 4px 6px; width: 60px; text-align: center;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                `;
+
+                (taskItem.logs || []).forEach((log, idx) => {
+                  const rowBg = idx % 2 === 0 ? '#ffffff' : '#fafafa';
+                  const ratingVal = log.rating || log.ratings;
+                  const ratingText = ratingVal ? `★ ${ratingVal}/5` : '-';
+                  const stColor = (log.approval_status === 'approved') ? '#059669' : ((log.approval_status === 'rejected') ? '#dc2626' : '#d97706');
+                  html += `
+                    <tr style="background: ${rowBg}; border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 4px 6px; color: #475569; white-space: nowrap;">${log.work_date || '-'}</td>
+                      <td style="padding: 4px 6px;">
+                        <strong style="color: #0f172a; display: block;">${log.student_name || 'N/A'}</strong>
+                        <span style="color: #64748b; font-size: 8.5px;">${log.student_email || ''}</span>
+                      </td>
+                      <td style="padding: 4px 6px; text-align: center; font-weight: 700; color: #0284c7;">${log.hours_worked || 0}h</td>
+                      <td style="padding: 4px 6px; color: #334155; line-height: 1.3;">${log.description || '-'}</td>
+                      <td style="padding: 4px 6px; text-align: center; color: #eab308; font-weight: 600;">${ratingText}</td>
+                      <td style="padding: 4px 6px; text-align: center; font-weight: 600; color: ${stColor}; text-transform: capitalize;">${log.approval_status || 'Pending'}</td>
+                    </tr>
+                  `;
+                });
+
+                html += `
+                      </tbody>
+                    </table>
+                  </div>
+                `;
+              });
+
+              html += `</div>`;
+            });
+
+            html += `</div>`;
+          });
+
+          html += `</div>`;
+        });
+      }
+
+      html += `
+          <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 8.5px; color: #94a3b8; text-align: center;">
+            RLabZ ERP Institutional Incubation &bull; Official Student Work Log &bull; Rajagiri College of Social Sciences (Autonomous)
+          </div>
+        </div>
+      `;
+
+      tempContainer.innerHTML = html;
+      document.body.appendChild(tempContainer);
+
+      const sanitizedTitle = (proj.title || 'Project').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+      try {
+        await html2pdf().set({
+          margin: [0.3, 0.3, 0.3, 0.3],
+          filename: `Work_Log_${sanitizedTitle}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: 'css', avoid: ['.pdf-task-card', 'tr'] }
+        }).from(tempContainer.querySelector('#pdf-printable-work-logs')).save();
+      } finally {
+        if (tempContainer.parentNode) {
+          document.body.removeChild(tempContainer);
+        }
+      }
+    } catch (err) {
+      console.error('PDF download error:', err);
+      alert('Error generating work log PDF: ' + (err.message || 'Unknown error'));
+    } finally {
+      if (btnDownloadWorkLog) {
+        btnDownloadWorkLog.disabled = false;
+        btnDownloadWorkLog.innerHTML = originalHtml;
+      }
+    }
+  };
+
+  const btnDownloadWorkLog = container.querySelector('#btn-download-work-log');
+  if (btnDownloadWorkLog) {
+    btnDownloadWorkLog.addEventListener('click', downloadWorkLogsPDF);
   }
 
   // Overview Requirements & Changes Logic
