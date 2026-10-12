@@ -1,6 +1,6 @@
 /* ============================================================
    RLABZ ERP — Finance Module Styles
-   Theme: Emerald (#059669) · Font: Plus Jakarta Sans
+   Theme: Emerald (var(--primary)) · Font: Plus Jakarta Sans
    ============================================================ */
 
 /* ── Module Shell ──────────────────────────────────────────── */
@@ -106,7 +106,7 @@
   margin-top: 0.35rem;
 }
 
-.fin-kpi-card.primary  { background: linear-gradient(135deg, #059669, #047857); }
+.fin-kpi-card.primary  { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); }
 .fin-kpi-card.teal     { background: linear-gradient(135deg, #0891b2, #0e7490); }
 .fin-kpi-card.indigo   { background: linear-gradient(135deg, #6366f1, #4f46e5); }
 .fin-kpi-card.purple   { background: linear-gradient(135deg, #a855f7, #9333ea); }
@@ -193,7 +193,7 @@ hr.fin-divider {
 
 .fin-table tbody tr:last-child td { border-bottom: none; }
 .fin-table tbody tr { transition: background 0.15s; }
-.fin-table tbody tr:hover { background: #f0fdf4; }
+.fin-table tbody tr:hover { background: var(--bg-main); }
 
 /* ── Badges ─────────────────────────────────────────────────── */
 .fin-badge {
@@ -207,7 +207,7 @@ hr.fin-divider {
   white-space: nowrap;
 }
 
-.fin-badge.success { background: #d1fae5; color: #065f46; }
+.fin-badge.success { background: var(--border-color); color: var(--primary); }
 .fin-badge.warning { background: #fef3c7; color: #92400e; }
 .fin-badge.danger  { background: #fee2e2; color: #991b1b; }
 .fin-badge.info    { background: #dbeafe; color: #1e40af; }
@@ -313,7 +313,7 @@ hr.fin-divider {
   display: inline-block;
 }
 .fin-aging-cell.a0 { color: var(--text-muted); }
-.fin-aging-cell.a1 { background: #d1fae5; color: #065f46; }
+.fin-aging-cell.a1 { background: var(--border-color); color: var(--primary); }
 .fin-aging-cell.a2 { background: #fef3c7; color: #92400e; }
 .fin-aging-cell.a3 { background: #fed7aa; color: #9a3412; }
 .fin-aging-cell.a4 { background: #fee2e2; color: #991b1b; }
@@ -388,7 +388,7 @@ hr.fin-divider {
 
 .fin-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 18, 32, 0.12);
 }
 
 /* Select wrapper for custom arrow */
@@ -533,11 +533,11 @@ hr.fin-divider {
 }
 
 /* Designation badges */
-.fin-badge.nova   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.fin-badge.nova   { background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-color); }
 .fin-badge.orbit  { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 .fin-badge.spark  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
 .fin-badge.indigo { background: #ede9fe; color: #5b21b6; }
-.fin-badge.primary { background: #d1fae5; color: #065f46; }
+.fin-badge.primary { background: var(--border-color); color: var(--primary); }
 
 /* ── Payroll hours cell ──────────────────────────────────── */
 .fin-hours-cell {
@@ -661,7 +661,7 @@ hr.fin-divider {
   background: linear-gradient(135deg, var(--primary-accent), var(--primary));
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(62, 75, 85, 0.3);
 }
 
 .finance-main-wrapper {
@@ -748,7 +748,7 @@ hr.fin-divider {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  background: #f0fdf4;
+  background: var(--bg-main);
   border: 1px solid #bbf7d0;
   border-radius: 6px;
   padding: 8px 12px;
@@ -786,7 +786,7 @@ hr.fin-divider {
   width: 42px;
   height: 42px;
   border-radius: 20px 0 0 20px;
-  background: #059669;
+  background: var(--primary);
   border: none;
   box-shadow: -2px 4px 10px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -807,7 +807,7 @@ hr.fin-divider {
 .fin-bell-trigger:hover {
   transform: scale(1.06);
   box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-  background: #047857;
+  background: var(--primary-hover);
   color: #ffffff;
 }
 
@@ -825,7 +825,7 @@ hr.fin-divider {
   font-weight: 800;
   border-radius: 10px;
   padding: 2px 6px;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--surface-card);
   min-width: 18px;
   text-align: center;
   line-height: 1;
@@ -857,7 +857,7 @@ hr.fin-divider {
   width: 410px;
   max-width: 90vw;
   height: 100vh;
-  background: #ffffff;
+  background: var(--surface-card);
   box-shadow: -8px 0 30px rgba(15, 23, 42, 0.16);
   z-index: 1070;
   transform: translateX(120%);
@@ -873,8 +873,8 @@ hr.fin-divider {
 
 .fin-drawer-header {
   padding: 1.2rem 1.4rem;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -889,18 +889,18 @@ hr.fin-divider {
 .fin-drawer-title {
   font-size: 1.05rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
 .fin-drawer-count {
-  background: #ecfdf5;
-  color: #059669;
+  background: var(--primary-light);
+  color: var(--primary);
   font-size: 0.72rem;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 12px;
-  border: 1px solid #a7f3d0;
+  border: 1px solid var(--border-color);
 }
 
 .fin-drawer-close {
@@ -912,21 +912,21 @@ hr.fin-divider {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .fin-drawer-close:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: var(--border-subtle);
+  color: var(--text-primary);
 }
 
 .fin-drawer-body {
   flex: 1;
   overflow-y: auto;
   padding: 1.2rem;
-  background: #f8fafc;
+  background: var(--bg-canvas-light);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -934,8 +934,8 @@ hr.fin-divider {
 
 /* Action Item Alert Card */
 .fin-action-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -1017,7 +1017,7 @@ hr.fin-divider {
 
 .fin-card-meta {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: space-between;

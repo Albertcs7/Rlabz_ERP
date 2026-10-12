@@ -38,6 +38,10 @@ export async function ProjectDetails(route, router) {
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
         <span>Overview</span>
       </button>
+      <button class="project-tab-btn" data-tab="progress-pace">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+        <span>Project Progress & Pace</span>
+      </button>
       <button class="project-tab-btn" data-tab="modules">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
         <span>Modules</span>
@@ -115,32 +119,35 @@ export async function ProjectDetails(route, router) {
             </div>
           </div>
 
-          <!-- Card 1: Project Requirements (client_requirements) -->
-          <div class="project-section-card" style="text-align: left;">
-            <div class="project-section-header" style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #2563eb; flex-shrink: 0;"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-              <span style="text-align: left;">Project Requirements</span>
+          <!-- Two-column horizontal layout: Project Requirements & Requirement Changes -->
+          <div class="project-requirements-grid">
+            <!-- Card 1: Project Requirements (client_requirements) -->
+            <div class="project-section-card" style="text-align: left;">
+              <div class="project-section-header" style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #2563eb; flex-shrink: 0;"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                <span style="text-align: left;">Project Requirements</span>
+              </div>
+              <div id="overview-client-requirements-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+                <p id="val-project-requirements" class="project-section-text" style="white-space: pre-wrap; margin: 0; color: var(--text-muted, var(--text-muted)); text-align: left;">Loading requirements...</p>
+              </div>
             </div>
-            <div id="overview-client-requirements-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem;">
-              <p id="val-project-requirements" class="project-section-text" style="white-space: pre-wrap; margin: 0; color: var(--text-muted, #64748b); text-align: left;">Loading requirements...</p>
-            </div>
-          </div>
 
-          <!-- Card 2: Requirement Changes & Updates (requirement_changes with notification symbol) -->
-          <div class="project-section-card" style="text-align: left;">
-            <div class="project-section-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; text-align: left;">
-              <div style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #d97706; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                <span style="text-align: left;">Requirement Changes</span>
+            <!-- Card 2: Requirement Changes & Updates (requirement_changes with notification symbol) -->
+            <div class="project-section-card" style="text-align: left;">
+              <div class="project-section-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #d97706; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                  <span style="text-align: left;">Requirement Changes</span>
+                </div>
+                <div id="req-changes-badge-wrapper" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: #fff1f2; border: 1px solid #fecdd3; color: #e11d48; font-size: 0.78rem; font-weight: 700;">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e11d48; box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);"></span>
+                  <span>🔔</span>
+                  <span id="req-changes-count-text">0 Updates</span>
+                </div>
               </div>
-              <div id="req-changes-badge-wrapper" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: #fff1f2; border: 1px solid #fecdd3; color: #e11d48; font-size: 0.78rem; font-weight: 700;">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e11d48; box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);"></span>
-                <span>🔔</span>
-                <span id="req-changes-count-text">0 Updates</span>
+              <div id="overview-requirement-changes-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+                <p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes recorded for this project.</p>
               </div>
-            </div>
-            <div id="overview-requirement-changes-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem;">
-              <p style="color: var(--text-muted, #64748b); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes recorded for this project.</p>
             </div>
           </div>
 
@@ -157,23 +164,53 @@ export async function ProjectDetails(route, router) {
         </div>
       </div>
 
+      <!-- PROJECT PROGRESS & PACE TAB -->
+      <div id="tab-progress-pace" class="tab-content" style="display: none;">
+        <div class="card-panel" style="background: var(--surface-card); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <!-- Project Progress & Schedule Card based on Tasks, Weight and Hours Worked -->
+          <div class="project-section-card" id="overview-progress-card" style="text-align: left; margin-bottom: 0;">
+            <div class="project-section-header" style="display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.5rem;">
+              <div id="overview-schedule-badge">
+                <span class="student-badge student-badge-info" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">Calculating pace...</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+              <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 0.85rem 1rem;">
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Task Completion</span>
+                <div style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary); margin: 0.25rem 0;" id="val-overview-tasks-ratio">-</div>
+                <div style="width: 100%; height: 6px; background: var(--border-subtle); border-radius: 9999px; overflow: hidden; margin-top: 6px;">
+                  <div id="val-overview-tasks-bar" style="width: 0%; height: 100%; background: var(--primary); border-radius: 9999px; transition: width 0.4s ease;"></div>
+                </div>
+              </div>
+              <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 0.85rem 1rem;">
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Planned Task Weight</span>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #0284c7; margin: 0.25rem 0;" id="val-overview-weight">-</div>
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted));" id="val-overview-weight-sub">Completed: - hrs</span>
+              </div>
+              <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 0.85rem 1rem;">
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted)); font-weight: 700; text-transform: uppercase;">Actual Hours Logged</span>
+                <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin: 0.25rem 0;" id="val-overview-hours">-</div>
+                <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted));">From student work logs</span>
+              </div>
+            </div>
+            <div id="overview-schedule-alert-box" style="display: none; margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.86rem; line-height: 1.45;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- MODULES TAB (Organized like Image 1) -->
       <div id="tab-modules" class="tab-content" style="display: none;">
         <div class="assigned-modules-section">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-            <div class="section-title-box">
-              <h3>Assigned Modules</h3>
-              <p>Functionalities and components allocated to your development scope. Select a module to view its description.</p>
-            </div>
-            ${canCreateModule ? `
+          ${canCreateModule ? `
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 0.5rem;">
               <button id="btn-add-module" class="btn btn-sm btn-primary shadow-hover" style="display: inline-flex; align-items: center; gap: 0.4rem;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>Add Module</span>
               </button>
-            ` : ''}
-          </div>
+            </div>
+          ` : ''}
           
-          <div id="module-form-container" style="display:none; margin-bottom: 1rem; padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface, #ffffff); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div id="module-form-container" style="display:none; margin-bottom: 1rem; padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface, var(--surface-card)); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <form id="form-module" style="display: flex; flex-direction: column; gap: 1rem;">
               <input type="text" name="name" placeholder="Module Name (e.g. Sprint 1: Project Setup & Auth Flow)" class="premium-input" required />
               <textarea name="description" placeholder="Description of module deliverables..." class="premium-input" rows="2"></textarea>
@@ -200,23 +237,19 @@ export async function ProjectDetails(route, router) {
       <div id="tab-tasks" class="tab-content" style="display: none;">
         <div class="assigned-tasks-section">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
-            <div class="section-title-box">
-              <h3>Assigned Project Tasks</h3>
-              <p>Comprehensive list of sprint components and responsibilities.</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div>
               <span id="all-tasks-count-badge" class="student-badge student-badge-info" style="font-size: 0.8rem; padding: 0.35rem 0.85rem;">0 Total Tasks</span>
-              ${canCreateTask ? `
-                <button id="btn-add-task-tasks-tab" class="btn btn-sm btn-primary shadow-hover btn-add-task" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.95rem; font-size: 0.85rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  <span>Add Task</span>
-                </button>
-              ` : ''}
             </div>
+            ${canCreateTask ? `
+              <button id="btn-add-task-tasks-tab" class="btn btn-sm btn-primary shadow-hover btn-add-task" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.95rem; font-size: 0.85rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Add Task</span>
+              </button>
+            ` : ''}
           </div>
 
           <!-- INLINE ADD TASK FORM (Identical style to Add Module) -->
-          <div id="task-form-container" style="display: none; margin-bottom: 1.25rem; padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface, #ffffff); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div id="task-form-container" style="display: none; margin-bottom: 1.25rem; padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface, var(--surface-card)); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <form id="form-task-inline" style="display: flex; flex-direction: column; gap: 1rem;">
               <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 220px;">
@@ -245,7 +278,7 @@ export async function ProjectDetails(route, router) {
             </form>
           </div>
 
-          <div class="project-table-container animate-fade-in" style="margin-top: 0; background: #ffffff; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0);">
+          <div class="project-table-container animate-fade-in" style="margin-top: 0; background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle));">
             <table class="premium-table" style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr>
@@ -302,10 +335,6 @@ export async function ProjectDetails(route, router) {
       <!-- FINANCE TAB -->
       <div id="tab-finance" class="tab-content" style="display: none;">
         <div class="card-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="margin-bottom: 0;">Finance Summary</h3>
-          </div>
-          
           <div id="finance-summary-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
             <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; background: var(--bg-surface);">
               <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Total Budget</span>
@@ -313,7 +342,7 @@ export async function ProjectDetails(route, router) {
             </div>
             <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; background: var(--bg-surface);">
               <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Amount Received</span>
-              <strong id="fin-received" style="display: block; font-size: 1.5rem; margin-top: 0.5rem; color: #10b981;">-</strong>
+              <strong id="fin-received" style="display: block; font-size: 1.5rem; margin-top: 0.5rem; color: var(--primary-accent);">-</strong>
             </div>
             <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; background: var(--bg-surface);">
               <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Amount Remaining</span>
@@ -331,13 +360,6 @@ export async function ProjectDetails(route, router) {
       <!-- CLIENT DETAILS TAB -->
       <div id="tab-client" class="tab-content" style="display: none;">
         <div class="card-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
-            <div>
-              <h3 style="margin: 0; font-size: 1.25rem;">Client Details & Requirements</h3>
-              <p style="margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.85rem;">Client agency information and recorded requirements for this project.</p>
-            </div>
-          </div>
-          
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
             <div style="padding: 1rem 1.25rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
               <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Client / Sponsor Agency</span>
@@ -374,10 +396,6 @@ export async function ProjectDetails(route, router) {
       <!-- GITHUB TAB -->
       <div id="tab-github" class="tab-content" style="display: none;">
         <div class="card-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="margin-bottom: 0;">GitHub Integration</h3>
-          </div>
-          
           <div id="github-content-area">
             <div class="spinner" style="border-top-color: var(--primary); margin: 30px auto; display: block; width: 28px; height: 28px;"></div>
           </div>
@@ -634,6 +652,42 @@ export async function ProjectDetails(route, router) {
         }
       });
     });
+
+    parentEl.querySelectorAll('.btn-rework-task').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const taskId = btn.getAttribute('data-task-id');
+        if (!confirm('Are you sure you want to mark this completed task for Rework?')) return;
+
+        btn.disabled = true;
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch(`${API_BASE}/projects/tasks/${taskId}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: 'rework' })
+          });
+          const resData = await res.json();
+          if (res.ok) {
+            showFacultySuccessPopup(
+              'Task Marked for Rework',
+              'Task has been reopened with status Rework.'
+            );
+            loadProject();
+          } else {
+            alert(resData.error || resData.message || 'Failed to update task status.');
+            btn.disabled = false;
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error updating task status.');
+          btn.disabled = false;
+        }
+      });
+    });
   };
 
   const loadProject = async () => {
@@ -672,14 +726,124 @@ export async function ProjectDetails(route, router) {
 
         loadOverviewRequirements(p);
 
+        // Compute and populate Project Progress, Task Weights, Hours Worked, and Schedule Pace
+        try {
+          const allTasksList = [];
+          let totalProjWeight = 0;
+          let completedProjWeight = 0;
+          let completedTasksCount = 0;
+
+          (p.modules || []).forEach(m => {
+            (m.tasks || []).forEach(t => {
+              allTasksList.push(t);
+              const w = Number(t.weight) > 0 ? Number(t.weight) : 1;
+              totalProjWeight += w;
+              if (String(t.status || '').toLowerCase() === 'completed') {
+                completedProjWeight += w;
+                completedTasksCount++;
+              }
+            });
+          });
+
+          const totalTasksCount = allTasksList.length;
+          const taskPct = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+          // Fetch work logs to get actual hours worked and behind schedule modules
+          let totalHoursLogged = 0;
+          let behindModules = [];
+          try {
+            const wlRes = await fetch(`${API_BASE}/faculty/projects/${projectId}/work-logs`, {
+              headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (wlRes.ok) {
+              const wlData = await wlRes.json();
+              if (wlData && Array.isArray(wlData.work_logs)) {
+                totalHoursLogged = wlData.work_logs.reduce((sum, log) => sum + (parseFloat(log.hours_worked) || 0), 0);
+              }
+              if (wlData && Array.isArray(wlData.behind_schedule_modules)) {
+                behindModules = wlData.behind_schedule_modules;
+              }
+            }
+          } catch (e) {
+            console.warn('Could not load work-logs for progress card:', e);
+          }
+
+          // Populate Task Completion
+          const ratioEl = container.querySelector('#val-overview-tasks-ratio');
+          const barEl = container.querySelector('#val-overview-tasks-bar');
+          if (ratioEl) ratioEl.textContent = `${completedTasksCount}/${totalTasksCount} (${taskPct}%)`;
+          if (barEl) barEl.style.width = `${taskPct}%`;
+
+          // Populate Planned Task Weight
+          const weightEl = container.querySelector('#val-overview-weight');
+          const weightSubEl = container.querySelector('#val-overview-weight-sub');
+          if (weightEl) weightEl.textContent = `${totalProjWeight} hrs`;
+          if (weightSubEl) weightSubEl.textContent = `Completed: ${completedProjWeight} hrs`;
+
+          // Populate Actual Hours Logged
+          const hoursEl = container.querySelector('#val-overview-hours');
+          if (hoursEl) hoursEl.textContent = `${totalHoursLogged.toFixed(1)} hrs`;
+
+          // Schedule Pace Badge & Warning Container
+          const paceBadgeEl = container.querySelector('#overview-schedule-badge');
+          const alertBoxEl = container.querySelector('#overview-schedule-alert-box');
+
+          const isBehind = behindModules.length > 0 || (totalProjWeight > 0 && totalHoursLogged > completedProjWeight && completedTasksCount < totalTasksCount && (totalHoursLogged - completedProjWeight) >= 2);
+
+          if (paceBadgeEl) {
+            if (totalTasksCount === 0) {
+              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-info" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">No Tasks Yet</span>';
+            } else if (completedTasksCount === totalTasksCount) {
+              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-success" style="font-size: 0.78rem; padding: 0.25rem 0.75rem;">✓ All Tasks Completed</span>';
+            } else if (isBehind) {
+              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-danger" style="font-size: 0.78rem; padding: 0.25rem 0.75rem; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700;">⚠ Behind Schedule</span>';
+            } else {
+              paceBadgeEl.innerHTML = '<span class="student-badge student-badge-success" style="font-size: 0.78rem; padding: 0.25rem 0.75rem; background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-color); font-weight: 700;">✓ On Track</span>';
+            }
+          }
+
+          if (alertBoxEl) {
+            if (isBehind && behindModules.length > 0) {
+              alertBoxEl.style.display = 'block';
+              alertBoxEl.style.background = '#fffbeb';
+              alertBoxEl.style.border = '1px solid #fcd34d';
+              alertBoxEl.style.color = '#92400e';
+              alertBoxEl.innerHTML = `
+                <div style="font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+                  <span>⚠️ Schedule Alert:</span>
+                  <span>Module(s) taking longer than estimated task weights</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                  ${behindModules.map(bm => `
+                    <div>&bull; <strong>${bm.module_name || 'Module'}:</strong> ${bm.reason || `Students logged ${bm.total_hours || 0} hrs against planned ${bm.completed_weight || 0}/${bm.total_weight || 0} hrs.`}</div>
+                  `).join('')}
+                </div>
+              `;
+            } else if (isBehind) {
+              alertBoxEl.style.display = 'block';
+              alertBoxEl.style.background = '#fffbeb';
+              alertBoxEl.style.border = '1px solid #fcd34d';
+              alertBoxEl.style.color = '#92400e';
+              alertBoxEl.innerHTML = `
+                <div style="font-weight: 700;">⚠️ Schedule Warning: Total hours logged (${totalHoursLogged.toFixed(1)} hrs) exceeds planned completion weight (${completedProjWeight} hrs).</div>
+              `;
+            } else {
+              alertBoxEl.style.display = 'none';
+              alertBoxEl.innerHTML = '';
+            }
+          }
+        } catch (err) {
+          console.error('Error computing project pace metrics:', err);
+        }
+
         // Populate Client Details Tab
         currentProjectData = p;
         const cNameEl = container.querySelector('#client-tab-name');
         if (cNameEl) cNameEl.textContent = p.client_name || 'N/A';
         const cEmailEl = container.querySelector('#client-tab-email');
-        if (cEmailEl) cEmailEl.textContent = p.client_email || 'N/A';
+        if (cEmailEl) cEmailEl.textContent = p.contact_email || p.client_email || 'N/A';
         const cPhoneEl = container.querySelector('#client-tab-phone');
-        if (cPhoneEl) cPhoneEl.textContent = p.client_phone || 'N/A';
+        if (cPhoneEl) cPhoneEl.textContent = p.contact_phone || p.client_phone || 'N/A';
         const cTypeEl = container.querySelector('#client-tab-type');
         if (cTypeEl) cTypeEl.textContent = p.project_type || 'N/A';
         const cDelivEl = container.querySelector('#client-tab-deliverables');
@@ -694,15 +858,15 @@ export async function ProjectDetails(route, router) {
               const des = s.student_profile?.designation || s.studentProfile?.designation || s.designation || 'Student';
               const formattedDes = String(des).charAt(0).toUpperCase() + String(des).slice(1);
               return `
-                <div style="display: inline-flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.95rem; background: var(--bg-body, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                  <div style="width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #475569; font-size: 0.85rem;">
+                <div style="display: inline-flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.95rem; background: var(--bg-body, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                  <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--border-subtle); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #475569; font-size: 0.85rem;">
                     ${(s.name || 'S').charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <strong style="display: block; font-size: 0.92rem; color: var(--text-main, #0f172a);">${s.name}</strong>
-                    <span style="font-size: 0.78rem; color: var(--text-muted, #64748b);">${s.email || ''}</span>
+                    <strong style="display: block; font-size: 0.92rem; color: var(--text-main, var(--text-primary));">${s.name}</strong>
+                    <span style="font-size: 0.78rem; color: var(--text-muted, var(--text-muted));">${s.email || ''}</span>
                   </div>
-                  <span class="status-badge" style="font-size: 0.75rem; padding: 0.2rem 0.6rem; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 6px; font-weight: 700; margin-left: 0.25rem;">
+                  <span class="status-badge" style="font-size: 0.75rem; padding: 0.2rem 0.6rem; background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-color); border-radius: 6px; font-weight: 700; margin-left: 0.25rem;">
                     ${formattedDes}
                   </span>
                 </div>
@@ -783,30 +947,37 @@ export async function ProjectDetails(route, router) {
             const modDesc = selectedModule.description || '';
             const mStatus = (selectedModule.status || 'not_started').toLowerCase();
             const isModBlocked = mStatus === 'blocked';
-            const statusClass = mStatus === 'completed' ? 'student-badge-success' : (mStatus === 'in_progress' ? 'student-badge-warning' : (isModBlocked ? 'student-badge-danger' : 'student-badge-info'));
-            const statusDisplay = selectedModule.status ? (selectedModule.status.charAt(0).toUpperCase() + selectedModule.status.slice(1).replace('_', ' ')) : 'Not Started';
+            const isModCompleted = mStatus === 'completed';
+            const isModRework = mStatus === 'rework';
+            const statusClass = isModCompleted ? 'student-badge-success' : (isModRework ? 'student-badge-warning' : (mStatus === 'in_progress' ? 'student-badge-warning' : (isModBlocked ? 'student-badge-danger' : 'student-badge-info')));
+            const statusDisplay = isModRework ? 'Rework' : (selectedModule.status ? (selectedModule.status.charAt(0).toUpperCase() + selectedModule.status.slice(1).replace('_', ' ')) : 'Not Started');
             const completedCount = modTasks.filter(t => (t.status || '').toLowerCase() === 'completed').length;
 
             tasksPaneContainer.innerHTML = `
-              <div class="module-details-card animate-fade-in" style="background: #ffffff; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; border-bottom: 1px solid var(--border-color, #e2e8f0); padding-bottom: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+              <div class="module-details-card animate-fade-in" style="background: var(--surface-card); border-radius: 12px; border: 1px solid var(--border-color, var(--border-subtle)); padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; border-bottom: 1px solid var(--border-color, var(--border-subtle)); padding-bottom: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
                   <div>
-                    <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--primary, #059669); letter-spacing: 0.05em; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--primary, var(--primary)); letter-spacing: 0.05em; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       Module Details
                     </div>
-                    <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-main, #0f172a);">${modTitle}</h2>
+                    <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-main, var(--text-primary));">${modTitle}</h2>
                   </div>
                   <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                    <span class="student-badge ${statusClass}" style="font-size: 0.8rem; padding: 0.35rem 0.85rem;">${statusDisplay}</span>
+                    <span class="student-badge ${statusClass}" style="font-size: 0.8rem; padding: 0.35rem 0.85rem; ${isModRework ? 'background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5;' : ''}">${statusDisplay}</span>
                     ${canCreateTask ? `
                       <button class="btn btn-sm btn-primary btn-add-task shadow-hover" data-module-id="${selectedModule.id}" data-module-title="${modTitle}" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.8rem; font-size: 0.8rem;">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         <span>Add Task</span>
                       </button>
                     ` : ''}
+                    ${canBlock && isModCompleted ? `
+                      <button class="btn btn-sm btn-outline btn-rework-module" data-module-id="${selectedModule.id}" title="Assign Rework" style="font-size: 0.75rem; padding: 0.3rem 0.75rem; border-color: #ea580c; color: #ea580c; font-weight: 600;">
+                        Rework
+                      </button>
+                    ` : ''}
                     ${canBlock ? `
-                      <button class="btn btn-sm btn-outline btn-toggle-module-block" data-module-id="${selectedModule.id}" data-current-status="${mStatus}" title="${isModBlocked ? 'Unblock Module' : 'Block Module'}" style="font-size: 0.75rem; padding: 0.3rem 0.75rem; ${isModBlocked ? 'border-color: #10b981; color: #10b981;' : 'border-color: #ef4444; color: #ef4444;'}">
+                      <button class="btn btn-sm btn-outline btn-toggle-module-block" data-module-id="${selectedModule.id}" data-current-status="${mStatus}" title="${isModBlocked ? 'Unblock Module' : 'Block Module'}" style="font-size: 0.75rem; padding: 0.3rem 0.75rem; ${isModBlocked ? 'border-color: var(--primary-accent); color: var(--primary-accent);' : 'border-color: #ef4444; color: #ef4444;'}">
                         ${isModBlocked ? 'Unblock' : 'Block'}
                       </button>
                     ` : ''}
@@ -814,20 +985,20 @@ export async function ProjectDetails(route, router) {
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
-                  <h3 style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted, #64748b); letter-spacing: 0.05em; margin: 0 0 0.6rem;">
+                  <h3 style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted, var(--text-muted)); letter-spacing: 0.05em; margin: 0 0 0.6rem;">
                     Module Description
                   </h3>
-                  <div style="background: var(--bg-main, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; padding: 1.25rem; font-size: 0.92rem; line-height: 1.6; color: var(--text-main, #334155); min-height: 100px; white-space: pre-line;">
-                    ${modDesc ? modDesc : '<span style="color: var(--text-muted, #94a3b8); font-style: italic;">No description provided for this module.</span>'}
+                  <div style="background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; padding: 1.25rem; font-size: 0.92rem; line-height: 1.6; color: var(--text-main, #334155); min-height: 100px; white-space: pre-line;">
+                    ${modDesc ? modDesc : '<span style="color: var(--text-muted, var(--text-secondary)); font-style: italic;">No description provided for this module.</span>'}
                   </div>
                 </div>
 
-                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border-color, #e2e8f0);">
-                  <div style="font-size: 0.85rem; color: var(--text-muted, #64748b);">
-                    Associated Tasks: <strong style="color: var(--text-main, #0f172a);">${modTasks.length} Tasks</strong>
+                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--border-color, var(--border-subtle));">
+                  <div style="font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
+                    Associated Tasks: <strong style="color: var(--text-main, var(--text-primary));">${modTasks.length} Tasks</strong>
                   </div>
-                  <div style="font-size: 0.85rem; color: var(--text-muted, #64748b);">
-                    Completed Tasks: <strong style="color: #059669;">${completedCount} Tasks</strong>
+                  <div style="font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
+                    Completed Tasks: <strong style="color: var(--primary);">${completedCount} Tasks</strong>
                   </div>
                 </div>
               </div>
@@ -840,6 +1011,8 @@ export async function ProjectDetails(route, router) {
               const moduleName = m.module_name || m.name || 'Module';
               const mStatus = (m.status || 'not_started').toLowerCase();
               const isModBlocked = mStatus === 'blocked';
+              const isModCompleted = mStatus === 'completed';
+              const isModRework = mStatus === 'rework';
               const isSelected = m.id === selectedModuleId;
               const taskCount = (m.tasks || []).length;
 
@@ -851,14 +1024,14 @@ export async function ProjectDetails(route, router) {
                   <div class="module-item-info">
                     <span class="module-item-name">${moduleName}</span>
                     <div class="module-item-sub">
-                      <span class="student-badge ${mStatus === 'completed' ? 'student-badge-success' : isModBlocked ? 'student-badge-danger' : 'student-badge-warning'}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
-                        ${m.status || 'In Progress'}
+                      <span class="student-badge ${isModCompleted ? 'student-badge-success' : isModRework ? 'student-badge-warning' : isModBlocked ? 'student-badge-danger' : 'student-badge-warning'}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem; ${isModRework ? 'background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5;' : ''}">
+                        ${isModRework ? 'Rework' : (m.status || 'In Progress')}
                       </span>
                       <span>${taskCount} Tasks</span>
                     </div>
                   </div>
                   ${canBlock ? `
-                    <button class="btn btn-sm btn-outline btn-toggle-module-block" data-module-id="${m.id}" data-current-status="${mStatus}" title="${isModBlocked ? 'Unblock Module' : 'Block Module'}" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; ${isModBlocked ? 'border-color: #10b981; color: #10b981;' : 'border-color: #ef4444; color: #ef4444;'}">
+                    <button class="btn btn-sm btn-outline btn-toggle-module-block" data-module-id="${m.id}" data-current-status="${mStatus}" title="${isModBlocked ? 'Unblock Module' : 'Block Module'}" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; ${isModBlocked ? 'border-color: var(--primary-accent); color: var(--primary-accent);' : 'border-color: #ef4444; color: #ef4444;'}">
                       ${isModBlocked ? 'Unblock' : 'Block'}
                     </button>
                   ` : ''}
@@ -921,6 +1094,42 @@ export async function ProjectDetails(route, router) {
                   }
                 });
               });
+
+              root.querySelectorAll('.btn-rework-module').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                  e.stopPropagation();
+                  const moduleId = btn.getAttribute('data-module-id');
+                  if (!confirm('Are you sure you want to mark this completed module for Rework?')) return;
+
+                  btn.disabled = true;
+                  try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_BASE}/projects/modules/${moduleId}/status`, {
+                      method: 'PATCH',
+                      headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({ status: 'rework' })
+                    });
+                    const resData = await res.json();
+                    if (res.ok) {
+                      showFacultySuccessPopup(
+                        'Module Marked for Rework',
+                        'Module has been updated to Rework status.'
+                      );
+                      loadProject();
+                    } else {
+                      alert(resData.error || resData.message || 'Failed to update module status.');
+                      btn.disabled = false;
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert('Error updating module status.');
+                    btn.disabled = false;
+                  }
+                });
+              });
             };
             bindModuleBlockButtons(modContainer);
             if (tasksPaneContainer) bindModuleBlockButtons(tasksPaneContainer);
@@ -938,7 +1147,7 @@ export async function ProjectDetails(route, router) {
           }
         } else {
           if (modContainer) modContainer.innerHTML = '<div style="color:var(--text-muted); padding: 1.5rem;">No modules created yet. Click "+ Add Module" to start.</div>';
-          if (tasksPaneContainer) tasksPaneContainer.innerHTML = '<div style="padding: 2.5rem; text-align: center; color: var(--text-muted); background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px;">Select or create a module to view its name and description.</div>';
+          if (tasksPaneContainer) tasksPaneContainer.innerHTML = '<div style="padding: 2.5rem; text-align: center; color: var(--text-muted); background: var(--surface-card); border: 1px solid var(--border-color); border-radius: 12px;">Select or create a module to view its name and description.</div>';
         }
 
         // -------------------------------------------------------------
@@ -963,16 +1172,18 @@ export async function ProjectDetails(route, router) {
           allTasksTbody.innerHTML = allTasks.length > 0 ? allTasks.map(t => {
             const tStatus = (t.status || 'todo').toLowerCase();
             const isTaskBlocked = tStatus === 'blocked';
-            const statusClass = tStatus === 'completed' ? 'student-badge-success' : (tStatus === 'in_progress' ? 'student-badge-warning' : (isTaskBlocked ? 'student-badge-danger' : 'student-badge-info'));
-            const statusDisplay = t.status ? (t.status.charAt(0).toUpperCase() + t.status.slice(1).replace('_', ' ')) : 'Todo';
+            const isTaskCompleted = tStatus === 'completed';
+            const isTaskRework = tStatus === 'rework';
+            const statusClass = isTaskCompleted ? 'student-badge-success' : (isTaskRework ? 'student-badge-warning' : (tStatus === 'in_progress' ? 'student-badge-warning' : (isTaskBlocked ? 'student-badge-danger' : 'student-badge-info')));
+            const statusDisplay = isTaskRework ? 'Rework' : (t.status ? (t.status.charAt(0).toUpperCase() + t.status.slice(1).replace('_', ' ')) : 'Todo');
             const assigneeName = t.assignee?.name || t.assigned_to_name || (typeof t.assignee === 'string' ? t.assignee : 'Unassigned');
             const isUnassigned = assigneeName === 'Unassigned';
 
             return `
-              <tr style="border-bottom: 1px solid var(--border-color, #e2e8f0); transition: background 0.15s ease;">
+              <tr style="border-bottom: 1px solid var(--border-color, var(--border-subtle)); transition: background 0.15s ease;">
                 <td style="padding: 1.15rem 1.25rem;">
-                  <div style="font-weight: 700; font-size: 0.92rem; color: #0f172a;">${t.title}</div>
-                  <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-primary);">${t.title}</div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span style="display: flex; align-items: center; gap: 4px;">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       <span>${t.moduleName}</span>
@@ -990,15 +1201,22 @@ export async function ProjectDetails(route, router) {
                   </span>
                 </td>
                 <td style="padding: 1.15rem 1.25rem;">
-                  <span class="student-badge ${statusClass}">
+                  <span class="student-badge ${statusClass}" style="${isTaskRework ? 'background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5;' : ''}">
                     ${statusDisplay}
                   </span>
                 </td>
                 ${canBlock ? `
-                  <td style="padding: 1.15rem 1.25rem; text-align: right;">
-                    <button class="btn btn-sm btn-outline btn-toggle-task-block" data-task-id="${t.id}" data-current-status="${tStatus}" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; ${isTaskBlocked ? 'border-color: #10b981; color: #10b981;' : 'border-color: #ef4444; color: #ef4444;'}">
-                      ${isTaskBlocked ? 'Unblock' : 'Block'}
-                    </button>
+                  <td style="padding: 1.15rem 1.25rem; text-align: right; white-space: nowrap;">
+                    <div style="display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
+                      ${isTaskCompleted ? `
+                        <button class="btn btn-sm btn-outline btn-rework-task" data-task-id="${t.id}" title="Assign Rework" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; border-color: #ea580c; color: #ea580c; font-weight: 600;">
+                          Rework
+                        </button>
+                      ` : ''}
+                      <button class="btn btn-sm btn-outline btn-toggle-task-block" data-task-id="${t.id}" data-current-status="${tStatus}" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; ${isTaskBlocked ? 'border-color: var(--primary-accent); color: var(--primary-accent);' : 'border-color: #ef4444; color: #ef4444;'}">
+                        ${isTaskBlocked ? 'Unblock' : 'Block'}
+                      </button>
+                    </div>
                   </td>
                 ` : ''}
               </tr>
@@ -1057,7 +1275,7 @@ export async function ProjectDetails(route, router) {
     if (!repo) {
       ghContainer.innerHTML = `
         <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
-          <div style="width: 54px; height: 54px; margin: 0 auto 1rem; border-radius: 12px; background: #0f172a; display: flex; align-items: center; justify-content: center; color: #fff;">
+          <div style="width: 54px; height: 54px; margin: 0 auto 1rem; border-radius: 12px; background: var(--text-primary); display: flex; align-items: center; justify-content: center; color: #fff;">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
             </svg>
@@ -1079,7 +1297,7 @@ export async function ProjectDetails(route, router) {
       <div style="padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
           <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="width: 48px; height: 48px; border-radius: 10px; background: #0f172a; display: flex; align-items: center; justify-content: center; color: #ffffff; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="width: 48px; height: 48px; border-radius: 10px; background: var(--text-primary); display: flex; align-items: center; justify-content: center; color: #ffffff; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
               </svg>
@@ -1088,7 +1306,7 @@ export async function ProjectDetails(route, router) {
               <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                 <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: var(--text-main);">${repo.repository_name || 'Project Repository'}</h3>
                 ${isVerified 
-                  ? '<span class="status-badge active" style="font-size: 0.75rem; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 0.25rem 0.65rem; border-radius: 6px; font-weight: 600;"><i class="fa fa-check-circle" style="margin-right: 0.35rem;"></i>Verified</span>' 
+                  ? '<span class="status-badge active" style="font-size: 0.75rem; background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-color); padding: 0.25rem 0.65rem; border-radius: 6px; font-weight: 600;"><i class="fa fa-check-circle" style="margin-right: 0.35rem;"></i>Verified</span>' 
                   : '<span class="status-badge pending" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 6px; font-weight: 600;">Pending Verification</span>'
                 }
               </div>
@@ -1122,7 +1340,7 @@ export async function ProjectDetails(route, router) {
           </div>
           <div>
             <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 0.25rem;">Verification Status</span>
-            <span style="font-size: 0.95rem; font-weight: 600; color: ${isVerified ? '#059669' : '#b45309'};">${isVerified ? 'Verified by Faculty' : 'Awaiting Faculty Verification'}</span>
+            <span style="font-size: 0.95rem; font-weight: 600; color: ${isVerified ? 'var(--primary)' : '#b45309'};">${isVerified ? 'Verified by Faculty' : 'Awaiting Faculty Verification'}</span>
           </div>
         </div>
       </div>
@@ -1291,7 +1509,7 @@ export async function ProjectDetails(route, router) {
                 <span style="display: block; font-size: 0.85rem; color: var(--text-muted);">${p.date || ''}</span>
               </div>
               <div style="text-align: right;">
-                <strong style="display: block; font-size: 1.1rem; color: ${p.status === 'Confirmed' ? '#10b981' : 'var(--text-main)'};">₹${p.amount}</strong>
+                <strong style="display: block; font-size: 1.1rem; color: ${p.status === 'Confirmed' ? 'var(--primary-accent)' : 'var(--text-main)'};">₹${p.amount}</strong>
                 <span class="status-badge ${p.status ? p.status.toLowerCase() : 'pending'}" style="font-size: 0.75rem;">${p.status || 'Pending'}</span>
               </div>
             </div>
@@ -1351,11 +1569,11 @@ export async function ProjectDetails(route, router) {
       if (clientReqListEl) {
         if (requirements.length > 0) {
           clientReqListEl.innerHTML = requirements.map((r, i) => `
-            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; background: #ffffff; text-align: left;">
+            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left;">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 0.5rem; text-align: left;">
                   <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 0.75rem; font-weight: 700;">${i + 1}</span>
-                  <strong style="font-size: 0.92rem; color: var(--text-main, #0f172a); text-align: left;">${r.title || `Requirement #${i + 1}`}</strong>
+                  <strong style="font-size: 0.92rem; color: var(--text-main, var(--text-primary)); text-align: left;">${r.title || `Requirement #${i + 1}`}</strong>
                 </div>
                 ${r.status ? `<span class="status-badge ${(r.status || '').toLowerCase()}" style="font-size: 0.72rem; padding: 0.15rem 0.55rem; text-transform: uppercase;">${r.status}</span>` : ''}
               </div>
@@ -1364,12 +1582,12 @@ export async function ProjectDetails(route, router) {
           `).join('');
         } else if (p && p.requirements) {
           clientReqListEl.innerHTML = `
-            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; background: #ffffff; text-align: left;">
+            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left;">
               <p style="margin: 0; font-size: 0.88rem; color: var(--text-main, #334155); line-height: 1.5; white-space: pre-wrap; text-align: left;">${p.requirements}</p>
             </div>
           `;
         } else {
-          clientReqListEl.innerHTML = '<p style="color: var(--text-muted, #64748b); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No client requirements documented for this project.</p>';
+          clientReqListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No client requirements documented for this project.</p>';
         }
       }
     } catch (err) {
@@ -1377,12 +1595,12 @@ export async function ProjectDetails(route, router) {
       if (clientReqListEl) {
         if (p && p.requirements) {
           clientReqListEl.innerHTML = `
-            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; background: #ffffff; text-align: left;">
+            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left;">
               <p style="margin: 0; font-size: 0.88rem; color: var(--text-main, #334155); line-height: 1.5; white-space: pre-wrap; text-align: left;">${p.requirements}</p>
             </div>
           `;
         } else {
-          clientReqListEl.innerHTML = '<p style="color: var(--text-muted, #64748b); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No client requirements documented for this project.</p>';
+          clientReqListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No client requirements documented for this project.</p>';
         }
       }
     }
@@ -1413,8 +1631,8 @@ export async function ProjectDetails(route, router) {
           badgeWrapperEl.style.borderColor = '#fecdd3';
         } else {
           badgeWrapperEl.style.background = '#f1f5f9';
-          badgeWrapperEl.style.color = '#64748b';
-          badgeWrapperEl.style.borderColor = '#e2e8f0';
+          badgeWrapperEl.style.color = 'var(--text-muted)';
+          badgeWrapperEl.style.borderColor = 'var(--border-subtle)';
         }
       }
 
@@ -1427,28 +1645,28 @@ export async function ProjectDetails(route, router) {
             const reason = c.reason;
             const dateStr = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
             const status = (c.status || 'pending').toLowerCase();
-            const statusColor = status === 'approved' ? '#059669' : (status === 'rejected' ? '#dc2626' : '#d97706');
-            const statusBg = status === 'approved' ? '#ecfdf5' : (status === 'rejected' ? '#fef2f2' : '#fef3c7');
+            const statusColor = status === 'approved' ? 'var(--primary)' : (status === 'rejected' ? '#dc2626' : '#d97706');
+            const statusBg = status === 'approved' ? 'var(--primary-light)' : (status === 'rejected' ? '#fef2f2' : '#fef3c7');
 
             return `
-              <div style="padding: 0.95rem 1.15rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; background: #ffffff; text-align: left; position: relative;">
+              <div style="padding: 0.95rem 1.15rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left; position: relative;">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.45rem; flex-wrap: wrap;">
                   <div style="display: flex; align-items: center; gap: 0.5rem; text-align: left;">
                     <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: #fff7ed; color: #ea580c; font-size: 0.75rem; font-weight: 700;">🔔</span>
-                    <strong style="font-size: 0.92rem; color: var(--text-main, #0f172a); text-align: left;">${reqTitle}</strong>
+                    <strong style="font-size: 0.92rem; color: var(--text-main, var(--text-primary)); text-align: left;">${reqTitle}</strong>
                   </div>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <span style="font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 9999px; font-weight: 700; background: ${statusBg}; color: ${statusColor}; text-transform: uppercase;">
                       ${status}
                     </span>
-                    ${dateStr ? `<span style="font-size: 0.75rem; color: var(--text-muted, #64748b);">${dateStr}</span>` : ''}
+                    ${dateStr ? `<span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted));">${dateStr}</span>` : ''}
                   </div>
                 </div>
-                <div style="margin-top: 0.4rem; font-size: 0.86rem; color: var(--text-main, #1e293b); line-height: 1.5; white-space: pre-wrap; background: #f8fafc; padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid #f1f5f9; text-align: left;">
+                <div style="margin-top: 0.4rem; font-size: 0.86rem; color: var(--text-main, #1e293b); line-height: 1.5; white-space: pre-wrap; background: var(--bg-canvas-light); padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid #f1f5f9; text-align: left;">
                   <strong>Change Description:</strong> ${changeDesc}
                 </div>
                 ${prevDesc ? `
-                  <div style="margin-top: 0.35rem; font-size: 0.8rem; color: var(--text-muted, #64748b); line-height: 1.4; padding-left: 0.5rem; border-left: 2px solid #cbd5e1; text-align: left;">
+                  <div style="margin-top: 0.35rem; font-size: 0.8rem; color: var(--text-muted, var(--text-muted)); line-height: 1.4; padding-left: 0.5rem; border-left: 2px solid #cbd5e1; text-align: left;">
                     <em>Previous:</em> ${prevDesc}
                   </div>
                 ` : ''}
@@ -1461,13 +1679,13 @@ export async function ProjectDetails(route, router) {
             `;
           }).join('');
         } else {
-          changesListEl.innerHTML = '<p style="color: var(--text-muted, #64748b); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes or updates recorded for this project.</p>';
+          changesListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes or updates recorded for this project.</p>';
         }
       }
     } catch (err) {
       console.error('Error fetching requirement changes:', err);
       if (changesListEl) {
-        changesListEl.innerHTML = '<p style="color: var(--text-muted, #64748b); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes or updates recorded for this project.</p>';
+        changesListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes or updates recorded for this project.</p>';
       }
     }
   };

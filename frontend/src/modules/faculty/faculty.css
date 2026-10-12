@@ -81,7 +81,7 @@
 }
 
 .faculty-stat-card {
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 22px;
@@ -161,7 +161,7 @@
 }
 
 .faculty-project-card {
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 22px;
@@ -256,7 +256,7 @@
 }
 
 .faculty-project-detail-card {
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     padding: 22px;
@@ -340,7 +340,7 @@
 
 .faculty-project-details {
     margin-top: 30px;
-    background: #ffffff;
+    background: var(--surface-card);
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     padding: 25px;
@@ -435,7 +435,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 20px;
-    background: #ffffff;
+    background: var(--surface-card);
 }
 
 .faculty-assignment-card h3 {
@@ -580,7 +580,7 @@
     width: 100%;
     max-width: 400px;
     padding: 12px 16px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     font-size: 14px;
     outline: none;
@@ -589,13 +589,13 @@
 }
 
 #faculty-student-search:focus {
-    border-color: #059669;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 18, 32, 0.1);
 }
 
 .faculty-student-table-container {
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -607,19 +607,20 @@
     text-align: left;
 }
 
+.faculty-student-table thead,
 .faculty-student-table th {
-    background: #f8fafc;
-    padding: 16px 20px;
+    background: #e8f7f1;
+    padding: 14px 20px;
     font-size: 13px;
-    font-weight: 600;
-    color: #64748b;
+    font-weight: 700;
+    color: var(--primary);
     text-transform: uppercase;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 2px solid var(--border-color);
 }
 
 .faculty-student-table td {
     padding: 16px 20px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-subtle);
     font-size: 14px;
     color: #334155;
 }
@@ -629,7 +630,7 @@
 }
 
 .faculty-student-table tbody tr:hover {
-    background: #f8fafc;
+    background: var(--bg-canvas-light);
 }
 
 .faculty-designation {
@@ -667,7 +668,7 @@
 }
 
 .faculty-student-view:hover {
-    background: #e2e8f0;
+    background: var(--border-subtle);
     color: #1e293b;
 }
 
@@ -705,8 +706,8 @@
 
 /* Calendar Styles */
 .calendar-wrapper {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -725,7 +726,7 @@
 }
 .calendar-day-label {
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 13px;
     padding: 8px 0;
 }
@@ -760,7 +761,7 @@
     background: #ef4444;
 }
 .calendar-day.selected.has-meeting::after {
-    background: #ffffff;
+    background: var(--surface-card);
 }
 
 /* Meeting Schedule Form & List */
@@ -776,8 +777,8 @@
     }
 }
 .meeting-form-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -805,8 +806,8 @@
     border-color: #087f5b;
 }
 .meeting-team-preview {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-canvas-light);
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     padding: 12px;
     font-size: 13px;
@@ -827,8 +828,8 @@
     background: #066b4d;
 }
 .meetings-list-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -847,7 +848,7 @@
 }
 .meeting-item-meta {
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-muted);
     margin-top: 4px;
     display: flex;
     gap: 15px;
@@ -858,8 +859,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 20px;
     margin-bottom: 25px;
@@ -873,8 +874,8 @@
     }
 }
 .sprints-project-progress-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 20px;
     margin-bottom: 25px;
@@ -886,8 +887,8 @@
     gap: 20px;
 }
 .sprint-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -933,12 +934,12 @@
 }
 .sprint-info-row span {
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
     display: inline-block;
     width: 120px;
 }
 .sprint-feedback-box {
-    background: #f8fafc;
+    background: var(--bg-canvas-light);
     border-left: 4px solid #087f5b;
     padding: 12px;
     border-radius: 0 8px 8px 0;
@@ -972,7 +973,7 @@
     cursor: pointer;
 }
 .btn-edit:hover {
-    background: #e2e8f0;
+    background: var(--border-subtle);
 }
 
 /* Modal and Form overlay style */
@@ -999,8 +1000,8 @@
 
 /* Reports and Notifications page styles */
 .report-table-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 14px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     overflow: hidden;
@@ -1021,8 +1022,8 @@
     background: #066b4d;
 }
 .notification-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     padding: 18px;
     margin-bottom: 14px;
@@ -1048,7 +1049,7 @@
 }
 .notification-card-time {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--text-secondary);
 }
 
 /* Github integration style additions */
@@ -1070,9 +1071,9 @@
 .git-message-box {
     margin-top: 15px;
     padding: 12px;
-    background: #f8fafc;
+    background: var(--bg-canvas-light);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
 }
 .git-message-box textarea {
     width: 100%;
@@ -1105,9 +1106,9 @@
     max-height: 250px;
     overflow-y: auto;
     margin-top: 15px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
-    background: #0f172a;
+    background: var(--text-primary);
     color: #cbd5e1;
     font-family: monospace;
     padding: 12px;
@@ -1137,7 +1138,7 @@
 .faculty-sprints,
 .faculty-meetings {
     font-family: var(--font-family, 'Plus Jakarta Sans', sans-serif);
-    color: var(--text-main, #0f172a);
+    color: var(--text-main, var(--text-primary));
     max-width: 1280px;
     margin: 0 auto;
     padding: 24px;
@@ -1147,21 +1148,21 @@
 .faculty-meetings .page-header h1 {
     font-size: 1.6rem;
     font-weight: 700;
-    color: var(--text-main, #0f172a);
+    color: var(--text-main, var(--text-primary));
     margin: 0 0 0.4rem;
 }
 
 .faculty-sprints .page-header p,
 .faculty-meetings .page-header p {
     font-size: 0.92rem;
-    color: var(--text-muted, #64748b);
+    color: var(--text-muted, var(--text-muted));
     margin: 0;
 }
 
 /* Card panels matching My Project */
 .faculty-card-panel {
-    background: var(--bg-card, #ffffff);
-    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-card, var(--surface-card));
+    border: 1px solid var(--border-color, var(--border-subtle));
     border-radius: var(--radius-lg, 12px);
     box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
     padding: 1.5rem;
@@ -1174,19 +1175,19 @@
     padding: 0.7rem 0.95rem;
     font-size: 0.92rem;
     font-family: inherit;
-    border: 1px solid var(--border-color, #e2e8f0);
+    border: 1px solid var(--border-color, var(--border-subtle));
     border-radius: var(--radius-md, 8px);
-    background: var(--bg-main, #f8fafc);
-    color: var(--text-main, #0f172a);
+    background: var(--bg-main, var(--bg-canvas-light));
+    color: var(--text-main, var(--text-primary));
     transition: var(--transition, all 0.2s ease);
 }
 
 .faculty-sprints .premium-input:focus,
 .faculty-meetings .premium-input:focus {
     outline: none;
-    border-color: var(--primary, #059669);
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    border-color: var(--primary, var(--primary));
+    background: var(--surface-card);
+    box-shadow: 0 0 0 3px rgba(0, 18, 32, 0.15);
 }
 
 /* Buttons matching My Project */
@@ -1217,7 +1218,7 @@
 .faculty-sprints .btn-primary,
 .faculty-meetings .btn-primary,
 .faculty-verify-tasks .btn-primary {
-    background: var(--primary, #059669);
+    background: var(--primary, var(--primary));
     color: #ffffff;
 }
 
@@ -1230,7 +1231,7 @@
 .faculty-sprints .btn-primary.shadow-hover:hover,
 .faculty-meetings .btn-primary.shadow-hover:hover,
 .faculty-verify-tasks .btn-primary.shadow-hover:hover {
-    background: var(--primary-hover, #047857);
+    background: var(--primary-hover, var(--primary-hover));
     box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1));
     transform: translateY(-2px);
 }
@@ -1239,16 +1240,16 @@
 .faculty-meetings .btn-outline,
 .faculty-verify-tasks .btn-outline {
     background: transparent;
-    border: 1px solid var(--border-color, #e2e8f0);
-    color: var(--text-main, #0f172a);
+    border: 1px solid var(--border-color, var(--border-subtle));
+    color: var(--text-main, var(--text-primary));
 }
 
 .faculty-sprints .btn-outline:hover,
 .faculty-meetings .btn-outline:hover,
 .faculty-verify-tasks .btn-outline:hover {
-    border-color: var(--primary, #059669);
-    color: var(--primary, #059669);
-    background: var(--primary-light, #ecfdf5);
+    border-color: var(--primary, var(--primary));
+    color: var(--primary, var(--primary));
+    background: var(--primary-light, var(--primary-light));
 }
 
 /* Status Badges matching My Project */
@@ -1273,7 +1274,7 @@
 .faculty-verify-tasks .status-badge.in_progress { background: #fce7f3; color: #db2777; }
 .faculty-sprints .status-badge.completed,
 .faculty-meetings .status-badge.completed,
-.faculty-verify-tasks .status-badge.completed { background: #d1fae5; color: #059669; }
+.faculty-verify-tasks .status-badge.completed { background: var(--border-color); color: var(--primary); }
 .faculty-sprints .status-badge.scheduled,
 .faculty-meetings .status-badge.scheduled,
 .faculty-verify-tasks .status-badge.scheduled { background: #fef3c7; color: #d97706; }
@@ -1296,26 +1297,59 @@
 .faculty-stat-card-interactive:hover {
     transform: translateY(-3px) !important;
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08) !important;
-    border-color: var(--primary, #059669) !important;
+    border-color: var(--primary, var(--primary)) !important;
 }
 .faculty-kpi-card-clickable:active,
 .faculty-stat-card-interactive:active {
     transform: translateY(-1px) !important;
 }
 
-/* My Projects Table Hover: Make project name green like Assign Module & Task, keep background neutral #f8fafc */
+/* My Projects Table Hover: Make project name green like Assign Module & Task, keep background neutral var(--bg-canvas-light) */
 .premium-table tbody tr.project-row-clickable,
 .project-table-container table tbody tr {
     cursor: pointer;
     transition: background 0.15s ease;
 }
+
+/* Table header styling with greenish tint matching the overall ERP design */
+.premium-table thead,
+.premium-table thead th,
+.faculty-student-table thead,
+.faculty-student-table thead th,
+.project-table-container table thead,
+.project-table-container table thead th {
+    background: #e8f7f1 !important;
+    color: var(--primary) !important;
+    border-bottom: 2px solid var(--border-color) !important;
+    font-weight: 700 !important;
+}
+
+/* Reset table body rows to clean background without green striping */
+.premium-table tbody tr,
+.faculty-student-table tbody tr,
+.project-table-container table tbody tr {
+    background: var(--surface-card) !important;
+}
+.premium-table tbody tr:nth-child(even),
+.faculty-student-table tbody tr:nth-child(even),
+.project-table-container table tbody tr:nth-child(even) {
+    background: var(--surface-card) !important;
+}
+.premium-table tbody tr:nth-child(odd),
+.faculty-student-table tbody tr:nth-child(odd),
+.project-table-container table tbody tr:nth-child(odd) {
+    background: var(--surface-card) !important;
+}
+
 .premium-table tbody tr.project-row-clickable:hover,
 .premium-table tbody tr:hover,
+.faculty-student-table tbody tr:hover,
 .project-table-container table tbody tr:hover {
-    background: #f8fafc !important;
+    background: var(--bg-canvas-light) !important;
 }
 .premium-table tbody tr.project-row-clickable:hover td,
 .premium-table tbody tr:hover td,
+.faculty-student-table tbody tr:hover td,
 .project-table-container table tbody tr:hover td {
     background: transparent !important;
 }
@@ -1324,7 +1358,130 @@
 .project-table-container table tbody tr:hover td:first-child,
 .premium-table tbody tr.project-row-clickable:hover td:first-child *,
 .project-table-container table tbody tr:hover td:first-child * {
-    color: #059669 !important;
+    color: var(--primary) !important;
     background: transparent !important;
     transition: color 0.15s ease;
-}
+}
+
+/* =========================================
+   SIMPLE COMPACT FACULTY PROFILE
+   ========================================= */
+.simple-profile-container {
+    max-width: 720px;
+}
+
+.simple-profile-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 640px) {
+    .simple-profile-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
+
+.simple-profile-avatar-wrap {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.simple-profile-avatar {
+    width: 95px;
+    height: 95px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #ffffff;
+    font-size: 32px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #e8f7f1;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.simple-profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.simple-profile-details {
+    flex-grow: 1;
+    width: 100%;
+}
+
+.simple-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.simple-profile-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.simple-profile-badge {
+    background: #e8f7f1;
+    color: var(--primary);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+}
+
+.simple-profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 500px) {
+    .simple-profile-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.simple-profile-field {
+    background: var(--bg-canvas-light);
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+.simple-profile-field .label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 3px;
+}
+
+.simple-profile-field .value {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+    word-break: break-word;
+}

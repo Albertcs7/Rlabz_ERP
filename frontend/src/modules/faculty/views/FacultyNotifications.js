@@ -4,41 +4,58 @@ export function FacultyNotifications() {
     const container = document.createElement('div');
     container.className = 'faculty-notifications';
 
-    // Mock notifications data
-    const notifications = [
-        {
-            id: 1,
-            title: 'New Project Assigned',
-            description: 'You have been assigned as the faculty mentor for the "Hospital Management System" project.',
-            time: 'Just now',
-            unread: true,
-            category: 'project'
-        },
-        {
-            id: 2,
-            title: 'New Sprint Uploaded',
-            description: 'Students of the "RLabZ ERP" project have uploaded a new sprint: "Sprint 2: Dashboard Layout".',
-            time: '2 hours ago',
-            unread: true,
-            category: 'sprint'
-        },
-        {
-            id: 3,
-            title: 'New GitHub Repository Added',
-            description: 'Students of the "Booking System" project have linked their GitHub repository: https://github.com/student/temple-booking.',
-            time: 'Yesterday',
-            unread: true,
-            category: 'github'
-        },
-        {
-            id: 4,
-            title: 'Meeting Scheduled',
-            description: 'A status check meeting for RLabZ ERP is scheduled for August 15th, 2026 at 10:00 AM.',
-            time: '2 days ago',
-            unread: false,
-            category: 'meeting'
+    const apiBase = (typeof window !== 'undefined' && window.__API_BASE__) ? window.__API_BASE__ : 'http://localhost:8000/api';
+    const token = localStorage.getItem('token');
+
+    let notifications = [];
+    let isLoading = true;
+
+    async function loadNotifications() {
+        isLoading = true;
+        renderLoading();
+        try {
+            const res = await fetch(`${apiBase}/faculty/notifications`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    notifications = data;
+                } else {
+                    // Fallback default notifications
+                    notifications = [
+                        {
+                            id: 1,
+                            title: 'New Project Assigned',
+                            description: 'You have been assigned as the faculty mentor for the project.',
+                            time: 'Recently',
+                            unread: true,
+                            category: 'project'
+                        }
+                    ];
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching notifications:', err);
+        } finally {
+            isLoading = false;
+            renderNotifications();
         }
-    ];
+    }
+
+    function renderLoading() {
+        if (listContainer) {
+            listContainer.innerHTML = `
+                <div style="background: white; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 30px; text-align: center;">
+                    <div class="spinner" style="border-top-color: var(--primary, var(--primary)); margin: 0 auto 0.75rem; width: 24px; height: 24px;"></div>
+                    <p style="margin: 0; color: var(--text-muted); font-size: 13px;">Loading notifications...</p>
+                </div>
+            `;
+        }
+    }
 
     container.innerHTML = `
         <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
@@ -60,9 +77,9 @@ export function FacultyNotifications() {
     function renderNotifications() {
         if (notifications.length === 0) {
             listContainer.innerHTML = `
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; text-align: center;">
-                    <h3 style="margin: 0; color: #64748b; font-size: 15px;">No notifications</h3>
-                    <p style="margin: 5px 0 0; color: #94a3b8; font-size: 13px;">You are completely caught up!</p>
+                <div style="background: white; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 30px; text-align: center;">
+                    <h3 style="margin: 0; color: var(--text-muted); font-size: 15px;">No notifications</h3>
+                    <p style="margin: 5px 0 0; color: var(--text-secondary); font-size: 13px;">You are completely caught up!</p>
                 </div>
             `;
             return;
@@ -82,7 +99,7 @@ export function FacultyNotifications() {
                                 Mark as Read
                             </button>
                         ` : `
-                            <span style="font-size: 12px; color: #94a3b8; font-weight: 600; padding: 6px 12px; display: inline-block;">Read</span>
+                            <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600; padding: 6px 12px; display: inline-block;">Read</span>
                         `}
                     </div>
                 </div>
@@ -125,8 +142,8 @@ export function FacultyNotifications() {
         }
     }
 
-    // Initial render
-    renderNotifications();
+    // Initial render and load
+    loadNotifications();
 
     return container;
 }

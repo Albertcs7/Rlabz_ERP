@@ -82,7 +82,7 @@ export async function StudentWorkLogs(route, router) {
       const status = (l.status || 'pending').toLowerCase();
       const statusClass = status === 'approved' ? 'student-badge-success' : status === 'rejected' ? 'student-badge-danger' : 'student-badge-warning';
       return `
-        <tr style="vertical-align: top; border-bottom: 1px solid var(--border-color, #e2e8f0);">
+        <tr style="vertical-align: top; border-bottom: 1px solid var(--border-color, var(--border-subtle));">
           <td style="padding: 12px 14px;">
             <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-main);">${l.project}</div>
             <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">${l.date}</div>
@@ -92,7 +92,7 @@ export async function StudentWorkLogs(route, router) {
               <span class="daily-task-code-badge">${l.taskCode}</span>
               <div style="font-weight: 600; font-size: 0.84rem; color: var(--text-main);">${l.taskTitle || 'Assigned Task'}</div>
             ` : `
-              <span style="color: #94a3b8; font-size: 0.8rem;">${l.taskId ? 'Task #' + l.taskId : 'General Tasks'}</span>
+              <span style="color: var(--text-secondary); font-size: 0.8rem;">${l.taskId ? 'Task #' + l.taskId : 'General Tasks'}</span>
             `}
           </td>
           <td style="padding: 12px 14px; font-weight: 700; color: var(--primary); font-size: 0.9rem;">
@@ -118,7 +118,7 @@ export async function StudentWorkLogs(route, router) {
         <!-- Work Log Form -->
         <div class="student-card reports-form-card" style="height: fit-content;">
           <div class="student-card-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #059669;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             <span>Log Working Hours</span>
           </div>
 
@@ -315,7 +315,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'warning',
           title: 'Project Required',
           text: 'Please select a project.',
-          confirmButtonColor: '#059669'
+          confirmButtonColor: 'var(--primary)'
         });
         return;
       }
@@ -325,7 +325,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'warning',
           title: 'Task Required',
           text: 'Please select an assigned task.',
-          confirmButtonColor: '#059669'
+          confirmButtonColor: 'var(--primary)'
         });
         return;
       }
@@ -345,7 +345,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'success',
           title: 'Logged Successfully',
           text: `Logged ${hours} hours for task.`,
-          confirmButtonColor: '#059669'
+          confirmButtonColor: 'var(--primary)'
         });
       } catch (err) {
         formSubmitting = false;
@@ -354,7 +354,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'error',
           title: 'Error Logging Hours',
           text: err.message || 'Failed to submit work log.',
-          confirmButtonColor: '#059669'
+          confirmButtonColor: 'var(--primary)'
         });
       }
     });

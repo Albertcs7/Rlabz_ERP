@@ -67,19 +67,19 @@ export function FacultySprints() {
                         value="${searchQuery}" 
                         style="padding-left: 2.25rem; font-size: 0.88rem; height: 40px; border-radius: 8px;"
                     />
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: var(--text-secondary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
             </div>
 
             <div class="faculty-card-panel" style="padding: 0; overflow: hidden;">
                 <table class="premium-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                     <thead>
-                        <tr style="background: var(--bg-main, #f8fafc); border-bottom: 2px solid var(--border-color, #e2e8f0);">
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Project Title</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Client Name</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Project Type</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
-                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;">Action</th>
+                        <tr style="background: var(--bg-main, var(--bg-canvas-light)); border-bottom: 2px solid var(--border-color, var(--border-subtle));">
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Project Title</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Client Name</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Type</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
+                            <th style="padding: 1rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="projects-table-body">
@@ -89,10 +89,10 @@ export function FacultySprints() {
             </div>
             <style>
                 .faculty-sprints .project-row-clickable:hover {
-                    background: var(--bg-surface, #f8fafc) !important;
+                    background: var(--bg-surface, var(--bg-canvas-light)) !important;
                 }
                 .faculty-sprints .project-row-clickable:hover td:first-child {
-                    color: var(--primary, #059669) !important;
+                    color: var(--primary, var(--primary)) !important;
                 }
             </style>
         `;
@@ -102,7 +102,7 @@ export function FacultySprints() {
 
     function renderProjectRows() {
         if (isLoadingProjects) {
-            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, #64748b); padding: 2.5rem; font-size: 0.95rem;">Loading assigned projects...</td></tr>`;
+            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, var(--text-muted)); padding: 2.5rem; font-size: 0.95rem;">Loading assigned projects...</td></tr>`;
         }
 
         const query = searchQuery.trim().toLowerCase();
@@ -111,7 +111,7 @@ export function FacultySprints() {
             : assignedProjects;
 
         if (!filteredProjects || filteredProjects.length === 0) {
-            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, #64748b); padding: 2.5rem; font-size: 0.95rem;">${query ? `No projects found matching "${searchQuery}".` : 'No projects currently assigned to you.'}</td></tr>`;
+            return `<tr><td colspan="5" style="text-align: center; color: var(--text-muted, var(--text-muted)); padding: 2.5rem; font-size: 0.95rem;">${query ? `No projects found matching "${searchQuery}".` : 'No projects currently assigned to you.'}</td></tr>`;
         }
 
         return filteredProjects.map(p => {
@@ -121,14 +121,14 @@ export function FacultySprints() {
             const status = (p.status || 'in_progress').toLowerCase();
 
             return `
-                <tr class="project-row-clickable" data-project-id="${p.id}" style="border-bottom: 1px solid var(--border-color, #e2e8f0); transition: background 0.15s ease; cursor: pointer;">
-                    <td style="padding: 1.1rem 1.5rem; font-weight: 700; color: var(--text-main, #0f172a); font-size: 0.95rem;">
+                <tr class="project-row-clickable" data-project-id="${p.id}" style="border-bottom: 1px solid var(--border-color, var(--border-subtle)); transition: background 0.15s ease; cursor: pointer;">
+                    <td style="padding: 1.1rem 1.5rem; font-weight: 700; color: var(--text-main, var(--text-primary)); font-size: 0.95rem;">
                         ${title}
                     </td>
                     <td style="padding: 1.1rem 1.5rem; color: var(--text-muted, #475569); font-size: 0.92rem;">
                         ${client}
                     </td>
-                    <td style="padding: 1.1rem 1.5rem; color: var(--text-muted, #64748b); font-size: 0.9rem;">
+                    <td style="padding: 1.1rem 1.5rem; color: var(--text-muted, var(--text-muted)); font-size: 0.9rem;">
                         ${type}
                     </td>
                     <td style="padding: 1.1rem 1.5rem;">
@@ -138,7 +138,7 @@ export function FacultySprints() {
                     </td>
                     <td style="padding: 1.1rem 1.5rem; text-align: right;">
                         <button class="btn btn-sm btn-primary shadow-hover view-project-btn" data-id="${p.id}">
-                            👁 View
+                            View
                         </button>
                     </td>
                 </tr>
@@ -181,7 +181,7 @@ export function FacultySprints() {
         if (isLoadingDetail || !projectDetail) {
             container.innerHTML = `
                 <div style="padding: 3rem; text-align: center;">
-                    <p style="color: var(--text-muted, #64748b); font-size: 1rem;">Loading project modules, student teams, and tasks...</p>
+                    <p style="color: var(--text-muted, var(--text-muted)); font-size: 1rem;">Loading project modules, student teams, and tasks...</p>
                 </div>
             `;
             return;
@@ -194,7 +194,7 @@ export function FacultySprints() {
 
         const rawTitle = project.title || 'Project Details';
         const projectTitle = rawTitle.replace(/\s*[-–—]\s*Student Portal/gi, '').replace(/Student Portal/gi, '').trim() || 'Project Details';
-        const projectDesc = project.requirements || project.deliverables || 'Academic project under faculty supervision.';
+        const projectDesc = project.requirements || project.deliverables || '';
         const clientName = project.client_name || 'Rajagiri College';
         const status = (project.status || 'in_progress').toLowerCase();
         const isClosed = status === 'closed';
@@ -205,19 +205,21 @@ export function FacultySprints() {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <h1 style="margin: 0; font-size: 1.45rem; font-weight: 700; color: var(--text-main, #0f172a);">${projectTitle}</h1>
+                            <h1 style="margin: 0; font-size: 1.45rem; font-weight: 700; color: var(--text-main, var(--text-primary));">${projectTitle}</h1>
                             <span class="status-badge ${status.replace(' ', '_')}">
                                 ${status.toUpperCase()}
                             </span>
                         </div>
+                        ${projectDesc ? `
                         <p style="margin: 0.5rem 0 0; color: var(--text-muted, #475569); font-size: 0.92rem; line-height: 1.5; max-width: 850px;">
                             ${projectDesc}
                         </p>
-                        <div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted, #64748b);">
-                            Client: <strong style="color: var(--text-main, #0f172a);">${clientName}</strong> &nbsp;|&nbsp; 
-                            Project Students: <strong style="color: var(--primary, #059669);">${students.length}</strong> &nbsp;|&nbsp; 
-                            Modules: <strong style="color: var(--text-main, #0f172a);">${modules.length}</strong> &nbsp;|&nbsp; 
-                            Tasks: <strong style="color: var(--text-main, #0f172a);">${tasks.length}</strong>
+                        ` : ''}
+                        <div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
+                            Client: <strong style="color: var(--text-main, var(--text-primary));">${clientName}</strong> &nbsp;|&nbsp; 
+                            Project Students: <strong style="color: var(--primary, var(--primary));">${students.length}</strong> &nbsp;|&nbsp; 
+                            Modules: <strong style="color: var(--text-main, var(--text-primary));">${modules.length}</strong> &nbsp;|&nbsp; 
+                            Tasks: <strong style="color: var(--text-main, var(--text-primary));">${tasks.length}</strong>
                         </div>
                     </div>
                     <div>
@@ -246,20 +248,20 @@ export function FacultySprints() {
             ` : ''}
 
             <!-- Sub Navigation Tabs: Assign Module | Assign Task | Existing Modules | Existing Tasks -->
-            <div class="project-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color, #e2e8f0); margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <button id="tab-btn-assign-module" class="tab-btn ${activeTab === 'assign-module' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'assign-module' ? 'var(--primary, #059669)' : 'transparent'}; color: ${activeTab === 'assign-module' ? 'var(--primary, #059669)' : 'var(--text-muted, #64748b)'}; display: inline-flex; align-items: center; gap: 0.45rem;">
+            <div class="project-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color, var(--border-subtle)); margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <button id="tab-btn-assign-module" class="tab-btn ${activeTab === 'assign-module' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'assign-module' ? 'var(--primary, var(--primary))' : 'transparent'}; color: ${activeTab === 'assign-module' ? 'var(--primary, var(--primary))' : 'var(--text-muted, var(--text-muted))'}; display: inline-flex; align-items: center; gap: 0.45rem;">
                     ${iconFolder} Assign Module ${isClosed ? '<span style="font-size: 0.7rem; background: #fee2e2; color: #991b1b; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 700; margin-left: 0.25rem;">Closed</span>' : ''}
                 </button>
-                <button id="tab-btn-assign-task" class="tab-btn ${activeTab === 'assign-task' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'assign-task' ? 'var(--primary, #059669)' : 'transparent'}; color: ${activeTab === 'assign-task' ? 'var(--primary, #059669)' : 'var(--text-muted, #64748b)'}; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <button id="tab-btn-assign-task" class="tab-btn ${activeTab === 'assign-task' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'assign-task' ? 'var(--primary, var(--primary))' : 'transparent'}; color: ${activeTab === 'assign-task' ? 'var(--primary, var(--primary))' : 'var(--text-muted, var(--text-muted))'}; display: inline-flex; align-items: center; gap: 0.45rem;">
                     ${iconTask} Assign Task ${isClosed ? '<span style="font-size: 0.7rem; background: #fee2e2; color: #991b1b; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 700; margin-left: 0.25rem;">Closed</span>' : ''}
                 </button>
-                <button id="tab-btn-existing-modules" class="tab-btn ${activeTab === 'existing-modules' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'existing-modules' ? 'var(--primary, #059669)' : 'transparent'}; color: ${activeTab === 'existing-modules' ? 'var(--primary, #059669)' : 'var(--text-muted, #64748b)'}; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <button id="tab-btn-existing-modules" class="tab-btn ${activeTab === 'existing-modules' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'existing-modules' ? 'var(--primary, var(--primary))' : 'transparent'}; color: ${activeTab === 'existing-modules' ? 'var(--primary, var(--primary))' : 'var(--text-muted, var(--text-muted))'}; display: inline-flex; align-items: center; gap: 0.45rem;">
                     ${iconLayers} Existing Modules
                     <span class="status-badge ${activeTab === 'existing-modules' ? 'completed' : 'todo'}" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">
                         ${modules.length}
                     </span>
                 </button>
-                <button id="tab-btn-existing-tasks" class="tab-btn ${activeTab === 'existing-tasks' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'existing-tasks' ? 'var(--primary, #059669)' : 'transparent'}; color: ${activeTab === 'existing-tasks' ? 'var(--primary, #059669)' : 'var(--text-muted, #64748b)'}; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <button id="tab-btn-existing-tasks" class="tab-btn ${activeTab === 'existing-tasks' ? 'active' : ''}" style="background: none; border: none; padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.92rem; cursor: pointer; border-bottom: 2px solid ${activeTab === 'existing-tasks' ? 'var(--primary, var(--primary))' : 'transparent'}; color: ${activeTab === 'existing-tasks' ? 'var(--primary, var(--primary))' : 'var(--text-muted, var(--text-muted))'}; display: inline-flex; align-items: center; gap: 0.45rem;">
                     ${iconList} Existing Tasks
                     <span class="status-badge ${activeTab === 'existing-tasks' ? 'completed' : 'todo'}" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">
                         ${tasks.length}
@@ -308,7 +310,7 @@ export function FacultySprints() {
                         <p style="color: #7f1d1d; font-size: 0.95rem; line-height: 1.5; margin: 0 auto 1.5rem; max-width: 480px;">
                             This project has been marked as <strong>Closed</strong>. You cannot create new modules or assign students to modules for closed projects.
                         </p>
-                        <button type="button" id="btn-view-existing-modules" class="btn btn-outline btn-sm" style="color: #991b1b; border-color: #fca5a5; background: #ffffff;">
+                        <button type="button" id="btn-view-existing-modules" class="btn btn-outline btn-sm" style="color: #991b1b; border-color: #fca5a5; background: var(--surface-card);">
                             View Existing Modules →
                         </button>
                     </div>
@@ -322,15 +324,15 @@ export function FacultySprints() {
         return `
             <div style="max-width: 680px; margin: 0 auto;">
                 <div class="faculty-card-panel">
-                    <h2 style="margin: 0 0 0.35rem; font-size: 1.18rem; font-weight: 700; color: var(--text-main, #0f172a);">Assign Module</h2>
-                    <p style="margin: 0 0 1.25rem; font-size: 0.85rem; color: var(--text-muted, #64748b);">
+                    <h2 style="margin: 0 0 0.35rem; font-size: 1.18rem; font-weight: 700; color: var(--text-main, var(--text-primary));">Assign Module</h2>
+                    <p style="margin: 0 0 1.25rem; font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
                         Select a module from the <strong>modules table</strong> or create a new module, and assign multiple students from this project.
                     </p>
 
                     <form id="form-assign-module">
                         <!-- 1. MODULE DROPDOWN FROM MODULES TABLE -->
                         <div class="form-group" style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.4rem;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.4rem;">
                                 Select Module (from Modules table) *
                             </label>
                             <select id="select-module-dropdown" class="premium-input" required>
@@ -350,9 +352,9 @@ export function FacultySprints() {
                         </div>
 
                         <!-- DYNAMIC NEW MODULE FIELDS (ONLY SHOWN IF '+ Create New Module' IS SELECTED) -->
-                        <div id="container-new-module" style="display: none; padding: 1rem; background: var(--bg-main, #f8fafc); border: 1px dashed var(--border-color, #cbd5e1); border-radius: var(--radius-md, 8px); margin-bottom: 1rem;">
+                        <div id="container-new-module" style="display: none; padding: 1rem; background: var(--bg-main, var(--bg-canvas-light)); border: 1px dashed var(--border-color, #cbd5e1); border-radius: var(--radius-md, 8px); margin-bottom: 1rem;">
                             <div class="form-group" style="margin-bottom: 0.75rem;">
-                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.35rem;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.35rem;">
                                     New Module Name *
                                 </label>
                                 <input
@@ -364,7 +366,7 @@ export function FacultySprints() {
                             </div>
 
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.35rem;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.35rem;">
                                     Description (Optional)
                                 </label>
                                 <textarea
@@ -378,26 +380,26 @@ export function FacultySprints() {
 
                         <!-- 2. MULTIPLE STUDENTS SELECTION IN A DROPDOWN -->
                         <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.4rem;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.4rem;">
                                 Assign Students to Module (Select Multiple in Dropdown) *
                             </label>
                             
                             <div class="student-multi-dropdown" style="position: relative;">
-                                <button type="button" id="btn-student-dropdown-toggle" class="premium-input" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-align: left; background: var(--bg-main, #f8fafc);">
-                                    <span id="student-dropdown-label" style="color: var(--text-muted, #64748b); font-size: 0.9rem;">
+                                <button type="button" id="btn-student-dropdown-toggle" class="premium-input" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-align: left; background: var(--bg-main, var(--bg-canvas-light));">
+                                    <span id="student-dropdown-label" style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem;">
                                         Select students to assign...
                                     </span>
-                                    <span style="font-size: 0.75rem; color: var(--text-muted, #64748b);">▼</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted));">▼</span>
                                 </button>
 
-                                <div id="student-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 280px; overflow-y: auto; background: #ffffff; border: 1px solid var(--border-color, #cbd5e1); border-radius: var(--radius-md, 8px); box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1)); z-index: 60; padding: 0.5rem;">
-                                    <div style="display: flex; justify-content: space-between; padding: 0.25rem 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color, #e2e8f0); font-size: 0.75rem;">
-                                        <button type="button" id="btn-select-all-students" style="background: none; border: none; color: var(--primary, #059669); font-weight: 600; cursor: pointer; padding: 0;">Select All</button>
-                                        <button type="button" id="btn-clear-students" style="background: none; border: none; color: var(--text-muted, #64748b); cursor: pointer; padding: 0;">Clear</button>
+                                <div id="student-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 280px; overflow-y: auto; background: var(--surface-card); border: 1px solid var(--border-color, #cbd5e1); border-radius: var(--radius-md, 8px); box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1)); z-index: 60; padding: 0.5rem;">
+                                    <div style="display: flex; justify-content: space-between; padding: 0.25rem 0.5rem 0.5rem; border-bottom: 1px solid var(--border-color, var(--border-subtle)); font-size: 0.75rem;">
+                                        <button type="button" id="btn-select-all-students" style="background: none; border: none; color: var(--primary, var(--primary)); font-weight: 600; cursor: pointer; padding: 0;">Select All</button>
+                                        <button type="button" id="btn-clear-students" style="background: none; border: none; color: var(--text-muted, var(--text-muted)); cursor: pointer; padding: 0;">Clear</button>
                                     </div>
                                     <div style="display: flex; flex-direction: column; gap: 0.25rem; padding-top: 0.5rem;">
                                         ${students.length === 0 ? `
-                                            <div style="font-size: 0.8rem; color: var(--text-muted, #94a3b8); padding: 0.5rem; text-align: center;">No students assigned to this project yet.</div>
+                                            <div style="font-size: 0.8rem; color: var(--text-muted, var(--text-secondary)); padding: 0.5rem; text-align: center;">No students assigned to this project yet.</div>
                                         ` : students.map(s => {
                                             const studentModules = (projectDetail.modules || []).filter(m => 
                                                 (m.assigned_students || []).some(st => st.student_id === s.student_id)
@@ -411,12 +413,12 @@ export function FacultySprints() {
                                                         value="${s.student_id}"
                                                         data-name="${s.name}"
                                                         class="module-student-checkbox"
-                                                        style="width: 16px; height: 16px; margin-top: 3px; accent-color: var(--primary, #059669); cursor: pointer;"
+                                                        style="width: 16px; height: 16px; margin-top: 3px; accent-color: var(--primary, var(--primary)); cursor: pointer;"
                                                     />
                                                     <div style="flex: 1; min-width: 0;">
                                                         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;">
-                                                            <strong style="color: var(--text-main, #0f172a); font-size: 0.88rem;">${s.name}</strong>
-                                                            <span style="color: var(--text-muted, #64748b); font-size: 0.76rem;">${s.designation || 'Student'} &bull; ${s.email}</span>
+                                                            <strong style="color: var(--text-main, var(--text-primary)); font-size: 0.88rem;">${s.name}</strong>
+                                                            <span style="color: var(--text-muted, var(--text-muted)); font-size: 0.76rem;">${s.designation || 'Student'} &bull; ${s.email}</span>
                                                         </div>
                                                         <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; font-size: 0.76rem;">
                                                             ${studentModules.length > 0 ? `
@@ -424,7 +426,7 @@ export function FacultySprints() {
                                                                     Modules (${studentModules.length}): ${studentModules.map(m => m.module_name).join(', ')}
                                                                 </span>
                                                             ` : `
-                                                                <span style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px;">
+                                                                <span style="background: var(--bg-canvas-light); color: var(--text-muted); border: 1px solid var(--border-subtle); padding: 1px 6px; border-radius: 4px;">
                                                                     No modules assigned yet
                                                                 </span>
                                                             `}
@@ -474,7 +476,7 @@ export function FacultySprints() {
                         <p style="color: #7f1d1d; font-size: 0.95rem; line-height: 1.5; margin: 0 auto 1.5rem; max-width: 480px;">
                             This project has been marked as <strong>Closed</strong>. You cannot assign new tasks or create tasks for closed projects.
                         </p>
-                        <button type="button" id="btn-view-existing-tasks" class="btn btn-outline btn-sm" style="color: #991b1b; border-color: #fca5a5; background: #ffffff;">
+                        <button type="button" id="btn-view-existing-tasks" class="btn btn-outline btn-sm" style="color: #991b1b; border-color: #fca5a5; background: var(--surface-card);">
                             View Existing Tasks →
                         </button>
                     </div>
@@ -487,15 +489,15 @@ export function FacultySprints() {
         return `
             <div style="max-width: 680px; margin: 0 auto;">
                 <div class="faculty-card-panel">
-                    <h2 style="margin: 0 0 0.35rem; font-size: 1.18rem; font-weight: 700; color: var(--text-main, #0f172a);">Assign Task</h2>
-                    <p style="margin: 0 0 1.25rem; font-size: 0.85rem; color: var(--text-muted, #64748b);">
+                    <h2 style="margin: 0 0 0.35rem; font-size: 1.18rem; font-weight: 700; color: var(--text-main, var(--text-primary));">Assign Task</h2>
+                    <p style="margin: 0 0 1.25rem; font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
                         The task belongs to a module and can <strong>only be assigned to students who belong to that particular module</strong>. Task status will be set to <strong>To Do</strong>.
                     </p>
 
                     <form id="form-assign-task">
                         <!-- 1. MODULE DROPDOWN -->
                         <div class="form-group" style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.4rem;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.4rem;">
                                 Select Module *
                             </label>
                             <select id="select-task-module" class="premium-input" required>
@@ -509,7 +511,7 @@ export function FacultySprints() {
 
                         <!-- 2. TASK DROPDOWN FROM TASKS TABLE UNDER SELECTED MODULE -->
                         <div class="form-group" style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.4rem;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.4rem;">
                                 Select Task (from Tasks table) *
                             </label>
                             <select id="select-task-dropdown" class="premium-input" required disabled>
@@ -518,9 +520,9 @@ export function FacultySprints() {
                         </div>
 
                         <!-- DYNAMIC NEW TASK INPUTS (SHOWN WHEN '+ Create New Task' IS CHOSEN) -->
-                        <div id="container-new-task" style="display: none; padding: 1rem; background: var(--bg-main, #f8fafc); border: 1px dashed var(--border-color, #cbd5e1); border-radius: var(--radius-md, 8px); margin-bottom: 1rem;">
+                        <div id="container-new-task" style="display: none; padding: 1rem; background: var(--bg-main, var(--bg-canvas-light)); border: 1px dashed var(--border-color, #cbd5e1); border-radius: var(--radius-md, 8px); margin-bottom: 1rem;">
                             <div class="form-group" style="margin-bottom: 0.75rem;">
-                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.35rem;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.35rem;">
                                     New Task Title *
                                 </label>
                                 <input
@@ -532,7 +534,7 @@ export function FacultySprints() {
                             </div>
 
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.35rem;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.35rem;">
                                     Task Description
                                 </label>
                                 <textarea
@@ -549,22 +551,22 @@ export function FacultySprints() {
 
                         <!-- 3. STUDENT DROPDOWN (ONLY STUDENTS BELONGING TO SELECTED MODULE) -->
                         <div class="form-group" style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.4rem;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.4rem;">
                                 Assign To Student (Module Team Members Only) *
                             </label>
                             <select id="select-task-student" class="premium-input" required disabled>
                                 <option value="">-- First choose a module above --</option>
                             </select>
-                            <div id="module-students-hint" style="font-size: 0.8rem; color: var(--text-muted, #64748b); margin-top: 0.4rem;">
+                            <div id="module-students-hint" style="font-size: 0.8rem; color: var(--text-muted, var(--text-muted)); margin-top: 0.4rem;">
                                 Only students assigned to this specific module appear in this list.
                             </div>
                             <!-- Selected Student's Currently Assigned Tasks Specifically -->
-                            <div id="student-assigned-tasks-preview" style="display: none; margin-top: 0.5rem; padding: 0.65rem 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.82rem; color: #334155;"></div>
+                            <div id="student-assigned-tasks-preview" style="display: none; margin-top: 0.5rem; padding: 0.65rem 0.85rem; background: var(--bg-canvas-light); border: 1px solid var(--border-subtle); border-radius: 6px; font-size: 0.82rem; color: #334155;"></div>
                         </div>
 
                         <!-- 4. DUE DATE -->
                         <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, #0f172a); margin-bottom: 0.4rem;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, var(--text-primary)); margin-bottom: 0.4rem;">
                                 Due Date
                             </label>
                             <input
@@ -596,10 +598,10 @@ export function FacultySprints() {
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
                     <div>
-                        <h2 style="margin: 0 0 0.25rem; font-size: 1.2rem; font-weight: 700; color: var(--text-main, #0f172a);">
+                        <h2 style="margin: 0 0 0.25rem; font-size: 1.2rem; font-weight: 700; color: var(--text-main, var(--text-primary));">
                             Existing Project Modules (${modules.length})
                         </h2>
-                        <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted, #64748b);">
+                        <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
                             All configured modules for this project and their assigned student development team members.
                         </p>
                     </div>
@@ -611,10 +613,10 @@ export function FacultySprints() {
                 </div>
 
                 ${modules.length === 0 ? `
-                    <div class="faculty-card-panel" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 3rem 2rem;">
-                        <div style="font-size: 1.5rem; margin-bottom: 0.75rem; color: var(--text-muted, #94a3b8);">${iconLayers}</div>
-                        <h3 style="margin: 0 0 0.35rem; font-size: 1.05rem; font-weight: 700; color: var(--text-main, #0f172a);">No modules created yet</h3>
-                        <p style="margin: 0 0 1.25rem; font-size: 0.88rem; color: var(--text-muted, #64748b);">
+                    <div class="faculty-card-panel" style="text-align: center; color: var(--text-muted, var(--text-secondary)); padding: 3rem 2rem;">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.75rem; color: var(--text-muted, var(--text-secondary));">${iconLayers}</div>
+                        <h3 style="margin: 0 0 0.35rem; font-size: 1.05rem; font-weight: 700; color: var(--text-main, var(--text-primary));">No modules created yet</h3>
+                        <p style="margin: 0 0 1.25rem; font-size: 0.88rem; color: var(--text-muted, var(--text-muted));">
                             Get started by creating your first module and assigning student team members.
                         </p>
                         ${!isClosed ? `
@@ -627,29 +629,42 @@ export function FacultySprints() {
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1.15rem;">
                         ${modules.map(m => {
                             const assigned = m.assigned_students || [];
+                            const modStatus = (m.status || (assigned.length > 0 ? 'in_progress' : 'todo')).toLowerCase();
+                            const isModCompleted = modStatus === 'completed';
+                            const isModRework = modStatus === 'rework';
                             return `
-                                <div class="module-card" style="background: var(--bg-card, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 1.25rem; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04)); display: flex; flex-direction: column; justify-content: space-between;">
+                                <div class="module-card" style="background: var(--bg-card, var(--surface-card)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 10px; padding: 1.25rem; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04)); display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
-                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.65rem;">
-                                            <h4 style="margin: 0; font-size: 1.08rem; font-weight: 700; color: var(--text-main, #0f172a);">${m.module_name}</h4>
-                                            <span class="status-badge ${assigned.length > 0 ? 'completed' : 'todo'}" style="font-size: 0.72rem; flex-shrink: 0;">
-                                                ${assigned.length} Student${assigned.length === 1 ? '' : 's'}
-                                            </span>
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.65rem; flex-wrap: wrap;">
+                                            <h4 style="margin: 0; font-size: 1.08rem; font-weight: 700; color: var(--text-main, var(--text-primary));">${m.module_name}</h4>
+                                            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                                <span class="status-badge ${isModCompleted ? 'completed' : (isModRework ? 'pending' : (assigned.length > 0 ? 'in_progress' : 'todo'))}" style="font-size: 0.72rem; flex-shrink: 0; ${isModRework ? 'background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5;' : ''}">
+                                                    ${isModRework ? 'REWORK' : (isModCompleted ? 'COMPLETED' : (assigned.length > 0 ? 'IN PROGRESS' : 'TODO'))}
+                                                </span>
+                                                ${isModCompleted && !isClosed ? `
+                                                    <button type="button" class="btn btn-sm btn-outline btn-rework-module" data-module-id="${m.id}" title="Mark module for rework" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; border-color: #ea580c; color: #ea580c; font-weight: 600;">
+                                                        Rework
+                                                    </button>
+                                                ` : ''}
+                                                <span class="status-badge todo" style="font-size: 0.72rem; flex-shrink: 0;">
+                                                    ${assigned.length} Student${assigned.length === 1 ? '' : 's'}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <p style="margin: 0 0 1rem; font-size: 0.86rem; color: var(--text-muted, #64748b); line-height: 1.45;">
+                                        <p style="margin: 0 0 1rem; font-size: 0.86rem; color: var(--text-muted, var(--text-muted)); line-height: 1.45;">
                                             ${m.description || 'No description provided.'}
                                         </p>
                                     </div>
 
                                     <div style="border-top: 1px solid var(--border-color, #f1f5f9); padding-top: 0.85rem; margin-top: auto;">
-                                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted, #64748b); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
                                             Assigned Students
                                         </div>
                                         <div style="display: flex; flex-wrap: wrap; gap: 0.45rem;">
                                             ${assigned.length === 0 ? `
-                                                <span style="font-size: 0.82rem; color: var(--text-muted, #94a3b8); font-style: italic;">No students assigned to this module yet.</span>
+                                                <span style="font-size: 0.82rem; color: var(--text-muted, var(--text-secondary)); font-style: italic;">No students assigned to this module yet.</span>
                                             ` : assigned.map(s => `
-                                                <span style="background: var(--primary-light, #ecfdf5); color: var(--primary, #059669); border: 1px solid #a7f3d0; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                                <span style="background: var(--primary-light, var(--primary-light)); color: var(--primary, var(--primary)); border: 1px solid var(--border-color); padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
                                                     ${iconUser} ${s.name} ${s.designation ? `(${s.designation})` : ''}
                                                     ${!isClosed ? `
                                                     <button
@@ -658,7 +673,7 @@ export function FacultySprints() {
                                                         data-module-id="${m.id}"
                                                         data-student-id="${s.student_id}"
                                                         title="Remove student from this module"
-                                                        style="background: none; border: none; color: var(--primary, #059669); cursor: pointer; font-weight: bold; font-size: 12px; padding: 0 2px; line-height: 1;"
+                                                        style="background: none; border: none; color: var(--primary, var(--primary)); cursor: pointer; font-weight: bold; font-size: 12px; padding: 0 2px; line-height: 1;"
                                                     >&times;</button>
                                                     ` : ''}
                                                 </span>
@@ -686,10 +701,10 @@ export function FacultySprints() {
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
                     <div>
-                        <h2 style="margin: 0 0 0.25rem; font-size: 1.2rem; font-weight: 700; color: var(--text-main, #0f172a);">
+                        <h2 style="margin: 0 0 0.25rem; font-size: 1.2rem; font-weight: 700; color: var(--text-main, var(--text-primary));">
                             Existing Project Tasks (${tasks.length})
                         </h2>
-                        <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted, #64748b);">
+                        <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted, var(--text-muted));">
                             Comprehensive list of all assigned student tasks, associated modules, assignees, deadlines, and delivery statuses.
                         </p>
                     </div>
@@ -701,10 +716,10 @@ export function FacultySprints() {
                 </div>
 
                 ${tasks.length === 0 ? `
-                    <div class="faculty-card-panel" style="text-align: center; color: var(--text-muted, #94a3b8); padding: 3rem 2rem;">
-                        <div style="font-size: 1.5rem; margin-bottom: 0.75rem; color: var(--text-muted, #94a3b8);">${iconList}</div>
-                        <h3 style="margin: 0 0 0.35rem; font-size: 1.05rem; font-weight: 700; color: var(--text-main, #0f172a);">No tasks created yet</h3>
-                        <p style="margin: 0 0 1.25rem; font-size: 0.88rem; color: var(--text-muted, #64748b);">
+                    <div class="faculty-card-panel" style="text-align: center; color: var(--text-muted, var(--text-secondary)); padding: 3rem 2rem;">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.75rem; color: var(--text-muted, var(--text-secondary));">${iconList}</div>
+                        <h3 style="margin: 0 0 0.35rem; font-size: 1.05rem; font-weight: 700; color: var(--text-main, var(--text-primary));">No tasks created yet</h3>
+                        <p style="margin: 0 0 1.25rem; font-size: 0.88rem; color: var(--text-muted, var(--text-muted));">
                             Assign your first task to a student belonging to a project module.
                         </p>
                         ${!isClosed ? `
@@ -714,15 +729,15 @@ export function FacultySprints() {
                         ` : ''}
                     </div>
                 ` : `
-                    <div class="faculty-card-panel" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div class="faculty-card-panel" style="padding: 0; overflow: hidden; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; background: var(--surface-card); box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                         <table class="premium-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
-                                <tr style="background: var(--bg-main, #f8fafc); border-bottom: 2px solid var(--border-color, #e2e8f0);">
-                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 34%;">Task Title & Scope</th>
-                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 22%;">Module</th>
-                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 24%;">Assigned Student</th>
-                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 10%;">Due Date</th>
-                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; width: 10%; text-align: right;">Status</th>
+                                <tr style="background: var(--bg-main, var(--bg-canvas-light)); border-bottom: 2px solid var(--border-color, var(--border-subtle));">
+                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 34%;">Task Title & Scope</th>
+                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 22%;">Module</th>
+                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 24%;">Assigned Student</th>
+                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 10%;">Due Date</th>
+                                    <th style="padding: 1rem 1.25rem; font-size: 0.82rem; font-weight: 700; color: var(--text-muted, var(--text-muted)); text-transform: uppercase; letter-spacing: 0.05em; width: 10%; text-align: right;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -731,8 +746,8 @@ export function FacultySprints() {
                                     return `
                                         <tr style="border-bottom: 1px solid var(--border-color, #f1f5f9); transition: background 0.15s ease;">
                                             <td style="padding: 1rem 1.25rem;">
-                                                <strong style="display: block; font-size: 0.92rem; color: var(--text-main, #0f172a); margin-bottom: 2px;">${t.title}</strong>
-                                                ${t.description ? `<p style="margin: 0; font-size: 0.82rem; color: var(--text-muted, #64748b); line-height: 1.4;">${t.description}</p>` : ''}
+                                                <strong style="display: block; font-size: 0.92rem; color: var(--text-main, var(--text-primary)); margin-bottom: 2px;">${t.title}</strong>
+                                                ${t.description ? `<p style="margin: 0; font-size: 0.82rem; color: var(--text-muted, var(--text-muted)); line-height: 1.4;">${t.description}</p>` : ''}
                                             </td>
                                             <td style="padding: 1rem 1.25rem; font-size: 0.85rem; color: var(--text-main, #334155);">
                                                 <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
@@ -740,17 +755,24 @@ export function FacultySprints() {
                                                 </span>
                                             </td>
                                             <td style="padding: 1rem 1.25rem; font-size: 0.85rem;">
-                                                <div style="font-weight: 600; color: var(--text-main, #0f172a); display: flex; align-items: center; gap: 4px;">
+                                                <div style="font-weight: 600; color: var(--text-main, var(--text-primary)); display: flex; align-items: center; gap: 4px;">
                                                     ${iconUser} ${t.assigned_to_name || 'Unassigned'}
                                                 </div>
                                             </td>
-                                            <td style="padding: 1rem 1.25rem; font-size: 0.82rem; color: var(--text-muted, #64748b); white-space: nowrap;">
+                                            <td style="padding: 1rem 1.25rem; font-size: 0.82rem; color: var(--text-muted, var(--text-muted)); white-space: nowrap;">
                                                 ${t.due_date ? `${iconCalendar} ${t.due_date}` : '—'}
                                             </td>
-                                            <td style="padding: 1rem 1.25rem; text-align: right;">
-                                                <span class="status-badge ${status.replace(' ', '_')}">
-                                                    ${status.replace('_', ' ').toUpperCase()}
-                                                </span>
+                                            <td style="padding: 1rem 1.25rem; text-align: right; white-space: nowrap;">
+                                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem;">
+                                                    <span class="status-badge ${status === 'rework' ? 'pending' : status.replace(' ', '_')}" style="${status === 'rework' ? 'background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5;' : ''}">
+                                                        ${status.replace('_', ' ').toUpperCase()}
+                                                    </span>
+                                                    ${status === 'completed' && !isClosed ? `
+                                                        <button type="button" class="btn btn-sm btn-outline btn-rework-task" data-task-id="${t.id}" title="Mark task for rework" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; border-color: #ea580c; color: #ea580c; font-weight: 600;">
+                                                            Rework
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
                                             </td>
                                         </tr>
                                     `;
@@ -883,9 +905,9 @@ export function FacultySprints() {
                         const s = students.find(item => item.student_id === id);
                         const sName = s ? s.name : `Student #${id}`;
                         return `
-                            <span style="background: var(--primary-light, #ecfdf5); color: var(--primary, #059669); border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 9999px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="background: var(--primary-light, var(--primary-light)); color: var(--primary, var(--primary)); border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 9999px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                                 👤 ${sName}
-                                <button type="button" class="remove-pill-btn" data-id="${id}" style="background: none; border: none; color: var(--primary, #059669); cursor: pointer; font-weight: bold; font-size: 11px; padding: 0;">✕</button>
+                                <button type="button" class="remove-pill-btn" data-id="${id}" style="background: none; border: none; color: var(--primary, var(--primary)); cursor: pointer; font-weight: bold; font-size: 11px; padding: 0;">✕</button>
                             </span>
                         `;
                     }).join('');
@@ -969,7 +991,7 @@ export function FacultySprints() {
                             <strong>Assigned Module:</strong> "${matchedMod.module_name}" is assigned to <strong>${(matchedMod.assigned_students || []).map(s => s.name).join(', ')}</strong>.
                         `;
                     } else {
-                        banner.style.background = '#f0fdf4';
+                        banner.style.background = 'var(--bg-main)';
                         banner.style.border = '1px solid #bbf7d0';
                         banner.style.color = '#166534';
                         banner.innerHTML = `
@@ -1100,7 +1122,7 @@ export function FacultySprints() {
 
                         if (msgContainer) {
                             msgContainer.innerHTML = `
-                                <div style="background: #ecfdf5; border: 1px solid #86efac; color: #166534; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600;">
+                                <div style="background: var(--primary-light); border: 1px solid #86efac; color: #166534; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600;">
                                     ✓ Students successfully assigned to module!
                                 </div>
                             `;
@@ -1191,18 +1213,18 @@ export function FacultySprints() {
 
             previewEl.style.display = 'block';
             previewEl.innerHTML = `
-                <div style="font-weight: 700; color: #0f172a; margin-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center;">
                     <span>Assigned Tasks for ${sName} (${studentTasks.length}):</span>
                 </div>
                 ${studentTasks.length === 0 ? `
-                    <div style="color: #64748b; font-size: 0.8rem;">No other tasks currently assigned to this student in this project.</div>
+                    <div style="color: var(--text-muted); font-size: 0.8rem;">No other tasks currently assigned to this student in this project.</div>
                 ` : `
                     <div style="display: flex; flex-direction: column; gap: 0.3rem; max-height: 120px; overflow-y: auto;">
                         ${studentTasks.map(t => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 0.78rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 4px 8px; font-size: 0.78rem;">
                                 <span style="color: #1e293b; font-weight: 600;">${t.title}</span>
                                 <div style="display: flex; gap: 0.4rem; align-items: center;">
-                                    <span style="color: #64748b; font-size: 0.74rem;">${t.module_name || 'Module'}</span>
+                                    <span style="color: var(--text-muted); font-size: 0.74rem;">${t.module_name || 'Module'}</span>
                                     <span class="status-badge ${t.status.replace(' ', '_')}" style="padding: 1px 5px; font-size: 0.7rem;">
                                         ${t.status.toUpperCase()}
                                     </span>
@@ -1342,7 +1364,7 @@ export function FacultySprints() {
                 `;
                 taskStudentSelect.value = soleStudent.student_id;
                 if (studentsHint) {
-                    studentsHint.innerHTML = `<span style="color: var(--primary, #059669); font-weight: 600;">✓ Module is assigned to only <strong>${soleStudent.name}</strong> — automatically assigned to this student.</span>`;
+                    studentsHint.innerHTML = `<span style="color: var(--primary, var(--primary)); font-weight: 600;">✓ Module is assigned to only <strong>${soleStudent.name}</strong> — automatically assigned to this student.</span>`;
                 }
                 updateStudentTaskPreview(soleStudent.student_id);
             } else {
@@ -1493,7 +1515,7 @@ export function FacultySprints() {
 
                         if (msgContainer) {
                             msgContainer.innerHTML = `
-                                <div style="background: #ecfdf5; border: 1px solid #86efac; color: #166534; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600;">
+                                <div style="background: var(--primary-light); border: 1px solid #86efac; color: #166534; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600;">
                                     ✓ Task successfully assigned with status <strong>TO DO</strong>!
                                 </div>
                             `;
@@ -1516,6 +1538,70 @@ export function FacultySprints() {
                 }
             });
         }
+
+        // Bind Rework buttons on existing modules
+        container.querySelectorAll('.btn-rework-module').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const moduleId = btn.getAttribute('data-module-id');
+                if (!confirm('Are you sure you want to mark this completed module for Rework?')) return;
+                btn.disabled = true;
+                try {
+                    const res = await fetch(`${apiBase}/projects/modules/${moduleId}/status`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({ status: 'rework' })
+                    });
+                    const data = await res.json();
+                    if (res.ok && (data.status === 'success' || data.success)) {
+                        showFacultySuccessPopup('Module Marked for Rework', 'Module has been updated to Rework status.');
+                        await loadProjectDetail(selectedProjectId);
+                    } else {
+                        showFacultyErrorPopup('Error', data.error || data.message || 'Failed to update module status.');
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showFacultyErrorPopup('Error', 'Failed to update module status.');
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        // Bind Rework buttons on existing tasks
+        container.querySelectorAll('.btn-rework-task').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const taskId = btn.getAttribute('data-task-id');
+                if (!confirm('Are you sure you want to mark this completed task for Rework?')) return;
+                btn.disabled = true;
+                try {
+                    const res = await fetch(`${apiBase}/projects/tasks/${taskId}/status`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({ status: 'rework' })
+                    });
+                    const data = await res.json();
+                    if (res.ok && (data.status === 'success' || data.success)) {
+                        showFacultySuccessPopup('Task Marked for Rework', 'Task has been reopened with Rework status.');
+                        await loadProjectDetail(selectedProjectId);
+                    } else {
+                        showFacultyErrorPopup('Error', data.error || data.message || 'Failed to update task status.');
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showFacultyErrorPopup('Error', 'Failed to update task status.');
+                    btn.disabled = false;
+                }
+            });
+        });
     }
 
     // ==========================================

@@ -68,14 +68,14 @@ export async function StudentDashboard(route, router) {
       return `
         <tr>
           <td style="max-width: 240px;">
-            <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">${t.title}</div>
-            ${t.description ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 2px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${t.description}</div>` : ''}
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${t.title}</div>
+            ${t.description ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${t.description}</div>` : ''}
             <div style="display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap;">
               <span class="student-badge" style="background: ${t.type === 'module' ? '#fdf4ff' : '#eff6ff'}; color: ${t.type === 'module' ? '#9333ea' : '#2563eb'}; font-size: 0.7rem; padding: 2px 6px; font-weight: 700;">
                 ${t.type === 'module' ? 'Module / Sprint' : 'Sub-Task'}
               </span>
               <span class="student-badge" style="background: #f1f5f9; color: #475569; font-size: 0.7rem; padding: 2px 6px;">${t.project}</span>
-              <span class="student-badge" style="background: #ecfdf5; color: #047857; font-size: 0.7rem; padding: 2px 6px;">${t.module}</span>
+              <span class="student-badge" style="background: var(--primary-light); color: var(--primary-hover); font-size: 0.7rem; padding: 2px 6px;">${t.module}</span>
             </div>
           </td>
           <td>
@@ -167,7 +167,7 @@ export async function StudentDashboard(route, router) {
             <div class="student-dash-meeting-meta">
               <span>⏰ ${m.time || '10:00 AM'}</span>
               <span>•</span>
-              <span style="color: #059669; font-weight: 600;">${m.project}</span>
+              <span style="color: var(--primary); font-weight: 600;">${m.project}</span>
               ${m.scheduledBy ? `<span>• By: ${m.scheduledBy}</span>` : ''}
             </div>
           </div>
@@ -185,7 +185,7 @@ export async function StudentDashboard(route, router) {
 
     // 4. Build Notifications List (Latest 1 or 2)
     const notifItems = displayedNotifications.map(n => {
-      let iconColor = '#059669';
+      let iconColor = 'var(--primary)';
       if (n.type === 'meeting_scheduled') iconColor = '#2563eb';
       else if (n.type === 'task_assigned') iconColor = '#d97706';
       else if (n.type === 'module_assigned') iconColor = '#7c3aed';
@@ -247,7 +247,7 @@ export async function StudentDashboard(route, router) {
 
         <!-- 2. Completed Projects -->
         <div class="student-kpi-card" id="kpi-completed-projects" style="cursor: pointer;" title="Click to view completed projects">
-          <div class="student-kpi-icon" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); color: #16a34a; border: 1px solid #bbf7d0;">
+          <div class="student-kpi-icon" style="background: linear-gradient(135deg, var(--bg-main) 0%, #dcfce7 100%); color: #16a34a; border: 1px solid #bbf7d0;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -281,7 +281,7 @@ export async function StudentDashboard(route, router) {
 
         <!-- 4. Bug Fixes -->
         <div class="student-kpi-card ${bugFixesCount > 0 ? 'kpi-card-alert' : ''}" id="kpi-bug-fixes" style="cursor: pointer;" title="${bugFixesCount > 0 ? 'Click to inspect ' + bugFixesCount + ' bug fixes / rework' : 'Click to view bug fixes status'}">
-          <div class="student-kpi-icon" style="${bugFixesCount > 0 ? 'background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #dc2626; border: 1px solid #fca5a5; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);' : 'background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); color: #64748b; border: 1px solid #e2e8f0;'}">
+          <div class="student-kpi-icon" style="${bugFixesCount > 0 ? 'background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #dc2626; border: 1px solid #fca5a5; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);' : 'background: linear-gradient(135deg, var(--bg-canvas-light) 0%, #f1f5f9 100%); color: var(--text-muted); border: 1px solid var(--border-subtle);'}">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect width="8" height="14" x="8" y="5" rx="4"></rect>
               <path d="m19 7-3 2"></path>
@@ -295,7 +295,7 @@ export async function StudentDashboard(route, router) {
             </svg>
           </div>
           <div class="student-kpi-info">
-            <span class="student-kpi-value" style="color: ${bugFixesCount > 0 ? '#dc2626' : '#64748b'};">${bugFixesCount}</span>
+            <span class="student-kpi-value" style="color: ${bugFixesCount > 0 ? '#dc2626' : 'var(--text-muted)'};">${bugFixesCount}</span>
             <span class="student-kpi-label">Bug Fixes</span>
           </div>
           <div class="student-kpi-arrow" style="${bugFixesCount > 0 ? 'color: #dc2626;' : ''}">
@@ -378,7 +378,7 @@ export async function StudentDashboard(route, router) {
                 <tbody>
                   ${taskRows || `
                     <tr>
-                      <td colspan="3" style="text-align: center; padding: 36px 20px; color: #64748b;">
+                      <td colspan="3" style="text-align: center; padding: 36px 20px; color: var(--text-muted);">
                         <div style="font-size: 1.75rem; margin-bottom: 6px;">📋</div>
                         <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">No tasks assigned</div>
     
@@ -389,7 +389,7 @@ export async function StudentDashboard(route, router) {
               </table>
 
               ${tasks.length > 0 ? `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--bg-canvas-light); border-top: 1px solid var(--border-subtle); font-size: 0.8rem; color: var(--text-muted);">
                   <span>
                     Showing <strong>${displayedTasks.length}</strong> of <strong>${tasks.length}</strong> tasks (Latest 3)
                   </span>
@@ -430,7 +430,7 @@ export async function StudentDashboard(route, router) {
 
             <div class="student-dash-meetings-list">
               ${meetingItems || `
-                <div style="text-align: center; padding: 28px 16px; color: #64748b;">
+                <div style="text-align: center; padding: 28px 16px; color: var(--text-muted);">
                   <div style="font-size: 1.5rem; margin-bottom: 6px;">📅</div>
                   <div style="font-size: 0.85rem; font-weight: 600; color: #334155;">No meetings scheduled</div>
                 </div>
@@ -442,12 +442,12 @@ export async function StudentDashboard(route, router) {
           <div class="student-card">
             <div class="student-card-header">
               <div class="student-card-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #059669;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
                 <span>Recent Activity & Alerts</span>
-                <span class="student-badge" style="background: #ecfdf5; color: #047857; font-size: 0.72rem; margin-left: 6px; font-weight: 600;">
+                <span class="student-badge" style="background: var(--primary-light); color: var(--primary-hover); font-size: 0.72rem; margin-left: 6px; font-weight: 600;">
                   Latest ${displayedNotifications.length}
                 </span>
               </div>
@@ -456,7 +456,7 @@ export async function StudentDashboard(route, router) {
             <div class="student-notif-list">
               ${notifItems || `
                 <div class="student-notif-empty">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: #94a3b8;">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-secondary);">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                     <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                   </svg>
@@ -554,10 +554,10 @@ export async function StudentDashboard(route, router) {
     container.querySelector('#kpi-bug-fixes')?.addEventListener('click', () => {
       if (bugFixList.length > 0) {
         const listHtml = bugFixList.map(b => `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; text-align: left;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-canvas-light); border: 1px solid var(--border-subtle); border-radius: 8px; margin-bottom: 8px; text-align: left;">
             <div>
-              <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">${b.title}</div>
-              <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+              <div style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${b.title}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
                 <span>Project: <strong>${b.project}</strong></span>
               </div>
             </div>
@@ -568,11 +568,11 @@ export async function StudentDashboard(route, router) {
         `).join('');
 
         StudentSwal.fire({
-          title: `<span style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.15rem; font-weight: 800; color: #0f172a;">
+          title: `<span style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
             <span style="color: #dc2626;">🔧</span> Bug Fixes & Rework (${bugFixList.length})
           </span>`,
           html: `
-            <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 14px; text-align: center;">
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px; text-align: center;">
               The following rework or bug fix tickets have been requested by Faculty or Coordinator:
             </div>
             <div style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
@@ -580,7 +580,7 @@ export async function StudentDashboard(route, router) {
             </div>
           `,
           confirmButtonText: 'Go to Projects Workspace →',
-          confirmButtonColor: '#059669',
+          confirmButtonColor: 'var(--primary)',
           showCancelButton: true,
           cancelButtonText: 'Close'
         }).then((res) => {
@@ -594,7 +594,7 @@ export async function StudentDashboard(route, router) {
           title: '0 Bug Fixes Pending',
           text: 'No bug fixes or rework tickets have been assigned by Faculty or Coordinator. All your deliverables are in order.',
           confirmButtonText: 'Great!',
-          confirmButtonColor: '#059669'
+          confirmButtonColor: 'var(--primary)'
         });
       }
     });
