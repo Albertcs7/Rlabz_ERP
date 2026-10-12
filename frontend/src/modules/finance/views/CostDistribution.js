@@ -63,7 +63,7 @@ export async function CostDistribution(route, router) {
         <div id="results-count" style="font-size:0.8rem;color:var(--text-muted)"></div>
       </div>
       <div class="fin-filters" style="padding:1.5rem; border-bottom:1px solid var(--border-subtle); display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
-        <input type="text" class="fin-input" id="search-filter" placeholder="Search project or client..." style="max-width:300px;">
+        <input type="text" class="fin-input app-search-input" id="search-filter" placeholder="Search project or client..." style="max-width:300px;">
         <select class="fin-input" id="project-filter" style="max-width:300px;">
           <option value="All">All Projects</option>
         </select>

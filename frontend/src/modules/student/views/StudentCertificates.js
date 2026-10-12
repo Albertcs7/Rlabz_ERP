@@ -36,6 +36,8 @@ export async function StudentCertificates(route, router) {
       date: cert.issue_date,
       issuer: cert.issuer?.name || '',
       facultyNames: facultyList.map((f) => f.name).filter(Boolean).join(' and '),
+      teamMembers: Array.isArray(cert.team_members) ? cert.team_members : [],
+      developerName: cert.developer_name || null,
     };
   }
 

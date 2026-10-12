@@ -1,6 +1,9 @@
 import html2pdf from 'html2pdf.js';
 
 const LOGO_SRC = '/assets/RlabZ_Logo.png';
+// Icon-only mark (no wordmark) — used for the decorative side watermark so a
+// half-crop never shows illegible cut-off text, only the swirl shape.
+const WATERMARK_SRC = '/assets/RlabZ_Watermark.png';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -25,6 +28,36 @@ export function formatReadableDate(value) {
 }
 
 /**
+ * Builds the natural-language certification sentence, in a fixed
+ * PERSON → MODULE → PROJECT → UNDER/TEAM order, from real certificate fields
+ * only — no hardcoded values. The original app wording is preserved
+ * ("Proudly presented to ... for successfully completing ... and actively
+ * contributing to the project ..."), only reordered/kept in this order and
+ * with the trailing clause pointed at the real project team
+ * (certificate.teamMembers — every student on project_student for this
+ * project, plus module_student for this module when known; computed
+ * server-side by Certificate::getTeamMembersAttribute()) instead of faculty,
+ * since there is no separate "team name" field/table anywhere in the schema
+ * and faculty supervision is a different, distinct relationship from "the
+ * team the student worked under". "under the supervision of" was adjusted to
+ * "under the project team of" since teammates don't supervise one another —
+ * flagged for review.
+ */
+function buildCertificateSentence(certificate) {
+  const teamText = Array.isArray(certificate.teamMembers) && certificate.teamMembers.length
+    ? certificate.teamMembers.join(', ')
+    : null;
+  const underClause = teamText ? ` under the project team of ${escapeHtml(teamText)}` : '';
+
+  if (certificate.module) {
+    const moduleText = moduleClause(certificate.module);
+    return `Proudly presented to <strong>${escapeHtml(certificate.student)}</strong> for successfully completing the <strong>${escapeHtml(moduleText)}</strong> and actively contributing to the project <strong>${escapeHtml(certificate.project)}</strong>${underClause}.`;
+  }
+
+  return `Proudly presented to <strong>${escapeHtml(certificate.student)}</strong> for actively contributing to the project <strong>${escapeHtml(certificate.project)}</strong>${underClause}.`;
+}
+
+/**
  * Appends the word "module" only if the module name doesn't already contain
  * it, avoiding duplicated wording like "Sensor Integration Module module".
  */
@@ -34,26 +67,14 @@ function moduleClause(moduleName) {
   return /\bmodule\b/i.test(trimmed) ? trimmed : `${trimmed} module`;
 }
 
-function buildCertificateSentence(certificate) {
-  const supervisionClause = certificate.facultyNames
-    ? ` under the supervision of ${escapeHtml(certificate.facultyNames)} and Co-ordinators`
-    : ' under the supervision of the project Co-ordinators';
-
-  if (certificate.module) {
-    const moduleText = moduleClause(certificate.module);
-    return `Proudly presented to <strong>${escapeHtml(certificate.student)}</strong> for successfully completing the <strong>${escapeHtml(moduleText)}</strong> and actively contributing to the project <strong>${escapeHtml(certificate.project)}</strong>${supervisionClause}.`;
-  }
-
-  return `Proudly presented to <strong>${escapeHtml(certificate.student)}</strong> for actively contributing to the project <strong>${escapeHtml(certificate.project)}</strong>${supervisionClause}.`;
-}
-
 /**
  * Builds the full certificate document markup (logo, title, recipient,
- * sentence, footer signatures) shared by both the coordinator preview and
- * the student dashboard preview, so the design only needs to be maintained
- * in one place. Expects `certificate` in the normalized shape used by
- * CertificatesHome.js's normalizeCertificate(): { student, project, module,
- * certificateNumber, description, date, issuer, facultyNames }.
+ * certification sentence, footer signatures, decorative watermark) shared by
+ * both the coordinator preview and the student dashboard preview, so the
+ * design only needs to be maintained in one place. Expects `certificate` in
+ * the normalized shape used by CertificatesHome.js's normalizeCertificate():
+ * { student, project, module, certificateNumber, description, date, issuer,
+ * facultyNames, teamMembers, developerName }.
  */
 export function buildCertificateHtml(certificate) {
   const sentence = buildCertificateSentence(certificate);
@@ -61,6 +82,7 @@ export function buildCertificateHtml(certificate) {
 
   return `
     <div class="certificate-sheet-inner">
+      <img src="${WATERMARK_SRC}" alt="" aria-hidden="true" class="certificate-watermark" />
       <img src="${LOGO_SRC}" alt="RLabZ" class="certificate-logo" />
 
       <div class="certificate-body">
@@ -73,8 +95,7 @@ export function buildCertificateHtml(certificate) {
       <div class="certificate-footer">
         <div class="certificate-footer-col">
           <div class="certificate-footer-line"></div>
-          <div class="certificate-footer-label">${escapeHtml(certificate.facultyNames || '—')}</div>
-          <div class="certificate-footer-role">Faculty / Supervisor</div>
+          <div class="certificate-footer-role">Director</div>
         </div>
 
         <div class="certificate-footer-center">
@@ -84,8 +105,7 @@ export function buildCertificateHtml(certificate) {
 
         <div class="certificate-footer-col">
           <div class="certificate-footer-line"></div>
-          <div class="certificate-footer-label">${escapeHtml(certificate.issuer || 'Director')}</div>
-          <div class="certificate-footer-role">Director / Issuing Authority</div>
+          <div class="certificate-footer-role">Developer</div>
         </div>
       </div>
     </div>

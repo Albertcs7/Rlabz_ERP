@@ -318,28 +318,54 @@ export async function CoordinatorProjectDetail(route, router) {
       return Array.isArray(data?.data) ? data.data : [];
     }
 
-    // Assign student — dropdown populated from students not already assigned to THIS project
-    // (a student may already be on a different project — that's allowed)
+    async function fetchStudentCurrentProjects(studentId) {
+      const token = getAuthToken();
+      const resp = await fetch(`${API_BASE}/coordinator/students/${studentId}/current-projects`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!resp.ok) return [];
+      const data = await resp.json().catch(() => ({}));
+      return Array.isArray(data?.data) ? data.data : [];
+    }
+
+    // Assign student — searchable list populated from students not already assigned
+    // to THIS project (a student may already be on a different project — that's
+    // allowed, and is exactly what the current-project side panel surfaces).
     container.querySelector('#assign-student-btn')?.addEventListener('click', async () => {
       const html = `
         <div class="coordinator-modal-header">
           <h2>Assign Student</h2>
-          <p>Select a student and set their role on this project.</p>
+          <p>Search for a student, review their current project, and set their role on this project.</p>
           <button class="coordinator-close-btn">×</button>
         </div>
-        <div class="coordinator-form-grid">
-          <div class="coordinator-form-group"><label>Student</label><select id="assign-student-id"><option value="">Loading students...</option></select></div>
-          <div class="coordinator-form-group"><label>Role</label>
-            <select id="assign-student-role">
-              <option value="project_lead">Project Lead</option>
-              <option value="developer">Developer</option>
-              <option value="designer">Designer</option>
-              <option value="tester">Tester</option>
-              <option value="other">Other</option>
-            </select>
-            <small id="assign-role-note" style="display:none; color:#6b7280; margin-top:0.25rem;">This student already has a role set — it applies to every project and can't be changed here.</small>
+        <div class="coordinator-assign-student-layout">
+          <div class="coordinator-form-grid" style="flex:1; min-width:260px;">
+            <div class="coordinator-form-group full-width">
+              <label>Student *</label>
+              <input type="text" id="assign-student-search" class="app-search-input" placeholder="Search by name or email..." autocomplete="off" />
+              <input type="hidden" id="assign-student-id" />
+              <div id="assign-student-results" class="coordinator-student-search-results"></div>
+            </div>
+            <div class="coordinator-form-group"><label>Role</label>
+              <select id="assign-student-role">
+                <option value="project_lead">Project Lead</option>
+                <option value="developer">Developer</option>
+                <option value="designer">Designer</option>
+                <option value="tester">Tester</option>
+                <option value="other">Other</option>
+              </select>
+              <small id="assign-role-note" style="display:none; color:#6b7280; margin-top:0.25rem;">This student already has a role set — it applies to every project and can't be changed here.</small>
+            </div>
+            <div class="coordinator-form-group"><label>Assigned date (optional)</label><input type="date" id="assign-student-date" /></div>
           </div>
-          <div class="coordinator-form-group"><label>Assigned date (optional)</label><input type="date" id="assign-student-date" /></div>
+          <div class="coordinator-current-project-panel" id="current-project-panel">
+            <h4>Current Project</h4>
+            <p class="coordinator-empty-copy">Select a student to see their current project.</p>
+          </div>
         </div>
         <div class="coordinator-modal-footer">
           <button class="coordinator-secondary-btn coordinator-close-btn">Cancel</button>
@@ -349,27 +375,53 @@ export async function CoordinatorProjectDetail(route, router) {
 
       const overlay = openModal(html);
 
-      const sel = overlay.querySelector('#assign-student-id');
+      const searchInput = overlay.querySelector('#assign-student-search');
+      const hiddenId = overlay.querySelector('#assign-student-id');
+      const resultsBox = overlay.querySelector('#assign-student-results');
       const roleSel = overlay.querySelector('#assign-student-role');
       const roleNote = overlay.querySelector('#assign-role-note');
+      const currentProjectPanel = overlay.querySelector('#current-project-panel');
+
+      // Fetched once when the modal opens — all filtering as the coordinator
+      // types happens client-side against this already-loaded list, so no
+      // repeated network request is made per keystroke.
+      searchInput.placeholder = 'Loading students...';
       const available = await fetchEligibleStudents();
+      searchInput.placeholder = 'Search by name or email...';
       const studentsById = new Map(available.map((s) => [String(s.id), s]));
 
-      if (!available.length) {
-        sel.innerHTML = `<option value="">No unassigned students available</option>`;
-      } else {
-        sel.innerHTML = `<option value="">Select a student</option>`;
-        available.forEach(s => {
-          const opt = document.createElement('option');
-          opt.value = s.id;
-          opt.textContent = s.name + (s.email ? ` (${s.email})` : '');
-          sel.appendChild(opt);
-        });
+      function renderResults(query) {
+        const q = query.trim().toLowerCase();
+        const matches = q
+          ? available.filter((s) => (s.name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q))
+          : available;
+
+        if (!available.length) {
+          resultsBox.innerHTML = `<div class="coordinator-student-result-empty">No unassigned students available</div>`;
+          return;
+        }
+        if (!matches.length) {
+          resultsBox.innerHTML = `<div class="coordinator-student-result-empty">No students match "${query}"</div>`;
+          return;
+        }
+        resultsBox.innerHTML = matches.slice(0, 50).map((s) => `
+          <div class="coordinator-student-result" data-student-id="${s.id}">
+            <strong>${s.name}</strong>
+            <small>${s.email || ''}</small>
+          </div>
+        `).join('');
       }
 
-      sel.addEventListener('change', () => {
-        const student = studentsById.get(sel.value);
-        const existingRole = student?.existing_role;
+      async function selectStudent(studentId) {
+        const student = studentsById.get(String(studentId));
+        if (!student) return;
+
+        hiddenId.value = student.id;
+        searchInput.value = student.name + (student.email ? ` (${student.email})` : '');
+        resultsBox.innerHTML = '';
+        resultsBox.style.display = 'none';
+
+        const existingRole = student.existing_role;
         if (existingRole) {
           roleSel.value = existingRole;
           roleSel.disabled = true;
@@ -378,13 +430,48 @@ export async function CoordinatorProjectDetail(route, router) {
           roleSel.disabled = false;
           roleNote.style.display = 'none';
         }
+
+        currentProjectPanel.innerHTML = `<h4>Current Project</h4><p class="coordinator-empty-copy">Loading…</p>`;
+        const currentProjects = await fetchStudentCurrentProjects(student.id);
+        if (!currentProjects.length) {
+          currentProjectPanel.innerHTML = `<h4>Current Project</h4><p class="coordinator-empty-copy">No current project assigned.</p>`;
+          return;
+        }
+        currentProjectPanel.innerHTML = `
+          <h4>Current Project${currentProjects.length > 1 ? 's' : ''}</h4>
+          ${currentProjects.map((p) => `
+            <div class="coordinator-current-project-card">
+              <strong>${p.title || 'Untitled project'}</strong>
+              ${p.client_name ? `<div class="coordinator-current-project-row"><span>Client</span><span>${p.client_name}</span></div>` : ''}
+              <div class="coordinator-current-project-row"><span>Role</span><span>${formatLabel(p.role)}</span></div>
+              <div class="coordinator-current-project-row"><span>Status</span><span>${formatLabel(p.status)}</span></div>
+              ${p.assigned_date ? `<div class="coordinator-current-project-row"><span>Since</span><span>${formatDate(p.assigned_date)}</span></div>` : ''}
+            </div>
+          `).join('')}
+        `;
+      }
+
+      searchInput.addEventListener('input', () => {
+        hiddenId.value = '';
+        resultsBox.style.display = 'block';
+        renderResults(searchInput.value);
+        currentProjectPanel.innerHTML = `<h4>Current Project</h4><p class="coordinator-empty-copy">Select a student to see their current project.</p>`;
+      });
+      searchInput.addEventListener('focus', () => {
+        resultsBox.style.display = 'block';
+        renderResults(searchInput.value);
+      });
+
+      resultsBox.addEventListener('click', (e) => {
+        const row = e.target.closest('.coordinator-student-result');
+        if (row?.dataset.studentId) selectStudent(row.dataset.studentId);
       });
 
       overlay.querySelector('#assign-student-submit').addEventListener('click', async () => {
-        const studentId = Number(overlay.querySelector('#assign-student-id').value || 0);
-        const role = overlay.querySelector('#assign-student-role').value;
+        const studentId = Number(hiddenId.value || 0);
+        const role = roleSel.value;
         const assigned_date = overlay.querySelector('#assign-student-date').value || undefined;
-        if (!studentId) return alert('Please select or enter a valid student id');
+        if (!studentId) return alert('Please search for and select a student');
         try {
           await postJson(`${API_BASE}/coordinator/projects/${projectId}/students`, { student_id: studentId, role, assigned_date });
           alert('Student assigned');

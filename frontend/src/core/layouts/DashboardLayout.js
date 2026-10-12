@@ -222,7 +222,7 @@ export async function DashboardLayout(contentChild, route, router) {
   wrapper.innerHTML = `
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-logo">
+        <div class="sidebar-logo" id="sidebar-logo-link" role="link" tabindex="0" title="Go to dashboard" style="cursor: pointer;">
           <img src="/assets/Rlabz_Logo_dark.png" alt="RLabZ ERP" class="sidebar-watermark" style="height: 84px; width: auto;" />
         </div>
       </div>
@@ -422,6 +422,29 @@ export async function DashboardLayout(contentChild, route, router) {
   logoutBtn?.addEventListener('click', () => {
     authStore.logout();
     router.push('/auth/login');
+  });
+
+  // Bind sidebar logo click — goes to the current role's own dashboard
+  // (same role→route mapping AuthController::respondWithToken() already
+  // sends down as `user.defaultRoute`), never a generic/other-role page.
+  const ROLE_HOME_ROUTES = {
+    director: '/dashboard',
+    coordinator: '/coordinator',
+    finance: '/finance',
+    faculty: '/faculty',
+    student: '/student',
+  };
+  const sidebarLogoLink = wrapper.querySelector('#sidebar-logo-link');
+  const goToDashboard = () => {
+    const target = authStore.user?.defaultRoute || ROLE_HOME_ROUTES[authStore.role] || '/';
+    router.push(target);
+  };
+  sidebarLogoLink?.addEventListener('click', goToDashboard);
+  sidebarLogoLink?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      goToDashboard();
+    }
   });
 
   // Bind User Profile Header Click

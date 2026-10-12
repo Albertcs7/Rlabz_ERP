@@ -324,7 +324,7 @@ export async function ProjectDetails(route, router) {
             <h3 style="margin-bottom: 1.25rem; font-size: 1.2rem;">Assign Faculty</h3>
             <form id="form-assign-faculty" style="display: flex; flex-direction: column; gap: 1rem;">
               <div class="autocomplete-container">
-                <input type="text" id="faculty-search" placeholder="Type faculty name..." class="premium-input" autocomplete="off" />
+                <input type="text" id="faculty-search" placeholder="Type faculty name..." class="premium-input app-search-input" autocomplete="off" />
                 <input type="hidden" name="faculty_id" id="faculty-id" required />
                 <div id="faculty-results" class="autocomplete-results"></div>
               </div>
@@ -339,7 +339,7 @@ export async function ProjectDetails(route, router) {
             <h3 style="margin-bottom: 1.25rem; font-size: 1.2rem;">Assign Student</h3>
             <form id="form-assign-student" style="display: flex; flex-direction: column; gap: 1rem;">
               <div class="autocomplete-container">
-                <input type="text" id="student-search" placeholder="Type student name..." class="premium-input" autocomplete="off" />
+                <input type="text" id="student-search" placeholder="Type student name..." class="premium-input app-search-input" autocomplete="off" />
                 <input type="hidden" name="student_id" id="student-id" required />
                 <div id="student-results" class="autocomplete-results"></div>
               </div>

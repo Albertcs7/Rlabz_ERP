@@ -9,6 +9,7 @@ Route::group(['prefix' => 'coordinator', 'middleware' => ['auth.jwt']], function
     Route::get('/projects/{project}', [CoordinatorController::class, 'show']);
 
     Route::get('/students/eligible', [CoordinatorController::class, 'eligibleStudents']);
+    Route::get('/students/{studentId}/current-projects', [CoordinatorController::class, 'studentCurrentProjects']);
     Route::post('/projects/{project}/students', [CoordinatorController::class, 'assignStudent']);
     Route::delete('/projects/{project}/students/{studentId}', [CoordinatorController::class, 'removeStudent']);
 
@@ -46,5 +47,14 @@ Route::group(['prefix' => 'coordinator', 'middleware' => ['auth.jwt']], function
     Route::get('/notifications', [CoordinatorController::class, 'getNotifications']);
     Route::post('/notifications/{id}/read', [CoordinatorController::class, 'markNotificationRead']);
     Route::post('/notifications/mark-all-read', [CoordinatorController::class, 'markAllNotificationsRead']);
+
+    Route::get('/profile', [CoordinatorController::class, 'getProfile']);
+    Route::put('/profile', [CoordinatorController::class, 'updateProfile']);
+    Route::post('/profile', [CoordinatorController::class, 'updateProfile']);
+    Route::post('/change-password', [CoordinatorController::class, 'changePassword']);
+
+    Route::get('/password-requests', [CoordinatorController::class, 'pendingPasswordChangeRequests']);
+    Route::post('/password-requests/{id}/approve', [CoordinatorController::class, 'approvePasswordChangeRequest']);
+    Route::post('/password-requests/{id}/reject', [CoordinatorController::class, 'rejectPasswordChangeRequest']);
 });
 

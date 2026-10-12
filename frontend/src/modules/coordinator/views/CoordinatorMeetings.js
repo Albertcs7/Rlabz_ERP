@@ -155,10 +155,28 @@ export async function CoordinatorMeetings(route, router) {
             <input type="text" id="meeting-title" placeholder="e.g. Client Requirement Discussion" required>
           </div>
 
+          <div class="coordinator-form-group">
+            <label>Meeting Type</label>
+            <select id="meeting-type">
+              <option value="">Not specified</option>
+              <option value="Faculty Meeting">Faculty Meeting</option>
+              <option value="Project Presentation">Project Presentation</option>
+            </select>
+          </div>
+
+          <div class="coordinator-form-group">
+            <label>Mode</label>
+            <select id="meeting-mode">
+              <option value="">Not specified</option>
+              <option value="Offline">Offline</option>
+              <option value="Online">Online</option>
+            </select>
+          </div>
+
           <div class="coordinator-form-group full-width">
-            <label>Project *</label>
-            <select id="meeting-project" required>
-              <option value="">Select project</option>
+            <label>Project</label>
+            <select id="meeting-project">
+              <option value="">No project (not required)</option>
               ${projectOptions}
             </select>
           </div>
@@ -174,7 +192,7 @@ export async function CoordinatorMeetings(route, router) {
           </div>
 
           <div class="coordinator-form-group">
-            <label>Location</label>
+            <label>Venue</label>
             <input type="text" id="meeting-location" placeholder="e.g. Google Meet">
           </div>
 
@@ -222,14 +240,16 @@ export async function CoordinatorMeetings(route, router) {
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
           <div>
             <strong style="font-size:1.02rem; color:#111827; display:block;">${escapeHtml(meeting.title)}</strong>
-            <span style="font-size:0.85rem; color:#2563eb; font-weight:600;">Project: ${escapeHtml(meeting.project)}</span>
+            <span style="font-size:0.85rem; color:#2563eb; font-weight:600;">Project: ${meeting.project ? escapeHtml(meeting.project) : 'No project'}</span>
           </div>
           <span class="project-status" style="background:#fef2f2; color:#dc2626;">Minutes Pending</span>
         </div>
 
         <div style="margin-top:0.75rem; font-size:0.85rem; color:#4b5563; display:flex; flex-direction:column; gap:0.35rem;">
           <div>Scheduled: <strong style="color:#111827;">${escapeHtml(meeting.date)} at ${escapeHtml(meeting.time)}</strong> <span style="color:#dc2626; font-weight:600;">(date passed)</span></div>
-          ${meeting.location ? `<div>Location: <strong style="color:#111827;">${escapeHtml(meeting.location)}</strong></div>` : ''}
+          ${meeting.meeting_type ? `<div>Type: <strong style="color:#111827;">${escapeHtml(meeting.meeting_type)}</strong></div>` : ''}
+          ${meeting.mode ? `<div>Mode: <strong style="color:#111827;">${escapeHtml(meeting.mode)}</strong></div>` : ''}
+          ${meeting.location ? `<div>Venue: <strong style="color:#111827;">${escapeHtml(meeting.location)}</strong></div>` : ''}
           ${meeting.meeting_link ? `<div>Meeting Link: <a href="${escapeHtml(meeting.meeting_link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(meeting.meeting_link)}</a></div>` : ''}
           ${meeting.agenda ? `<div style="margin-top:0.25rem; padding:0.5rem 0.75rem; background:var(--bg-canvas-light); border:1px solid #e5e7eb; border-radius:6px;"><strong>Agenda:</strong> ${escapeHtml(meeting.agenda)}</div>` : ''}
         </div>
@@ -257,9 +277,10 @@ export async function CoordinatorMeetings(route, router) {
       <tr>
         <td>
           <strong>${escapeHtml(meeting.title)}</strong>
+          ${meeting.meeting_type || meeting.mode ? `<br><small style="color:#6b7280;">${[meeting.meeting_type, meeting.mode].filter(Boolean).map(escapeHtml).join(' • ')}</small>` : ''}
           ${meeting.agenda ? `<br><small style="color:#6b7280;">${escapeHtml(meeting.agenda)}</small>` : ''}
         </td>
-        <td>${escapeHtml(meeting.project)}</td>
+        <td>${meeting.project ? escapeHtml(meeting.project) : '—'}</td>
         <td>${escapeHtml(meeting.date)}<br><small>${escapeHtml(meeting.time)}</small></td>
         <td><span class="project-status completed">Completed</span></td>
         <td>
@@ -378,6 +399,8 @@ export async function CoordinatorMeetings(route, router) {
 
       const title = container.querySelector('#meeting-title').value.trim();
       const project = container.querySelector('#meeting-project').value;
+      const meetingType = container.querySelector('#meeting-type').value;
+      const mode = container.querySelector('#meeting-mode').value;
       const date = container.querySelector('#meeting-date').value;
       const time = container.querySelector('#meeting-time').value;
       const location = container.querySelector('#meeting-location').value.trim();
@@ -399,7 +422,9 @@ export async function CoordinatorMeetings(route, router) {
           method: 'POST',
           body: JSON.stringify({
             title,
-            project,
+            project: project || null,
+            meeting_type: meetingType || null,
+            mode: mode || null,
             date,
             time,
             location: location || null,

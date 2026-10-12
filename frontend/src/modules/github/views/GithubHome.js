@@ -57,15 +57,13 @@ export function FacultyGithub(route, router) {
                 <h1>GitHub Repositories</h1>
                 <p>View, verify, check activity logs, and message teams regarding their repositories.</p>
             </div>
-            <div style="position: relative; width: 320px; max-width: 100%;">
+            <div style="width: 320px; max-width: 100%;">
                 <input
                     type="text"
                     id="github-project-search"
-                    class="premium-input"
+                    class="app-search-input"
                     placeholder="Search project by name..."
-                    style="padding-left: 2.25rem; font-size: 0.88rem; height: 40px; border-radius: 8px;"
                 />
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: var(--text-secondary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
         </div>
 

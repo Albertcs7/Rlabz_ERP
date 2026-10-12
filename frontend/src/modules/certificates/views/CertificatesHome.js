@@ -48,6 +48,8 @@ export function CertificatesHome(route, router) {
       date: cert.issue_date,
       issuer: cert.issuer?.name || '',
       facultyNames: facultyList.map((f) => f.name).filter(Boolean).join(' and '),
+      teamMembers: Array.isArray(cert.team_members) ? cert.team_members : [],
+      developerName: cert.developer_name || null,
       status: 'Issued',
     };
   }
@@ -106,7 +108,9 @@ export function CertificatesHome(route, router) {
             <input
               type="text"
               id="certificate-search"
+              class="app-search-input"
               placeholder="Search student or project..."
+              style="max-width: 280px;"
             />
           </div>
 

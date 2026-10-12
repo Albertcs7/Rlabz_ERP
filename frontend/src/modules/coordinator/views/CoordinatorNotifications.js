@@ -12,6 +12,8 @@ export function CoordinatorNotifications(route, router) {
   let notifications = [];
   let currentFilter = 'all'; // 'all' | 'unread' | 'alerts'
   let isLoading = true;
+  let passwordRequests = [];
+  let passwordRequestsLoading = true;
 
   async function loadNotifications() {
     isLoading = true;
@@ -62,6 +64,95 @@ export function CoordinatorNotifications(route, router) {
       isLoading = false;
       render();
     }
+  }
+
+  async function loadPasswordRequests() {
+    passwordRequestsLoading = true;
+    const token = getAuthToken();
+    try {
+      const res = await fetch(`${API_BASE}/coordinator/password-requests`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const body = await res.json().catch(() => ({}));
+        passwordRequests = Array.isArray(body?.data) ? body.data : [];
+      }
+    } catch (err) {
+      console.error('Error fetching pending password change requests:', err);
+    } finally {
+      passwordRequestsLoading = false;
+      render();
+    }
+  }
+
+  async function resolvePasswordRequest(id, action) {
+    const token = getAuthToken();
+    const btns = container.querySelectorAll(`.pw-request-action[data-id="${id}"]`);
+    btns.forEach(b => { b.disabled = true; });
+
+    try {
+      const res = await fetch(`${API_BASE}/coordinator/password-requests/${id}/${action}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(body.error || `Failed to ${action} this request.`);
+        await loadPasswordRequests();
+        return;
+      }
+      passwordRequests = passwordRequests.filter(r => r.id !== id);
+      render();
+    } catch (err) {
+      alert(err.message || `Failed to ${action} this request.`);
+    }
+  }
+
+  function renderPasswordRequestsPanel() {
+    if (passwordRequestsLoading) {
+      return `
+        <div style="background: white; border: 1px solid var(--border-subtle, #e5e7eb); border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align:center; color: var(--text-muted, #6b7280); font-size: 13px;">
+          Loading password change requests...
+        </div>
+      `;
+    }
+
+    if (!passwordRequests.length) return '';
+
+    return `
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 12px; font-size: 15px; font-weight: 700; color: #92400e;">
+          Pending Password Change Requests (${passwordRequests.length})
+        </h3>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          ${passwordRequests.map(r => `
+            <div style="background:white; border:1px solid #fde68a; border-radius:8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+              <div>
+                <strong style="color:#111827; font-size:0.9rem;">${r.student_name}</strong>
+                <span style="color:#6b7280; font-size:0.8rem; margin-left:6px;">${r.student_email}</span>
+                <div style="color:#9ca3af; font-size:0.75rem; margin-top:2px;">Requested ${r.created_at ? new Date(r.created_at).toLocaleString() : ''}</div>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <button class="coord-btn coord-btn-secondary pw-request-action" data-id="${r.id}" data-action="approve" style="padding:6px 14px; font-size:12px; border-radius:6px; color:#15803d; border-color:#86efac;">
+                  Approve
+                </button>
+                <button class="coord-btn coord-btn-secondary pw-request-action" data-id="${r.id}" data-action="reject" style="padding:6px 14px; font-size:12px; border-radius:6px; color:#dc2626; border-color:#fca5a5;">
+                  Reject
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
   }
 
   async function markAsRead(id) {
@@ -265,6 +356,8 @@ export function CoordinatorNotifications(route, router) {
         </div>
       </div>
 
+      ${renderPasswordRequestsPanel()}
+
       <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-subtle, #e5e7eb); padding-bottom: 12px; flex-wrap: wrap;">
         <button class="filter-tab ${currentFilter === 'all' ? 'active' : ''}" data-filter="all" style="padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid ${currentFilter === 'all' ? '#2563eb' : 'transparent'}; background: ${currentFilter === 'all' ? '#eff6ff' : 'transparent'}; color: ${currentFilter === 'all' ? '#2563eb' : '#4b5563'};">
           All Notifications (${notifications.length})
@@ -299,9 +392,19 @@ export function CoordinatorNotifications(route, router) {
       markAllAsRead();
     });
 
+    container.querySelectorAll('.pw-request-action').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        const action = btn.getAttribute('data-action');
+        if (action === 'reject' && !confirm('Reject this password change request?')) return;
+        resolvePasswordRequest(id, action);
+      });
+    });
+
     renderList();
   }
 
   loadNotifications();
+  loadPasswordRequests();
   return container;
 }

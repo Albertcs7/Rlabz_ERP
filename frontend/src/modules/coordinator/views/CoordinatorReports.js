@@ -193,12 +193,37 @@ async function downloadReportPdf(project, btn) {
   }
 }
 
+function sortProjects(data, sortBy) {
+  const copy = [...data];
+  copy.sort((a, b) => {
+    switch (sortBy) {
+      case 'title_desc':
+        return String(b.title || '').localeCompare(String(a.title || ''));
+      case 'client_asc':
+        return String(a.client_name || '').localeCompare(String(b.client_name || ''));
+      case 'timeline_newest':
+        return new Date(b.expected_timeline || 0) - new Date(a.expected_timeline || 0);
+      case 'timeline_oldest':
+        return new Date(a.expected_timeline || 0) - new Date(b.expected_timeline || 0);
+      case 'progress_high':
+        return getCompletion(b).percent - getCompletion(a).percent;
+      case 'progress_low':
+        return getCompletion(a).percent - getCompletion(b).percent;
+      case 'title_asc':
+      default:
+        return String(a.title || '').localeCompare(String(b.title || ''));
+    }
+  });
+  return copy;
+}
+
 export function CoordinatorReports(route, router) {
   const container = document.createElement('div');
 
   let projects = [];
   let finalDocuments = [];
   let loadError = null;
+  let currentSort = 'title_asc';
 
   function render() {
     container.innerHTML = `
@@ -236,7 +261,18 @@ export function CoordinatorReports(route, router) {
               <h2>Project Documentation</h2>
               <p>Download a PDF report generated from live project data.</p>
             </div>
-            <input type="text" id="report-search" placeholder="Search projects..." />
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <input type="text" id="report-search" class="app-search-input" placeholder="Search projects..." style="max-width: 280px;" />
+              <select id="report-sort" class="premium-input" style="max-width: 200px; height: 40px;">
+                <option value="title_asc">Project Name (A-Z)</option>
+                <option value="title_desc">Project Name (Z-A)</option>
+                <option value="client_asc">Client Name (A-Z)</option>
+                <option value="timeline_newest">Expected Timeline (Newest)</option>
+                <option value="timeline_oldest">Expected Timeline (Oldest)</option>
+                <option value="progress_high">Progress (High to Low)</option>
+                <option value="progress_low">Progress (Low to High)</option>
+              </select>
+            </div>
           </div>
 
           <div class="cert-table-wrapper">
@@ -291,7 +327,7 @@ export function CoordinatorReports(route, router) {
       .then((data) => {
         projects = data;
         updateStats(projects);
-        renderReports(projects);
+        renderReports(sortProjects(projects, currentSort));
       })
       .catch((err) => {
         loadError = err.message || 'Failed to load projects';
@@ -309,13 +345,19 @@ export function CoordinatorReports(route, router) {
         if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:#b91c1c;">${err.message || 'Failed to load final project reports.'}</td></tr>`;
       });
 
-    container.querySelector('#report-search')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
+    function applyFiltersAndSort() {
+      const search = (container.querySelector('#report-search')?.value || '').toLowerCase();
       const filtered = projects.filter((p) =>
         (p.title || '').toLowerCase().includes(search) ||
         (p.client_name || '').toLowerCase().includes(search)
       );
-      renderReports(filtered);
+      renderReports(sortProjects(filtered, currentSort));
+    }
+
+    container.querySelector('#report-search')?.addEventListener('input', applyFiltersAndSort);
+    container.querySelector('#report-sort')?.addEventListener('change', (e) => {
+      currentSort = e.target.value;
+      applyFiltersAndSort();
     });
   }
 

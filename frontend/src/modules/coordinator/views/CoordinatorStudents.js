@@ -88,7 +88,7 @@ export async function CoordinatorStudents(route, router) {
         : '—';
 
       return `
-      <tr data-roles="${roleAttr}" data-project-ids="${projectIdAttr}">
+      <tr class="coordinator-row-clickable" data-student-id="${student.id}" data-roles="${roleAttr}" data-project-ids="${projectIdAttr}" tabindex="0">
         <td><strong>${student.name}</strong></td>
         <td>${student.email}</td>
         <td>${student.phone || '—'}</td>
@@ -224,6 +224,7 @@ export async function CoordinatorStudents(route, router) {
     container.querySelector('#project-filter')?.addEventListener('change', applyFiltersAndSort);
     container.querySelector('#sort-by')?.addEventListener('change', applyFiltersAndSort);
     container.querySelector('#add-student-btn')?.addEventListener('click', showAddStudentModal);
+    bindRowClicks();
   }
 
   function applyFiltersAndSort() {
@@ -252,6 +253,81 @@ export async function CoordinatorStudents(route, router) {
       }
 
       row.style.display = show ? '' : 'none';
+    });
+
+    bindRowClicks();
+  }
+
+  // Row is clickable anywhere, opens a detail view of that student using data
+  // already loaded on this page (assignments/projects) — no new fetch, no new
+  // page/route. Does not fire when the click lands on an interactive element
+  // inside the row (none exist today, but guarded in case one is added later).
+  function bindRowClicks() {
+    container.querySelectorAll('#students-table-body tr[data-student-id]').forEach((row) => {
+      const open = (e) => {
+        if (e.target.closest('button, a, input, select, textarea')) return;
+        const student = students.find((s) => String(s.id) === row.dataset.studentId);
+        if (student) showStudentDetailModal(student);
+      };
+      row.addEventListener('click', open);
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open(e);
+        }
+      });
+    });
+  }
+
+  function showStudentDetailModal(student) {
+    const modalRoot = container.querySelector('#student-modal-root');
+    const assignments = assignmentsOf(student);
+
+    modalRoot.innerHTML = `
+      <div class="coordinator-modal-overlay">
+        <div class="coordinator-modal">
+          <div class="coordinator-modal-header">
+            <div>
+              <h2>${student.name}</h2>
+              <p>${student.email}${student.phone ? ` • ${student.phone}` : ''}</p>
+            </div>
+            <button id="close-student-detail-modal" class="coordinator-close-btn">×</button>
+          </div>
+
+          <div style="padding: 0 1.5rem 1.5rem;">
+            <h4 style="margin: 0 0 0.6rem; font-size: 0.85rem; color: #111827;">Project Assignments</h4>
+            ${assignments.length ? `
+              <div class="coordinator-table-wrapper">
+                <table class="coordinator-table">
+                  <thead>
+                    <tr><th>Project</th><th>Role</th><th>Assigned Since</th></tr>
+                  </thead>
+                  <tbody>
+                    ${assignments.map((a) => `
+                      <tr>
+                        <td>${a.project_title || '—'}</td>
+                        <td><span class="student-track ${roleKey(a.designation)}">${ROLE_LABELS[roleKey(a.designation)] || a.designation}</span></td>
+                        <td>${a.assigned_date || '—'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : '<p class="coordinator-empty-copy">Not currently assigned to any project.</p>'}
+          </div>
+
+          <div class="coordinator-modal-footer">
+            <button class="coordinator-secondary-btn" id="close-student-detail-footer">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const close = () => { modalRoot.innerHTML = ''; };
+    modalRoot.querySelector('#close-student-detail-modal')?.addEventListener('click', close);
+    modalRoot.querySelector('#close-student-detail-footer')?.addEventListener('click', close);
+    modalRoot.querySelector('.coordinator-modal-overlay')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) close();
     });
   }
 

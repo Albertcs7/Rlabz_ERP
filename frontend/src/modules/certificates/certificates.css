@@ -80,12 +80,6 @@
   font-size: 1.1rem;
 }
 
-#certificate-search {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-}
-
 .cert-table-wrapper {
   overflow-x: auto;
 }
@@ -205,7 +199,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  /* "center" (not flex-start) distributes the box's leftover height evenly
+     above and below the content+footer group, instead of packing both at
+     the top and leaving one large empty band below the signatures. */
+  justify-content: center;
   padding: 28px 56px;
   box-sizing: border-box;
   text-align: center;
@@ -219,10 +216,31 @@
   left: 22px;
   height: 44px;
   width: auto;
+  z-index: 2;
+}
+
+/* Decorative side watermark — shows only the left half of the icon-only mark
+   (object-position shifts the crop), anchored to the right edge, low opacity
+   so it reads as a background element rather than competing with the text.
+   object-fit/object-position (not a CSS background-image) renders reliably
+   in html2canvas for the downloaded PDF as well as the live preview. */
+.certificate-watermark {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 48%;
+  object-fit: cover;
+  object-position: left center;
+  opacity: 0.09;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .certificate-body {
   margin-top: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .certificate-title {
@@ -262,6 +280,8 @@
   align-items: flex-end;
   margin-top: 32px;
   font-family: Arial, sans-serif;
+  position: relative;
+  z-index: 1;
 }
 
 .certificate-footer-col {
@@ -282,15 +302,10 @@
   border-top: 1px solid #9ca3af;
 }
 
-.certificate-footer-label {
+.certificate-footer-role {
   font-weight: 700;
   color: #111827;
   font-size: 0.95rem;
-}
-
-.certificate-footer-role {
-  font-size: 0.7rem;
-  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 2px;

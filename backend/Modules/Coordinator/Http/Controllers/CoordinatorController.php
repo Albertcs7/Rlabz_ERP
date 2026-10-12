@@ -301,6 +301,39 @@ class CoordinatorController extends Controller
         return response()->json(['data' => $students]);
     }
 
+    /**
+     * The given student's current (non-closed, non-rejected) project
+     * assignments — a student can be on more than one project at once, so
+     * this returns an array, not a single project. "Current" mirrors the
+     * same definition CoordinatorHome.js already uses for "active projects"
+     * (status in proposed/accepted/in_progress). Used by the Assign Student
+     * side panel so the coordinator can see what a student is already
+     * working on before assigning them to something new.
+     */
+    public function studentCurrentProjects(Request $request, $studentId)
+    {
+        if (!$this->isAuthorized($request, ['view-coordinator', 'view-student'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $projects = DB::table('project_student')
+            ->join('projects', 'projects.id', '=', 'project_student.project_id')
+            ->where('project_student.student_id', $studentId)
+            ->whereIn('projects.status', ['proposed', 'accepted', 'in_progress'])
+            ->select(
+                'projects.id',
+                'projects.title',
+                'projects.client_name',
+                'projects.status',
+                'project_student.role',
+                'project_student.assigned_date'
+            )
+            ->orderBy('project_student.assigned_date', 'desc')
+            ->get();
+
+        return response()->json(['data' => $projects]);
+    }
+
     public function removeStudent(Request $request, Project $project, $studentId)
     {
         if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
@@ -611,13 +644,16 @@ class CoordinatorController extends Controller
         }
 
         $meetings = DB::table('meetings')
-            ->join('projects', 'projects.id', '=', 'meetings.project_id')
+            // leftJoin (not join): meetings without a project must still be listed.
+            ->leftJoin('projects', 'projects.id', '=', 'meetings.project_id')
             ->select(
                 'meetings.id',
                 'meetings.title',
+                'meetings.meeting_type',
                 'projects.title as project',
                 'meetings.scheduled_at',
                 'meetings.location',
+                'meetings.mode',
                 'meetings.meeting_link',
                 'meetings.agenda',
                 'meetings.status'
@@ -640,8 +676,10 @@ class CoordinatorController extends Controller
                     'date' => $dt->format('d M Y'),
                     'time' => $dt->format('h:i A'),
                     'title' => $m->title,
+                    'meeting_type' => $m->meeting_type,
                     'project' => $m->project,
                     'location' => $m->location,
+                    'mode' => $m->mode,
                     'meeting_link' => $m->meeting_link,
                     'agenda' => $m->agenda,
                     'participants' => 'Coordinator, Students',
@@ -664,27 +702,34 @@ class CoordinatorController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'project' => 'required|string',
+            'project' => 'nullable|string',
+            'meeting_type' => 'nullable|string|in:Faculty Meeting,Project Presentation',
             'date' => 'required|date',
             'time' => 'required|string',
             'participants' => 'nullable|string',
             'location' => 'nullable|string|max:255',
+            'mode' => 'nullable|string|in:Offline,Online',
             'agenda' => 'nullable|string',
             'meeting_link' => 'nullable|string|max:500',
         ]);
 
-        $proj = Project::where('title', $validated['project'])->first();
-        if (!$proj) {
-            return response()->json(['error' => 'Selected project not found'], 404);
+        $proj = null;
+        if (!empty($validated['project'])) {
+            $proj = Project::where('title', $validated['project'])->first();
+            if (!$proj) {
+                return response()->json(['error' => 'Selected project not found'], 404);
+            }
         }
 
         $scheduledAt = date('Y-m-d H:i:s', strtotime($validated['date'] . ' ' . $validated['time']));
 
         $meetingId = DB::table('meetings')->insertGetId([
-            'project_id' => $proj->id,
+            'project_id' => $proj?->id,
             'title' => $validated['title'],
+            'meeting_type' => $validated['meeting_type'] ?? null,
             'scheduled_at' => $scheduledAt,
             'location' => $validated['location'] ?? null,
+            'mode' => $validated['mode'] ?? null,
             'agenda' => $validated['agenda'] ?? null,
             'meeting_link' => $validated['meeting_link'] ?? null,
             'status' => 'scheduled',
@@ -693,34 +738,37 @@ class CoordinatorController extends Controller
             'updated_at' => now(),
         ]);
 
-        // Automatically invite and notify students of the project
-        $studentIds = DB::table('project_student')
-            ->where('project_id', $proj->id)
-            ->pluck('student_id');
+        // Automatically invite and notify students of the project (only when a
+        // project is attached — a project-less meeting has no student roster to notify).
+        if ($proj) {
+            $studentIds = DB::table('project_student')
+                ->where('project_id', $proj->id)
+                ->pluck('student_id');
 
-        if (Schema::hasTable('meeting_participants')) {
-            foreach ($studentIds as $sId) {
-                DB::table('meeting_participants')->insert([
-                    'meeting_id' => $meetingId,
-                    'user_id' => $sId,
-                    'attendance_status' => 'invited',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            if (Schema::hasTable('meeting_participants')) {
+                foreach ($studentIds as $sId) {
+                    DB::table('meeting_participants')->insert([
+                        'meeting_id' => $meetingId,
+                        'user_id' => $sId,
+                        'attendance_status' => 'invited',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
-        }
 
-        if (Schema::hasTable('notifications')) {
-            $formattedTime = date('M j, Y g:i A', strtotime($scheduledAt));
-            foreach ($studentIds as $sId) {
-                DB::table('notifications')->insert([
-                    'user_id' => $sId,
-                    'type' => 'meeting_scheduled',
-                    'message' => "New meeting scheduled by Coordinator for project '{$proj->title}': '{$validated['title']}' on {$formattedTime}.",
-                    'is_read' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            if (Schema::hasTable('notifications')) {
+                $formattedTime = date('M j, Y g:i A', strtotime($scheduledAt));
+                foreach ($studentIds as $sId) {
+                    DB::table('notifications')->insert([
+                        'user_id' => $sId,
+                        'type' => 'meeting_scheduled',
+                        'message' => "New meeting scheduled by Coordinator for project '{$proj->title}': '{$validated['title']}' on {$formattedTime}.",
+                        'is_read' => 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
 
@@ -733,8 +781,10 @@ class CoordinatorController extends Controller
                 'date' => $dt->format('d M Y'),
                 'time' => $dt->format('h:i A'),
                 'title' => $validated['title'],
-                'project' => $proj->title,
+                'meeting_type' => $validated['meeting_type'] ?? null,
+                'project' => $proj?->title,
                 'location' => $validated['location'] ?? null,
+                'mode' => $validated['mode'] ?? null,
                 'meeting_link' => $validated['meeting_link'] ?? null,
                 'participants' => $validated['participants'] ?? 'Coordinator, Students',
                 'status' => 'Scheduled',
@@ -1160,5 +1210,264 @@ class CoordinatorController extends Controller
 
         return response()->json(['success' => true]);
 
+    }
+
+    /**
+     * The authenticated coordinator's own profile details. Mirrors Faculty's
+     * getProfile() pattern (Modules\Faculty\Http\Controllers\FacultyController),
+     * but there is no coordinator-equivalent side table (no department/
+     * designation concept for this role in the current schema), so this is
+     * users-table fields only — nothing invented beyond what's there.
+     */
+    public function getProfile(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')
+            ->where('id', $userId)
+            ->select('id', 'name', 'email', 'phone', 'role', 'created_at')
+            ->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Coordinator user not found'], 404);
+        }
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role' => ucfirst($user->role),
+            'created_at' => $user->created_at,
+        ]);
+    }
+
+    /**
+     * Update the authenticated coordinator's own name/email/phone. role and
+     * permissions are intentionally never accepted here — those stay
+     * controller-assigned, not self-editable.
+     */
+    public function updateProfile(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Coordinator user not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $userId,
+            'phone' => 'nullable|string|max:50',
+        ]);
+
+        DB::table('users')->where('id', $userId)->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'id' => $userId,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'role' => ucfirst($user->role),
+            ],
+        ]);
+    }
+
+    /**
+     * Change password for the logged-in coordinator. Mirrors Faculty's
+     * changePassword() exactly — current-password verification, no approval
+     * step (unlike the Student flow, which is approval-gated and not
+     * appropriate for a coordinator changing their own password).
+     */
+    public function changePassword(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $currentPassword = $request->input('current_password');
+        $newPassword = $request->input('new_password');
+        $confirmPassword = $request->input('confirm_password') ?: $request->input('new_password_confirmation');
+
+        if (!$currentPassword) {
+            return response()->json(['error' => 'Current password is required.'], 422);
+        }
+        if (!$newPassword) {
+            return response()->json(['error' => 'New password is required.'], 422);
+        }
+        if (strlen($newPassword) < 6) {
+            return response()->json(['error' => 'New password must be at least 6 characters long.'], 422);
+        }
+        if ($newPassword !== $confirmPassword) {
+            return response()->json(['error' => 'New password and confirmation do not match.'], 422);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Coordinator account not found.'], 404);
+        }
+
+        if (!Hash::check($currentPassword, $user->password)) {
+            return response()->json(['error' => 'Current password is incorrect.'], 400);
+        }
+
+        DB::table('users')->where('id', $userId)->update([
+            'password' => Hash::make($newPassword),
+            'updated_at' => now(),
+        ]);
+
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $userId,
+                'action' => 'Password Changed',
+                'description' => "Coordinator {$user->name} changed their account password.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password updated successfully.',
+        ]);
+    }
+
+    /**
+     * List students' pending password-change requests awaiting coordinator
+     * review. Reuses the existing `notifications` table — a student's
+     * request is the row StudentController::requestPasswordChange() created
+     * for them (type='password_change_request', urgency='pending'). The
+     * coordinator's own alert copy of the same event uses urgency='high',
+     * so filtering on urgency='pending' here naturally selects only the
+     * actionable student-owned rows, never the coordinator's alert copies.
+     */
+    public function pendingPasswordChangeRequests(Request $request)
+    {
+        if (!$this->isAuthorized($request, ['view-coordinator', 'view-student'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $requests = DB::table('notifications')
+            ->join('users', 'users.id', '=', 'notifications.user_id')
+            ->where('notifications.type', 'password_change_request')
+            ->where('notifications.urgency', 'pending')
+            ->where('users.role', 'student')
+            ->select(
+                'notifications.id',
+                'notifications.user_id as student_id',
+                'users.name as student_name',
+                'users.email as student_email',
+                'notifications.created_at'
+            )
+            ->orderBy('notifications.created_at', 'asc')
+            ->get();
+
+        return response()->json(['data' => $requests]);
+    }
+
+    /**
+     * Approve a student's pending password-change request. Never touches or
+     * exposes the student's password here — this only flips the existing
+     * request notification to 'approved', which is what
+     * StudentController::updatePassword() already checks before allowing
+     * the student to set their own new password themselves.
+     */
+    public function approvePasswordChangeRequest($id, Request $request)
+    {
+        if (!$this->isAuthorized($request, ['view-coordinator', 'view-student'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        return $this->resolvePasswordChangeRequest($id, $request, 'approved');
+    }
+
+    /**
+     * Reject a student's pending password-change request. A rejected
+     * request can never result in a password change: updatePassword() only
+     * proceeds when urgency === 'approved', which this never sets.
+     */
+    public function rejectPasswordChangeRequest($id, Request $request)
+    {
+        if (!$this->isAuthorized($request, ['view-coordinator', 'view-student'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        return $this->resolvePasswordChangeRequest($id, $request, 'rejected');
+    }
+
+    private function resolvePasswordChangeRequest($id, Request $request, string $outcome)
+    {
+        $coordinatorId = $this->currentUserId($request);
+        if (!$coordinatorId) {
+            return response()->json(['error' => 'Unable to identify current user'], 400);
+        }
+
+        // Re-check urgency==='pending' at update time (not just on an earlier
+        // read) so two coordinators double-clicking — or one request already
+        // processed — cannot both succeed: whichever request wins this
+        // conditional update is the only one that can change the row.
+        $updated = DB::table('notifications')
+            ->where('id', $id)
+            ->where('type', 'password_change_request')
+            ->where('urgency', 'pending')
+            ->update([
+                'urgency' => $outcome,
+                'is_read' => 1,
+                'updated_at' => now(),
+            ]);
+
+        if (!$updated) {
+            return response()->json([
+                'error' => 'This request has already been processed or no longer exists.',
+            ], 409);
+        }
+
+        $studentRequest = DB::table('notifications')->where('id', $id)->first();
+        $student = DB::table('users')->where('id', $studentRequest->user_id)->first();
+        $coordinator = DB::table('users')->where('id', $coordinatorId)->first();
+
+        $studentMessage = $outcome === 'approved'
+            ? 'Your password change request has been approved by the coordinator. You can now set your new password from your profile.'
+            : 'Your password change request has been rejected by the coordinator.';
+
+        DB::table('notifications')->insert([
+            'user_id' => $studentRequest->user_id,
+            'project_id' => null,
+            'type' => $outcome === 'approved' ? 'password_change_approved' : 'password_change_rejected',
+            'urgency' => 'normal',
+            'message' => $studentMessage,
+            'is_read' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $coordinatorId,
+                'action' => $outcome === 'approved' ? 'Password Change Request Approved' : 'Password Change Request Rejected',
+                'description' => "Coordinator {$coordinator->name} {$outcome} the password change request from student {$student->name}.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => $outcome === 'approved' ? 'Password change request approved.' : 'Password change request rejected.',
+            'status' => $outcome,
+        ]);
     }
 }
