@@ -1,58 +1,104 @@
-import { DirectorLayout } from './DirectorLayout.js';
+import { useAuthStore } from '@/core/stores/auth.js';
+
+export async function DashboardDispatchLayout(contentChild, route, router) {
+  const authStore = useAuthStore();
+  if (authStore.role === 'developer') {
+    const { DeveloperLayout } = await import('@/modules/developer/DeveloperLayout.js');
+    return DeveloperLayout(contentChild, route, router);
+  } else {
+    const { DirectorLayout } = await import('@/modules/director/DirectorLayout.js');
+    return DirectorLayout(contentChild, route, router);
+  }
+}
 
 const routes = [
   {
     path: '/dashboard',
-    component: DirectorLayout,
+    component: DashboardDispatchLayout,
     children: [
       {
         path: '',
-        name: 'director-dashboard-home',
-        component: () => import('./views/DirectorHome.js')
+        name: 'dashboard-home',
+        component: async () => {
+          const authStore = useAuthStore();
+          return authStore.role === 'developer'
+            ? import('@/modules/developer/views/DeveloperHome.js')
+            : import('@/modules/director/views/DirectorHome.js');
+        }
       },
       {
         path: 'projects',
-        name: 'director-dashboard-projects',
-        component: () => import('./views/DirectorProjects.js')
+        name: 'dashboard-projects',
+        component: async () => {
+          const authStore = useAuthStore();
+          return authStore.role === 'developer'
+            ? import('@/modules/developer/views/DeveloperProjects.js')
+            : import('@/modules/director/views/DirectorProjects.js');
+        }
       },
       {
         path: 'projects/create',
-        name: 'director-dashboard-projects-create',
+        name: 'dashboard-projects-create',
         component: () => import('@/modules/project/views/ProjectCreate.js')
       },
       {
         path: 'projects/:id',
-        name: 'director-dashboard-projects-details',
+        name: 'dashboard-projects-details',
         component: () => import('@/modules/project/views/ProjectDetails.js')
       },
       {
         path: 'students',
-        name: 'director-dashboard-students',
-        component: () => import('./views/DirectorStudents.js')
+        name: 'dashboard-students',
+        component: async () => {
+          const authStore = useAuthStore();
+          return authStore.role === 'developer'
+            ? import('@/modules/developer/views/DeveloperStudents.js')
+            : import('@/modules/director/views/DirectorStudents.js');
+        }
       },
       {
         path: 'students/:id',
-        name: 'director-dashboard-student-detail',
-        component: () => import('./views/DirectorStudentDetail.js')
+        name: 'dashboard-student-detail',
+        component: async () => {
+          const authStore = useAuthStore();
+          return authStore.role === 'developer'
+            ? import('@/modules/developer/views/DeveloperStudentDetail.js')
+            : import('@/modules/director/views/DirectorStudentDetail.js');
+        }
       },
       {
         path: 'clients',
-        name: 'director-dashboard-clients',
-        component: () => import('./views/DirectorClients.js')
+        name: 'dashboard-clients',
+        component: async () => {
+          const authStore = useAuthStore();
+          return authStore.role === 'developer'
+            ? import('@/modules/developer/views/DeveloperClients.js')
+            : import('@/modules/director/views/DirectorClients.js');
+        }
       },
       {
         path: 'finance',
-        name: 'director-dashboard-finance',
-        component: () => import('./views/DirectorFinance.js')
+        name: 'dashboard-finance',
+        component: async () => {
+          const authStore = useAuthStore();
+          return authStore.role === 'developer'
+            ? import('@/modules/developer/views/DeveloperFinance.js')
+            : import('@/modules/director/views/DirectorFinance.js');
+        }
       },
       {
         path: 'audit',
-        name: 'director-dashboard-audit',
-        component: () => import('./views/DirectorAuditLog.js')
+        name: 'dashboard-audit',
+        component: async () => {
+          const authStore = useAuthStore();
+          return authStore.role === 'developer'
+            ? import('@/modules/developer/views/DeveloperAuditLog.js')
+            : import('@/modules/director/views/DirectorAuditLog.js');
+        }
       },
       {
         path: 'github',
-        name: 'director-dashboard-github',
+        name: 'dashboard-github',
         component: () => import('@/modules/github/views/GithubHome.js')
       }
     ]

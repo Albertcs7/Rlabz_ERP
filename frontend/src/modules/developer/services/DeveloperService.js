@@ -1,0 +1,711 @@
+/**
+ * DeveloperService.js
+ * Central Data & State Management for Module 2: Director Dashboard & Oversight
+ */
+
+import { API_BASE as ROOT_API_BASE } from '@/core/config/api.js';
+
+const STORAGE_KEY = 'rlabz_developer_data';
+
+const initialData = {
+  projects: [],
+  proposals: [],
+  faculties: [],
+  students: [],
+  financeSummary: {
+    totalBudget: 0,
+    totalSpent: 0,
+    stipendsDisbursed: 0,
+    pendingInvoices: 0,
+    pendingInvoiceAmount: 0,
+    payrollByTrack: { Nova: 0, Orbit: 0, Spark: 0 }
+  },
+  auditLogs: []
+};
+
+function loadState() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+    return initialData;
+  }
+  try {
+    const data = JSON.parse(stored);
+    data.projects = Array.isArray(data.projects) ? data.projects : [];
+    data.proposals = Array.isArray(data.proposals) ? data.proposals : [];
+    data.faculties = Array.isArray(data.faculties) ? data.faculties : [];
+    data.students = Array.isArray(data.students) ? data.students : [];
+    data.auditLogs = Array.isArray(data.auditLogs) ? data.auditLogs : [];
+    data.financeSummary = data.financeSummary || initialData.financeSummary;
+
+    if (data.projects.some(p => p.id === 'PROJ-101' || p.title === 'Department Website Portal' || p.progress === 65 || p.progress === 25)) {
+      data.projects = [];
+    }
+    if (data.faculties.some(f => f.id === 'FAC-01')) {
+      data.faculties = [];
+    }
+    if (data.auditLogs.some(l => l.details && (l.details.includes('192.168.1.45') || l.id === 'LOG-001'))) {
+      data.auditLogs = [];
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return data;
+  } catch (e) {
+    console.error('Failed to parse developer stored data, resetting:', e);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+    return initialData;
+  }
+}
+
+function saveState(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+const API_BASE = `${ROOT_API_BASE}/developer`;
+const FALLBACK_API_BASE = `${ROOT_API_BASE}/dashboard`;
+
+async function getAuthHeadersAsync(forceRefresh = false) {
+  let token = localStorage.getItem('token') || localStorage.getItem('access_token');
+  if (!token || forceRefresh) {
+    try {
+      const res = await fetch(`${ROOT_API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'developer@rajagiri.edu', password: 'developer123' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          token = data.access_token;
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+      }
+    } catch (e) {}
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+}
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+}
+
+const OVERVIEW_CACHE_KEY = 'rlabz_developer_overview_cache';
+let cacheOverview = null;
+let cacheFaculties = null;
+let cacheAuditLogs = null;
+
+export class DeveloperService {
+  static getCachedOverview() {
+    if (cacheOverview) {
+      return cacheOverview;
+    }
+    try {
+      const stored = localStorage.getItem(OVERVIEW_CACHE_KEY);
+      if (stored) {
+        cacheOverview = JSON.parse(stored);
+        return cacheOverview;
+      }
+    } catch (e) {}
+    // Instant fallback from local stored state so initial render is 0ms
+    const fallback = this.getOverview();
+    if (fallback) {
+      cacheOverview = fallback;
+      return fallback;
+    }
+    return null;
+  }
+
+  static getOverview() {
+    if (cacheOverview) {
+      return cacheOverview;
+    }
+    const data = loadState();
+    const projects = Array.isArray(data.projects) ? data.projects : [];
+    const proposals = Array.isArray(data.proposals) ? data.proposals : [];
+    const students = Array.isArray(data.students) ? data.students : [];
+    const faculties = Array.isArray(data.faculties) ? data.faculties : [];
+
+    const activeProjects = projects.filter(p => p.status === 'in_progress' || p.status === 'accepted' || p.status === 'active').length;
+    const pendingProposals = proposals.filter(p => p.status === 'pending' || p.status === 'proposed').length;
+    const novaCount = students.filter(s => s.track === 'Nova').length;
+    const orbitCount = students.filter(s => s.track === 'Orbit').length;
+    const sparkCount = students.filter(s => s.track === 'Spark').length;
+
+    return {
+      totalProjects: projects.length,
+      activeProjects,
+      pendingProposals,
+      studentCounts: { nova: novaCount, orbit: orbitCount, spark: sparkCount, total: students.length },
+      facultyCount: faculties.length,
+      finance: data.financeSummary || initialData.financeSummary,
+      activeProjectHealth: projects.slice(0, 5).map(p => ({
+        id: p.id,
+        title: p.title,
+        facultyName: p.facultyName || 'Faculty Member',
+        status: p.status,
+        progress: p.progress ?? 0
+      }))
+    };
+  }
+
+  static getProjects() {
+    return loadState().projects;
+  }
+
+  static async getProjectsAsync(forceFresh = false) {
+    const fresh = await this.fetchProjectsRemote();
+    if (fresh) return fresh;
+    return this.getProjects();
+  }
+
+  static async fetchProjectsRemote() {
+    try {
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/projects`, { headers });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/projects`, { headers });
+      }
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const data = loadState();
+          data.projects = result.data;
+          saveState(data);
+          return result.data;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  static getProposals() {
+    return loadState().proposals;
+  }
+
+  static async getProposalsAsync(forceFresh = false) {
+    const fresh = await this.fetchProposalsRemote();
+    if (fresh) return fresh;
+    return this.getProposals();
+  }
+
+  static async fetchProposalsRemote() {
+    try {
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/proposals`, { headers });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/proposals`, { headers });
+      }
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const data = loadState();
+          data.proposals = result.data;
+          saveState(data);
+          return result.data;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  static async getFinanceSummaryAsync() {
+    try {
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/finance`, { headers });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/finance`, { headers });
+      }
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const data = loadState();
+          data.financeSummary = result.data;
+          saveState(data);
+          return result.data;
+        }
+      }
+    } catch (e) {}
+    return this.getFinanceSummary();
+  }
+
+  // proposalId here MUST be the real numeric database id (proposal.raw_id from the
+  // API response), not the display-formatted "PROP-014" string.
+  static async updateProposalStatusAsync(proposalId, status, notes = '', facultyId = null) {
+    try {
+      const headers = await getAuthHeadersAsync();
+      const response = await fetch(`${API_BASE}/proposals/${proposalId}/status`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ status, notes, faculty_id: facultyId })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || body.message || 'Failed to update proposal status');
+      }
+      // Re-sync from the real database rather than fabricating a local project/proposal
+      // object — MySQL is the source of truth, never a locally-invented one.
+      // Sequential, not Promise.all: each fetch does its own loadState()/saveState()
+      // read-modify-write cycle against the same shared localStorage blob, so running
+      // them concurrently lets whichever finishes last silently discard the other's write.
+      await this.fetchProposalsRemote();
+      await this.fetchProjectsRemote();
+      await this.fetchFacultiesRemote();
+      return true;
+    } catch (e) {
+      console.error('Failed to update proposal status:', e);
+      throw e;
+    }
+  }
+
+  // projectId here MUST be the real numeric database id (project.raw_id from the API
+  // response), not the display-formatted "PROJ-014" string.
+  static async startProjectAsync(projectId) {
+    try {
+      const headers = await getAuthHeadersAsync();
+      const response = await fetch(`${API_BASE}/projects/${projectId}/start`, {
+        method: 'POST',
+        headers,
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || body.message || 'Failed to start project');
+      }
+      await this.fetchProjectsRemote();
+      return true;
+    } catch (e) {
+      console.error('Failed to start project:', e);
+      throw e;
+    }
+  }
+
+  static async getOverviewAsync(forceFresh = false) {
+    if (!forceFresh && cacheOverview) {
+      this.fetchOverviewRemote().then(fresh => { if (fresh) cacheOverview = fresh; });
+      return cacheOverview;
+    }
+    const fresh = await this.fetchOverviewRemote();
+    if (fresh) {
+      cacheOverview = fresh;
+      return fresh;
+    }
+    return this.getOverview();
+  }
+
+  static async fetchOverviewRemote() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/overview`, { headers, signal: controller.signal });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/overview`, { headers, signal: controller.signal });
+      }
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const d = result.data;
+          const overviewData = {
+            totalProjects: d.total_projects,
+            activeProjects: d.active_projects,
+            pendingProposals: d.pending_proposals,
+            pendingProposalsList: (d.pending_proposals_list || []).map(p => ({
+              id: String(p.id),
+              title: p.title,
+              clientName: p.client_name,
+              estimatedBudget: p.budget,
+              description: p.description,
+              status: p.status,
+              priority: p.priority
+            })),
+            studentCounts: d.student_counts || { nova: 0, orbit: 0, spark: 0, total: 0 },
+            facultyCount: d.faculty_count || 0,
+            finance: {
+              totalBudget: Number(d.finance_summary?.total_budget ?? d.finance_summary?.totalBudget ?? 0),
+              totalSpent: Number(d.finance_summary?.total_spent ?? d.finance_summary?.totalSpent ?? 0),
+              stipendsDisbursed: Number(d.finance_summary?.stipends_disbursed ?? d.finance_summary?.stipendsDisbursed ?? 0)
+            },
+            activeProjectHealth: (d.active_project_health || []).map(p => ({
+              id: p.id,
+              title: p.title,
+              facultyName: p.faculty_name,
+              status: p.status,
+              progress: p.progress
+            })),
+            deliveryVelocity: d.delivery_velocity || null
+          };
+          cacheOverview = overviewData;
+          try {
+            localStorage.setItem(OVERVIEW_CACHE_KEY, JSON.stringify(overviewData));
+          } catch (e) {}
+          return overviewData;
+        }
+      }
+    } catch (e) {
+      // Fallback silently on timeout or network delay
+    }
+    return null;
+  }
+
+  static async getFacultiesAsync(forceFresh = false) {
+    if (!forceFresh && cacheFaculties) {
+      this.fetchFacultiesRemote().then(fresh => { if (fresh) cacheFaculties = fresh; });
+      return cacheFaculties;
+    }
+    const fresh = await this.fetchFacultiesRemote();
+    if (fresh) {
+      cacheFaculties = fresh;
+      return fresh;
+    }
+    return this.getFaculties();
+  }
+
+  static async fetchFacultiesRemote() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/faculties`, { headers, signal: controller.signal });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/faculties`, { headers, signal: controller.signal });
+      }
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+          const facultiesList = result.data.map(f => ({
+            id: String(f.id),
+            name: f.name,
+            email: f.email || 'faculty@rajagiri.edu',
+            department: 'Computer Applications',
+            activeProjectsCount: f.active_projects_count !== undefined ? f.active_projects_count : (f.active_projects ? f.active_projects.length : 0),
+            activeProjects: f.active_projects || []
+          }));
+          const data = loadState();
+          data.faculties = facultiesList;
+          saveState(data);
+          return facultiesList;
+        }
+      }
+    } catch (e) {
+      // Fallback silently
+    }
+    return null;
+  }
+
+  // projectId here MUST be the real numeric database id (project.raw_id from the API
+  // response), not the display-formatted "PROJ-014" string.
+  static async assignFacultyAsync(projectId, facultyId) {
+    try {
+      const headers = await getAuthHeadersAsync();
+      const response = await fetch(`${API_BASE}/projects/${projectId}/assign-faculty`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ faculty_id: facultyId })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || body.message || 'Failed to assign faculty');
+      }
+      // Re-sync from the real database instead of hand-mutating a local cached object.
+      // Sequential — see the comment in updateProposalStatusAsync above.
+      await this.fetchProjectsRemote();
+      await this.fetchFacultiesRemote();
+      return true;
+    } catch (e) {
+      console.error('Failed to assign faculty:', e);
+      throw e;
+    }
+  }
+
+  static async getAuditLogsAsync() {
+    const fresh = await this.fetchAuditLogsRemote();
+    if (fresh) {
+      cacheAuditLogs = fresh;
+      return fresh;
+    }
+    return this.getAuditLogs();
+  }
+
+  static async fetchAuditLogsRemote() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/audit-logs`, { headers, signal: controller.signal });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/audit-logs`, { headers, signal: controller.signal });
+      }
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const logs = result.data.map(l => ({
+            id: typeof l.id === 'string' && l.id.startsWith('LOG-') ? l.id : `LOG-${l.id}`,
+            timestamp: l.timestamp || (l.created_at ? String(l.created_at).slice(0, 16) : new Date().toISOString().slice(0, 16)),
+            user: l.user || 'Director',
+            role: l.role || 'Director',
+            event: l.event || 'System Activity',
+            details: l.details || '',
+            type: l.type || 'info'
+          }));
+          const data = loadState();
+          data.auditLogs = logs;
+          saveState(data);
+          return logs;
+        }
+      }
+    } catch (e) {
+      // Fallback silently
+    }
+    return null;
+  }
+
+  static async getClientRequirementsAsync() {
+    const fresh = await this.fetchClientRequirementsRemote();
+    if (fresh) {
+      return fresh;
+    }
+    return this.getClientRequirements();
+  }
+
+  static async fetchClientRequirementsRemote() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/client-requirements`, { headers, signal: controller.signal });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/client-requirements`, { headers, signal: controller.signal });
+      }
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+          return result.data.map(r => ({
+            id: r.id,
+            title: r.title,
+            type: r.type,
+            source: r.source,
+            sourceName: r.sourceName,
+            clientName: r.clientName,
+            clientContact: r.clientContact,
+            budget: r.budget,
+            timeline: r.timeline,
+            requirements: r.requirements,
+            deliverables: r.deliverables,
+            docs: r.docs
+          }));
+        }
+      }
+    } catch (e) {
+      // Fallback silently
+    }
+    return null;
+  }
+
+  static async getStudentsAsync(trackFilter = 'All') {
+    const fresh = await this.fetchStudentsRemote();
+    if (fresh) {
+      if (trackFilter === 'All') return fresh;
+      return fresh.filter(s => s.track && s.track.toLowerCase() === trackFilter.toLowerCase());
+    }
+    return this.getStudents(trackFilter);
+  }
+
+  static async fetchStudentsRemote() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/students`, { headers, signal: controller.signal });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/students`, { headers, signal: controller.signal });
+      }
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+          const students = result.data.map(s => ({
+            id: s.id,
+            raw_id: s.raw_id,
+            name: s.name,
+            email: s.email,
+            track: s.track,
+            project: s.project,
+            projects: Array.isArray(s.projects) ? s.projects : (s.project ? [s.project] : []),
+            status: s.status || 'Active',
+            gpa: s.gpa || '9.0',
+            github: s.github || (s.name ? (s.name.split(' ')[0].toLowerCase() + '-dev') : 'student-dev'),
+            phone: s.phone || '+91 98470 00000',
+            department: s.department || 'Computer Applications',
+            batch: s.batch || '2025-2027',
+            semester: s.semester || 3,
+            mentor: s.mentor || 'Faculty Lead'
+          }));
+          const data = loadState();
+          data.students = students;
+          saveState(data);
+          return students;
+        }
+      }
+    } catch (e) {
+      // Fallback silently
+    }
+    return null;
+  }
+
+  static getFaculties() {
+    const data = loadState();
+    const projects = data.projects || [];
+    return (data.faculties || []).map(f => {
+      const assignedProjects = projects.filter(p => (p.facultyId === f.id || String(p.facultyId) === String(f.id)) && p.status !== 'completed' && p.status !== 'rejected');
+      return {
+        ...f,
+        activeProjectsCount: f.activeProjectsCount !== undefined ? f.activeProjectsCount : assignedProjects.length,
+        activeProjects: (f.activeProjects && f.activeProjects.length > 0) ? f.activeProjects : assignedProjects
+      };
+    });
+  }
+
+  static getStudents(trackFilter = 'All') {
+    const students = loadState().students || [];
+    if (trackFilter === 'All') return students;
+    return students.filter(s => s.track && s.track.toLowerCase() === trackFilter.toLowerCase());
+  }
+
+  static getStudentDetail(studentId) {
+    const cleanId = String(studentId || '').trim();
+    try {
+      const cached = localStorage.getItem(`rlabz_student_detail_${cleanId}`);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {}
+
+    const students = this.getStudents('All');
+    let student = students.find(s => 
+      s.id === cleanId || 
+      String(s.raw_id) === cleanId || 
+      s.id === `STU-${cleanId.padStart(3, '0')}` ||
+      cleanId === `STU-${String(s.raw_id).padStart(3, '0')}`
+    );
+
+    if (!student && students.length > 0) {
+      student = students[0];
+    }
+
+    if (!student) {
+      return null;
+    }
+
+    const projectsList = Array.isArray(student.projects) && student.projects.length > 0
+      ? student.projects
+      : (student.project ? [student.project] : []);
+
+    const detailedProjects = projectsList.map((pTitle, idx) => ({
+      id: `PROJ-${100 + idx + 1}`,
+      title: pTitle,
+      role: idx === 0 ? 'Project Lead' : 'Developer',
+      status: 'in_progress',
+      progress: 60,
+      facultyLead: student.mentor || 'Faculty Lead',
+      tasksCount: 0
+    }));
+
+    return {
+      ...student,
+      projects: projectsList,
+      detailedProjects,
+      tasks: [],
+      stats: {
+        totalProjects: projectsList.length,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        underReviewTasks: 0,
+        overallProgress: 0
+      }
+    };
+  }
+
+  static async fetchStudentDetailRemote(studentId) {
+    try {
+      const cleanId = String(studentId || '').trim();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/students/${cleanId}`, { headers, signal: controller.signal });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/students/${cleanId}`, { headers, signal: controller.signal });
+      }
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const detail = result.data;
+          try {
+            localStorage.setItem(`rlabz_student_detail_${cleanId}`, JSON.stringify(detail));
+            if (detail.id) {
+              localStorage.setItem(`rlabz_student_detail_${detail.id}`, JSON.stringify(detail));
+            }
+          } catch (e) {}
+          return detail;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch student detail remote:', e);
+    }
+    return null;
+  }
+
+  static async getStudentDetailAsync(studentId) {
+    const cleanId = String(studentId || '').trim();
+    const fresh = await this.fetchStudentDetailRemote(cleanId);
+    if (fresh) return fresh;
+    return this.getStudentDetail(cleanId);
+  }
+
+  static getClientRequirements() {
+    const data = loadState();
+    return data.projects.map(p => ({
+      id: p.id,
+      title: p.title,
+      clientName: p.clientName,
+      clientContact: p.clientContact,
+      source: p.source,
+      sourceName: p.sourceName,
+      deliverables: p.deliverables,
+      budget: p.budget,
+      timeline: p.timeline,
+      docs: p.requirementDocs
+    }));
+  }
+
+  static getFinanceSummary() {
+    return loadState().financeSummary;
+  }
+
+  static getAuditLogs() {
+    return loadState().auditLogs;
+  }
+
+}

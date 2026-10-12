@@ -111,8 +111,8 @@ class AuthController extends Controller
         $role = $user->role ?? 'student';
         
         $defaultRoutes = [
-            'director' => '/dashboard',
-            'developer' => '/dashboard',
+            'director' => '/director',
+            'developer' => '/developer',
             'coordinator' => '/coordinator',
             'finance' => '/finance',
             'faculty' => '/faculty',
@@ -120,8 +120,8 @@ class AuthController extends Controller
         ];
         
         $modules = [
-            'director' => ['dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
-            'developer' => ['dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
+            'director' => ['director', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
+            'developer' => ['developer', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
             'coordinator' => ['coordinator', 'project', 'student', 'communication', 'github', 'certificates'],
             'finance' => ['finance', 'project'],
             'faculty' => ['faculty', 'project', 'communication', 'github'],

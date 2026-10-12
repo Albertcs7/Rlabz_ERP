@@ -388,7 +388,7 @@ export function DirectorHome(route, router) {
               </thead>
               <tbody>
                 ${((stats.activeProjectHealth && stats.activeProjectHealth.length > 0) ? stats.activeProjectHealth : projects.slice(0, 4)).map(p => `
-                  <tr>
+                  <tr class="director-home-project-row" data-project-title="${p.title || ''}" style="cursor:pointer;" title="Click to view ${p.title || 'project'} in Project Oversight">
                     <td>
                       <strong>${p.title || 'Institutional Project'}</strong>
                       <div style="font-size:0.75rem; color:#6b7280;">ID: ${p.id}</div>
@@ -513,11 +513,11 @@ export function DirectorHome(route, router) {
     });
 
     // ── TOP 5 EXECUTIVE KPI CARDS CLICK & KEYBOARD NAVIGATION ──
-    // 1. Active Projects -> /dashboard/projects?tab=active
+    // 1. Active Projects -> /dashboard/projects?tab=all
     const kpiProjects = container.querySelector('#kpi-card-projects');
     const navigateToActiveProjects = () => {
-      if (router) router.push('/dashboard/projects?tab=active');
-      else window.location.href = '/dashboard/projects?tab=active';
+      if (router) router.push('/dashboard/projects?tab=all');
+      else window.location.href = '/dashboard/projects?tab=all';
     };
     kpiProjects?.addEventListener('click', navigateToActiveProjects);
     kpiProjects?.addEventListener('keydown', (e) => {
@@ -525,6 +525,17 @@ export function DirectorHome(route, router) {
         e.preventDefault();
         navigateToActiveProjects();
       }
+    });
+
+    container.querySelectorAll('.director-home-project-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const title = row.getAttribute('data-project-title');
+        const targetUrl = title 
+          ? `/dashboard/projects?tab=all&search=${encodeURIComponent(title)}` 
+          : '/dashboard/projects?tab=all';
+        if (router) router.push(targetUrl);
+        else window.location.href = targetUrl;
+      });
     });
 
     // 2. Pending Proposals -> /dashboard/projects?tab=proposals

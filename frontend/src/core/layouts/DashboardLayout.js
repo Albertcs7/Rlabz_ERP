@@ -50,7 +50,17 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
 
   const isStudent = authStore.role === 'student';
   const isStudentPortal = currentPath.startsWith('/student');
-  const targetPortal = (isStudent && isStudentPortal) ? 'student' : 'default';
+  const isDeveloper = authStore.role === 'developer' || currentPath.startsWith('/developer');
+  const isDirector = authStore.role === 'director' || currentPath.startsWith('/director');
+
+  let targetPortal = 'default';
+  if (isStudent && isStudentPortal) {
+    targetPortal = 'student';
+  } else if (isDeveloper) {
+    targetPortal = 'developer';
+  } else if (isDirector) {
+    targetPortal = 'director';
+  }
 
   if (sidebarNav.dataset.portal !== targetPortal || (targetPortal === 'student' && !sidebarNav.querySelector('a[href="/student/work-logs"]'))) {
     sidebarNav.dataset.portal = targetPortal;
@@ -133,6 +143,70 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           </li>
         </ul>
       `;
+    } else if (targetPortal === 'developer') {
+      const iconOverview = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`;
+      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+      const iconStudents = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      const iconClients = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`;
+      const iconFinance = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`;
+      const iconAudit = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
+
+      const navItems = [
+        { title: 'Developer Overview', path: '/developer', icon: iconOverview },
+        { title: 'Projects & Proposals', path: '/developer/projects', icon: iconProjects },
+        { title: 'Student Track Roster', path: '/developer/students', icon: iconStudents },
+        { title: 'Client Requirements', path: '/developer/clients', icon: iconClients },
+        { title: 'Finance & Payroll (Read-Only)', path: '/developer/finance', icon: iconFinance },
+        { title: 'System Audit Log', path: '/developer/audit', icon: iconAudit }
+      ];
+
+      sidebarNav.innerHTML = `
+        <div class="sidebar-section-title" style="padding: 0.75rem 1.25rem 0.25rem; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">
+          Developer Operations
+        </div>
+        <ul>
+          ${navItems.map(item => `
+            <li>
+              <a href="${item.path}">
+                ${item.icon}
+                <span>${item.title}</span>
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    } else if (targetPortal === 'director') {
+      const iconOverview = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`;
+      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+      const iconStudents = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      const iconClients = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`;
+      const iconFinance = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`;
+      const iconAudit = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
+
+      const navItems = [
+        { title: 'Executive Overview', path: '/director', icon: iconOverview },
+        { title: 'Projects & Proposals', path: '/director/projects', icon: iconProjects },
+        { title: 'Student Track Roster', path: '/director/students', icon: iconStudents },
+        { title: 'Client Requirements', path: '/director/clients', icon: iconClients },
+        { title: 'Finance & Payroll (Read-Only)', path: '/director/finance', icon: iconFinance },
+        { title: 'System Audit Log', path: '/director/audit', icon: iconAudit }
+      ];
+
+      sidebarNav.innerHTML = `
+        <div class="sidebar-section-title" style="padding: 0.75rem 1.25rem 0.25rem; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">
+          Director Workspace
+        </div>
+        <ul>
+          ${navItems.map(item => `
+            <li>
+              <a href="${item.path}">
+                ${item.icon}
+                <span>${item.title}</span>
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      `;
     } else {
       const iconsMap = {
         IconDashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`,
@@ -162,7 +236,7 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           <li>
             <a href="${mod.path}" class="${isActive ? 'active' : ''}">
               ${iconSvg}
-              <span>${(mod.name === 'dashboard' && authStore.role === 'developer') ? 'Developer Dashboard' : mod.title}</span>
+              <span>${mod.title}</span>
             </a>
           </li>
         `;
@@ -176,9 +250,14 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
   sidebarNav.querySelectorAll('a').forEach(a => {
     const href = a.getAttribute('href');
     if (href) {
-      const isActive = (href === '/student' || href === '/' || href === '/dashboard')
-        ? currentPath === href
-        : (currentPath === href || currentPath.startsWith(href + '/'));
+      let isActive = false;
+      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
+        isActive = currentPath === href || currentPath === href + '/';
+      } else {
+        isActive = currentPath === href || currentPath.startsWith(href + '/') ||
+          (href.startsWith('/developer/') && currentPath.startsWith(href.replace('/developer', '/dashboard'))) ||
+          (href.startsWith('/director/') && currentPath.startsWith(href.replace('/director', '/dashboard')));
+      }
       if (isActive) {
         a.classList.add('active');
       } else {
@@ -219,6 +298,18 @@ export async function DashboardLayout(contentChild, route, router) {
   const course = user?.course || 'MCA';
   const semester = user?.semester_text || (user?.semester ? `${user.semester}th Semester` : '2nd Year / 3rd Semester');
 
+  const isDeveloperUser = authStore.role === 'developer' || currentPath.startsWith('/developer') || (route.name && route.name.includes('developer'));
+  const isDirectorUser = authStore.role === 'director' || currentPath.startsWith('/director') || (route.name && route.name.includes('director'));
+
+  let topbarTitle = 'RLABZ ERP';
+  if (isDeveloperUser) {
+    topbarTitle = 'DEVELOPER DASHBOARD';
+  } else if (isDirectorUser) {
+    topbarTitle = 'DIRECTOR DASHBOARD';
+  } else {
+    topbarTitle = route.title || (route.name === 'faculty-sprints' ? 'PROJECT MODULES & TASKS' : (route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'RLABZ ERP'));
+  }
+
   wrapper.innerHTML = `
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -232,7 +323,7 @@ export async function DashboardLayout(contentChild, route, router) {
 
     <div class="main-wrapper">
       <header class="topbar">
-        <div class="topbar-title">${route.title || (route.name === 'faculty-sprints' ? 'PROJECT MODULES & TASKS' : (route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'RLABZ ERP'))}</div>
+        <div class="topbar-title">${topbarTitle}</div>
         <div style="display:flex; align-items:center; gap:0.85rem;">
           ${!isStudentPortal ? `
           <div class="notification-container">

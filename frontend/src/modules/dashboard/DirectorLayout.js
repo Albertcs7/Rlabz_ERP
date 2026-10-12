@@ -6,10 +6,18 @@ export async function DirectorLayout(contentChild, route, router) {
   // Render global layout first
   const layoutElement = await DashboardLayout(contentChild, route, router);
 
-  // Clean topbar user profile display to say "Director" instead of "Director & Co-ordinator"
+  const authStore = useAuthStore();
+
+  // Clean topbar user profile display to say "Director" or "Developer" instead of "Director & Co-ordinator"
   const userNameEl = layoutElement.querySelector('.topbar .user-name');
   if (userNameEl && userNameEl.textContent.includes('Director & Co-ordinator')) {
-    userNameEl.textContent = 'Director';
+    userNameEl.textContent = authStore.role === 'developer' ? 'Developer' : 'Director';
+  }
+
+  // Ensure topbar title is consistent
+  const topbarTitleEl = layoutElement.querySelector('.topbar-title');
+  if (topbarTitleEl) {
+    topbarTitleEl.textContent = authStore.role === 'developer' ? 'DEVELOPER DASHBOARD' : 'DIRECTOR DASHBOARD';
   }
 
   // Update stored user object if name was set to "Director & Co-ordinator"
