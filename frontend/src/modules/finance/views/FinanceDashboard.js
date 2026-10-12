@@ -197,7 +197,7 @@ export async function FinanceDashboard(route, router) {
       <div class="fin-drawer-body">
         ${alerts.length > 0
       ? alerts.map(a => `
-            <div class="fin-action-card ${a.daysLeft <= 0 ? 'card-overdue' : 'card-upcoming'}">
+            <div class="fin-action-card ${a.daysLeft <= 0 ? 'card-overdue' : 'card-upcoming'}" data-category="${a.category}" data-type="${a.type}" role="button" tabindex="0">
               <div class="fin-card-header-row">
                 <span class="fin-cat-badge fin-cat-${a.type}">${a.category}</span>
                 <span class="fin-countdown-tag ${a.daysLeft <= 0 ? 'tag-red' : 'tag-amber'}">
@@ -409,6 +409,46 @@ export async function FinanceDashboard(route, router) {
 
   if (bellBtn) bellBtn.addEventListener('click', openDrawer);
   if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+  // ── Action Cards Conditional Navigation ───────────────────────
+  container.querySelectorAll('.fin-action-card').forEach(card => {
+    const handleCardClick = () => {
+      const category = (card.dataset.category || '').toUpperCase();
+      const type = (card.dataset.type || '').toLowerCase();
+
+      let targetUrl = null;
+      if (category === 'BILLING' || type === 'billing' || category.includes('BILL')) {
+        targetUrl = '/finance/invoices';
+      } else if (
+        category === 'SSL' ||
+        category === 'DOMAIN' ||
+        type === 'ssl' ||
+        type === 'domain' ||
+        category.includes('INFRA') ||
+        type.includes('infra')
+      ) {
+        targetUrl = '/finance/operational-costs';
+      }
+
+      if (targetUrl) {
+        closeDrawer();
+        if (router && typeof router.push === 'function') {
+          router.push(targetUrl);
+        } else {
+          window.location.href = targetUrl;
+        }
+      }
+    };
+
+    card.addEventListener('click', handleCardClick);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCardClick();
+      }
+    });
+  });
 
   // â”€â”€ Charts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const Chart = await loadChartJs();
@@ -535,6 +575,29 @@ export async function FinanceDashboard(route, router) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: (event, elements, chart) => {
+          let activeEls = elements;
+          if ((!activeEls || activeEls.length === 0) && chart && event?.native) {
+            activeEls = chart.getElementsAtEventForMode(event.native, 'nearest', { intersect: true }, false);
+          }
+          if (activeEls && activeEls.length > 0) {
+            const index = activeEls[0].index;
+            const targetProj = activeProjects[index];
+            if (targetProj && targetProj.id) {
+              if (router && typeof router.push === 'function') {
+                router.push(`/finance/projects/${targetProj.id}`);
+              } else {
+                window.location.href = `/finance/projects/${targetProj.id}`;
+              }
+            }
+          }
+        },
+        onHover: (event, elements, chart) => {
+          const canvas = chart?.canvas || event?.native?.target;
+          if (canvas) {
+            canvas.style.cursor = (elements && elements.length > 0) ? 'pointer' : 'default';
+          }
+        },
         plugins: {
           legend: { position: 'top', labels: { color: COLORS.text, font: { family: 'Plus Jakarta Sans', size: 12 } } },
           tooltip: {
