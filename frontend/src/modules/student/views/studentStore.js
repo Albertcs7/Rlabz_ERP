@@ -11,9 +11,11 @@ let cachedReports = [];
 let cachedWorkLogs = [];
 let cachedMeetings = [];
 let cachedGithub = [];
+let cachedGithubProjects = [];
 let cachedChatMessages = [];
 let cachedNotifications = [];
 let cachedCertificates = [];
+let cachedCalendarEvents = [];
 let cachedProfile = null;
 let cachedDashboard = null;
 
@@ -60,6 +62,7 @@ export async function ensureDataLoaded(force = false) {
     cachedChatMessages = [];
     cachedNotifications = [];
     cachedCertificates = [];
+    cachedCalendarEvents = [];
     cachedProfile = null;
     cachedDashboard = null;
     dataLoaded = false;
@@ -82,12 +85,22 @@ export async function ensureDataLoaded(force = false) {
     cachedWorkLogs = await apiFetch('/student/work-logs');
     
     // 5. Fetch github
-    cachedGithub = await apiFetch('/student/github');
+    const githubRes = await apiFetch('/student/github');
+    cachedGithub = Array.isArray(githubRes) ? githubRes : (githubRes.repos || []);
+    cachedGithubProjects = Array.isArray(githubRes) ? [] : (githubRes.projects || []);
     
     // 6. Fetch meetings
     cachedMeetings = await apiFetch('/student/meetings');
+
+    // 7. Fetch calendar events (ERP deadlines, sprints, meetings, reviews, reports)
+    try {
+      cachedCalendarEvents = await apiFetch('/student/calendar-events');
+    } catch (err) {
+      console.warn('Could not load calendar events endpoint:', err);
+      cachedCalendarEvents = [];
+    }
     
-    // 7. Fetch chats for each project
+    // 8. Fetch chats for each project
     cachedChatMessages = [];
     for (const proj of cachedProjects) {
       try {
@@ -95,7 +108,9 @@ export async function ensureDataLoaded(force = false) {
         const mappedMsgs = msgs.map(m => ({
           project: proj.title,
           sender: m.sender,
+          senderName: m.senderName,
           text: m.text,
+          attachment: m.attachment || null,
           time: m.time
         }));
         cachedChatMessages.push(...mappedMsgs);
@@ -104,7 +119,7 @@ export async function ensureDataLoaded(force = false) {
       }
     }
 
-    // 8. Fetch notifications from DB
+    // 9. Fetch notifications from DB
     try {
       cachedNotifications = await apiFetch('/student/notifications');
     } catch (err) {
@@ -129,7 +144,7 @@ export async function ensureDataLoaded(force = false) {
         if (cachedDashboard.projects && cachedDashboard.projects.length > 0) {
           cachedProjects = cachedDashboard.projects;
         }
-        if (cachedDashboard.meetings && cachedDashboard.meetings.length > 0) {
+        if ((!cachedMeetings || cachedMeetings.length === 0) && cachedDashboard.meetings && cachedDashboard.meetings.length > 0) {
           cachedMeetings = cachedDashboard.meetings;
         }
         if (cachedDashboard.notifications && cachedDashboard.notifications.length > 0) {
@@ -158,7 +173,7 @@ export async function fetchLiveDashboard(force = true) {
         if (cachedDashboard.projects && cachedDashboard.projects.length > 0) {
           cachedProjects = cachedDashboard.projects;
         }
-        if (cachedDashboard.meetings && cachedDashboard.meetings.length > 0) {
+        if ((!cachedMeetings || cachedMeetings.length === 0) && cachedDashboard.meetings && cachedDashboard.meetings.length > 0) {
           cachedMeetings = cachedDashboard.meetings;
         }
         if (cachedDashboard.notifications && cachedDashboard.notifications.length > 0) {
@@ -209,12 +224,71 @@ export function getGithub() {
   return cachedGithub;
 }
 
+export function getGithubProjects() {
+  return cachedGithubProjects;
+}
+
 export function getChatMessages() {
   return cachedChatMessages;
 }
 
 export function getNotifications() {
   return cachedNotifications;
+}
+
+export function getCalendarEvents() {
+  return cachedCalendarEvents;
+}
+
+export async function fetchLiveCalendarEvents(force = true) {
+  if (force || !cachedCalendarEvents || cachedCalendarEvents.length === 0) {
+    try {
+      cachedCalendarEvents = await apiFetch('/student/calendar-events');
+    } catch (e) {
+      console.warn('Could not fetch live calendar events:', e);
+      cachedCalendarEvents = cachedCalendarEvents || [];
+    }
+  }
+  return cachedCalendarEvents;
+}
+
+export async function fetchLiveNotifications() {
+  try {
+    cachedNotifications = await apiFetch('/student/notifications');
+    return cachedNotifications;
+  } catch (e) {
+    console.warn('Could not fetch notifications:', e);
+    return cachedNotifications || [];
+  }
+}
+
+export async function markStudentNotificationRead(id) {
+  try {
+    await apiFetch(`/student/notifications/${id}/read`, {
+      method: 'POST'
+    });
+    const notif = (cachedNotifications || []).find(n => String(n.id) === String(id));
+    if (notif) {
+      notif.is_read = true;
+      notif.isRead = true;
+    }
+  } catch (e) {
+    console.error(`Failed to mark notification ${id} as read:`, e);
+  }
+}
+
+export async function markAllStudentNotificationsRead() {
+  try {
+    await apiFetch('/student/notifications/mark-all-read', {
+      method: 'POST'
+    });
+    (cachedNotifications || []).forEach(n => {
+      n.is_read = true;
+      n.isRead = true;
+    });
+  } catch (e) {
+    console.error('Failed to mark all notifications as read:', e);
+  }
 }
 
 export function getStudentProfile() {
@@ -229,6 +303,34 @@ export async function fetchLiveStudentProfile() {
   } catch (e) {
     return null;
   }
+}
+
+export async function fetchPasswordRequestStatus() {
+  try {
+    return await apiFetch('/student/password-request-status');
+  } catch (e) {
+    console.error('Failed to fetch password request status:', e);
+    return { has_request: false, status: 'none', request: null };
+  }
+}
+
+export async function requestPasswordChangeAccess() {
+  return await apiFetch('/student/request-password-change', {
+    method: 'POST'
+  });
+}
+
+export async function cancelPasswordRequest() {
+  return await apiFetch('/student/cancel-password-request', {
+    method: 'POST'
+  });
+}
+
+export async function updateStudentPassword(new_password, confirm_password) {
+  return await apiFetch('/student/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ new_password, confirm_password })
+  });
 }
 
 export async function getProjectTasks(projectId) {
@@ -258,21 +360,55 @@ export async function saveWorkLog(workLog) {
   await ensureDataLoaded(true); // refresh cache
 }
 
-export async function saveGithubUrl(project, url) {
+export async function saveGithubUrl(project, url, projectId = null) {
   await apiFetch('/student/github', {
     method: 'POST',
-    body: JSON.stringify({ project, url })
+    body: JSON.stringify({ project, url, projectId })
   });
   await ensureDataLoaded(true); // refresh cache
 }
 
-export async function saveChatMessage(project, text) {
+export async function saveGithubBranch(projectId, branchName, branchUrl = '', id = null) {
+  const res = await apiFetch('/student/github/branch', {
+    method: 'POST',
+    body: JSON.stringify({ projectId, branchName, branchUrl, id })
+  });
+  await ensureDataLoaded(true); // refresh cache
+  return res;
+}
+
+export async function deleteGithubBranch(branchId) {
+  const res = await apiFetch(`/student/github/branch/${branchId}`, {
+    method: 'DELETE'
+  });
+  await ensureDataLoaded(true); // refresh cache
+  return res;
+}
+
+export async function updateTaskGithub(taskId, githubRepositoryId, githubPrUrl) {
+  const res = await apiFetch(`/student/tasks/${taskId}/github`, {
+    method: 'POST',
+    body: JSON.stringify({
+      github_repository_id: githubRepositoryId,
+      github_pr_url: githubPrUrl
+    })
+  });
+  await ensureDataLoaded(true); // refresh cache
+  return res;
+}
+
+export async function saveChatMessage(project, text, attachment = null) {
   const proj = cachedProjects.find(p => p.title === project);
   if (!proj) return;
   
+  const payload = { text: text || '' };
+  if (attachment) {
+    payload.attachment = attachment;
+  }
+
   await apiFetch(`/student/chats/${proj.id}/messages`, {
     method: 'POST',
-    body: JSON.stringify({ text })
+    body: JSON.stringify(payload)
   });
   await ensureDataLoaded(true); // refresh cache
 }
@@ -284,3 +420,34 @@ export async function saveSprint(sprint) {
   });
   await ensureDataLoaded(true); // refresh cache
 }
+
+// Scoped student profile photo helpers
+export function getStudentPhotoKey(user) {
+  if (!user) return null;
+  const identifier = user.id || user.email || user.username || user.name;
+  return identifier ? `student_profile_photo_${String(identifier).toLowerCase().trim()}` : null;
+}
+
+export function getStudentProfilePhoto(user) {
+  const key = getStudentPhotoKey(user);
+  if (!key) return null;
+  return localStorage.getItem(key) || null;
+}
+
+export function saveStudentProfilePhoto(user, dataUrl) {
+  const key = getStudentPhotoKey(user);
+  if (key && dataUrl) {
+    localStorage.setItem(key, dataUrl);
+  }
+}
+
+export function removeStudentProfilePhoto(user) {
+  const key = getStudentPhotoKey(user);
+  if (key) {
+    localStorage.removeItem(key);
+  }
+  try {
+    localStorage.removeItem('student_profile_photo'); // clear legacy unscoped key
+  } catch (e) {}
+}
+

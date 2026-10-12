@@ -6,6 +6,9 @@ use Modules\Faculty\Http\Controllers\FacultyController;
 Route::prefix('faculty')->group(function () {
     Route::get('/dashboard', [FacultyController::class, 'getDashboardData']);
     Route::get('/profile', [FacultyController::class, 'getProfile']);
+    Route::put('/profile', [FacultyController::class, 'updateProfile']);
+    Route::post('/profile', [FacultyController::class, 'updateProfile']);
+    Route::post('/change-password', [FacultyController::class, 'changePassword']);
     Route::get('/projects', [FacultyController::class, 'getProjects']);
     Route::get('/projects/{id}/report', [FacultyController::class, 'getProjectReport']);
     Route::get('/projects/{id}/modules-tasks', [FacultyController::class, 'getProjectModulesAndTasks']);
@@ -14,8 +17,10 @@ Route::prefix('faculty')->group(function () {
     Route::post('/tasks', [FacultyController::class, 'createTask']);
     Route::post('/tasks/{id}/verify', [FacultyController::class, 'verifyTask']);
     Route::get('/projects/{id}/work-logs', [FacultyController::class, 'getProjectWorkLogs']);
+    Route::get('/projects/{id}/work-logs/download', [FacultyController::class, 'downloadProjectWorkLogs']);
     Route::post('/work-logs/{id}/approve', [FacultyController::class, 'approveWorkLog']);
     Route::post('/work-logs/{id}/rate', [FacultyController::class, 'rateWorkLog']);
+    Route::post('/work-logs/{id}/notify-coordinator', [FacultyController::class, 'notifyCoordinator']);
     Route::get('/projects/{id}/client-requirements', [FacultyController::class, 'getProjectClientRequirements']);
     Route::get('/projects/{id}/requirement-changes', [FacultyController::class, 'getProjectRequirementChanges']);
     Route::get('/students', [FacultyController::class, 'getStudents']);

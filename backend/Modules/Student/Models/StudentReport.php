@@ -75,6 +75,7 @@ class StudentReport extends Model
         return DB::transaction(function () use ($studentId, $projectId, $weekStart, $weekEnd, $weeklyKey) {
             $dailyReports = DB::table('student_reports')
                 ->leftJoin('tasks', 'tasks.id', '=', 'student_reports.task_id')
+                ->leftJoin('github_repositories', 'github_repositories.id', '=', 'tasks.github_repository_id')
                 ->where('student_reports.student_id', $studentId)
                 ->where('student_reports.project_id', $projectId)
                 ->where('student_reports.report_type', 'daily') // never pulls in an existing weekly row
@@ -90,7 +91,10 @@ class StudentReport extends Model
                     'student_reports.hours_worked',
                     'student_reports.task_id',
                     'tasks.title as task_title',
-                    'tasks.status as task_status'
+                    'tasks.status as task_status',
+                    'tasks.github_pr_url',
+                    'github_repositories.branch_name',
+                    'github_repositories.branch_url'
                 )
                 ->orderBy('student_reports.report_date', 'asc')
                 ->orderBy('student_reports.id', 'asc')
@@ -103,7 +107,7 @@ class StudentReport extends Model
             $totalHours = $dailyReports->sum(fn ($r) => $r->hours_worked !== null ? (float) $r->hours_worked : 0);
 
             $payload = [
-                'work_done' => self::formatByTask($dailyReports, 'work_done'),
+                'work_done' => self::formatByTask($dailyReports, 'work_done', true),
                 'tasks_completed' => self::formatByTask($dailyReports, 'tasks_completed') ?: null,
                 'next_plan' => self::formatByTask($dailyReports, 'next_plan') ?: null,
                 'challenges' => self::formatByTask($dailyReports, 'challenges') ?: null,
@@ -145,7 +149,7 @@ class StudentReport extends Model
      * non-empty values into one readable, dated summary. Same presentation style
      * used consistently for work_done, tasks_completed, next_plan, challenges, remarks.
      */
-    private static function formatByTask($dailyReports, string $field): string
+    private static function formatByTask($dailyReports, string $field, bool $includeGithubMeta = false): string
     {
         $tasksGrouped = [];
         foreach ($dailyReports as $dr) {
@@ -166,6 +170,11 @@ class StudentReport extends Model
                     'taskCode' => $dr->task_id ? 'T-' . $dr->task_id : 'General',
                     'taskTitle' => $dr->task_title ?: 'General Work',
                     'taskStatus' => $statusMap[strtolower($dr->task_status ?: 'todo')] ?? ucfirst($dr->task_status ?: 'Todo'),
+                    // Branch/PR are per-task metadata (same for every entry of this
+                    // task), not a per-entry dated value — captured once here.
+                    'branchName' => $dr->branch_name ?? null,
+                    'branchUrl' => $dr->branch_url ?? null,
+                    'githubPrUrl' => $dr->github_pr_url ?? null,
                     'entries' => [],
                 ];
             }
@@ -183,6 +192,14 @@ class StudentReport extends Model
         foreach ($tasksGrouped as $tg) {
             $formattedText .= "{$tg['taskCode']} — {$tg['taskTitle']}\n";
             $formattedText .= "Status: {$tg['taskStatus']}\n";
+            if ($includeGithubMeta) {
+                if (!empty($tg['branchName'])) {
+                    $formattedText .= "Branch: {$tg['branchName']}\n";
+                }
+                if (!empty($tg['githubPrUrl'])) {
+                    $formattedText .= "PR: {$tg['githubPrUrl']}\n";
+                }
+            }
             foreach ($tg['entries'] as $entry) {
                 $formattedDate = date('M j', strtotime($entry['date']));
                 $formattedText .= "• [{$formattedDate}] {$entry['value']}\n";

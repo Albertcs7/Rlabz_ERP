@@ -22,18 +22,19 @@ class WeeklyReportGenerationTest extends TestCase
     {
         // Same eligibility logic as StudentController::saveReport(): task belongs to a
         // module of the project, assigned to the student, student is also a
-        // project_student member, task not already completed+approved. Additionally
-        // require this student+project pair has NO existing student_reports rows at
-        // all (daily or weekly) — nothing this test does can touch pre-existing data.
+        // project_student member, task not already completed. (tasks.review_status was
+        // dropped by the 2026_09_14_143933 migration in favor of a 'rework' status
+        // value, and saveReport()'s own check was simplified to match — mirrored here.)
+        // Additionally require this student+project pair has NO existing
+        // student_reports rows at all (daily or weekly) — nothing this test does can
+        // touch pre-existing data.
         $combo = DB::table('tasks')
             ->join('modules', 'modules.id', '=', 'tasks.module_id')
             ->join('project_student', function ($j) {
                 $j->on('project_student.project_id', '=', 'modules.project_id')
                   ->on('project_student.student_id', '=', 'tasks.assigned_to');
             })
-            ->where(function ($q) {
-                $q->where('tasks.status', '!=', 'completed')->orWhere('tasks.review_status', 'rejected');
-            })
+            ->where('tasks.status', '!=', 'completed')
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))->from('student_reports')
                   ->whereColumn('student_reports.student_id', 'tasks.assigned_to')

@@ -5,6 +5,7 @@ namespace Modules\Faculty\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -14,10 +15,11 @@ class FacultyController extends Controller
     /**
      * Resolve the faculty user ID from JWT token or request context.
      */
-    private function getFacultyId(Request $request)
+    private function getFacultyId(?Request $request = null)
     {
+        $request = $request ?: request();
         // 1. Check if auth.jwt middleware merged auth_user
-        $authUser = $request->get('auth_user');
+        $authUser = $request ? $request->get('auth_user') : null;
         if ($authUser && isset($authUser['sub'])) {
             return $authUser['sub'];
         }
@@ -84,14 +86,39 @@ class FacultyController extends Controller
             ->select('id', 'title', 'title as name', 'client_name', 'project_type', 'status', 'requirements')
             ->get();
 
-        // Calculate progress for each project (completed tasks / total tasks)
+        // Calculate overall progress for each project based on modules and completed modules
         foreach ($projects as $p) {
-            $moduleIds = DB::table('modules')->where('project_id', $p->id)->pluck('id');
-            $totalTasks = DB::table('tasks')->whereIn('module_id', $moduleIds)->count();
-            $completedTasks = DB::table('tasks')->whereIn('module_id', $moduleIds)->where('status', 'completed')->count();
+            $modules = DB::table('modules')->where('project_id', $p->id)->get();
+            $totalModules = $modules->count();
+            $completedModules = 0;
+            $totalTasks = 0;
+            $completedTasks = 0;
+
+            if ($totalModules > 0) {
+                $moduleIds = $modules->pluck('id');
+                $tasks = DB::table('tasks')->whereIn('module_id', $moduleIds)->get();
+                $totalTasks = $tasks->count();
+                $completedTasks = $tasks->where('status', 'completed')->count();
+
+                foreach ($modules as $m) {
+                    $mTasks = $tasks->where('module_id', $m->id);
+                    $mTaskCount = $mTasks->count();
+                    $mCompletedCount = $mTasks->where('status', 'completed')->count();
+
+                    // A module is considered completed if marked as 'completed' in modules table
+                    // OR if it has tasks and all tasks inside that module are completed
+                    if (strtolower($m->status ?? '') === 'completed' || ($mTaskCount > 0 && $mCompletedCount === $mTaskCount)) {
+                        $completedModules++;
+                    }
+                }
+            }
+
+            $p->total_modules = $totalModules;
+            $p->completed_modules = $completedModules;
             $p->total_tasks = $totalTasks;
             $p->completed_tasks = $completedTasks;
-            $p->progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
+            // Overall progress based on modules inside the project
+            $p->progress = $totalModules > 0 ? round(($completedModules / $totalModules) * 100) : ($totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0);
             $p->students_count = DB::table('project_student')->where('project_id', $p->id)->count();
         }
 
@@ -233,6 +260,70 @@ class FacultyController extends Controller
     }
 
     /**
+     * Update faculty profile details in users table and faculty_profiles table.
+     */
+    public function updateProfile(Request $request)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $facultyId,
+            'phone' => 'nullable|string|max:50',
+            'department' => 'nullable|string|max:255',
+            'designation' => 'nullable|string|max:255',
+        ]);
+
+        $user = DB::table('users')->where('id', $facultyId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Faculty user not found'], 404);
+        }
+
+        DB::table('users')->where('id', $facultyId)->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'updated_at' => now(),
+        ]);
+
+        $department = $validated['department'] ?? 'Department of Computer Applications';
+        $designation = $validated['designation'] ?? 'Associate Professor';
+
+        if (Schema::hasTable('faculty_profiles')) {
+            $existingProfile = DB::table('faculty_profiles')->where('faculty_id', $facultyId)->first();
+            if ($existingProfile) {
+                DB::table('faculty_profiles')->where('faculty_id', $facultyId)->update([
+                    'department' => $department,
+                    'designation' => $designation,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('faculty_profiles')->insert([
+                    'faculty_id' => $facultyId,
+                    'department' => $department,
+                    'designation' => $designation,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'id' => $facultyId,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'role' => ucfirst($user->role),
+                'department' => $department,
+                'designation' => $designation,
+            ]
+        ]);
+    }
+
+    /**
      * Get projects assigned to the currently logged in faculty.
      */
     public function getProjects(Request $request)
@@ -295,14 +386,27 @@ class FacultyController extends Controller
             ->where('faculty_id', $facultyId)
             ->pluck('project_id');
 
+        // Identify students who belong to this faculty's assigned projects
+        $facultyStudentIds = collect();
+        if ($projectIds->isNotEmpty()) {
+            $facultyStudentIds = DB::table('project_student')
+                ->whereIn('project_id', $projectIds)
+                ->pluck('student_id')
+                ->unique();
+        }
+
         $query = DB::table('project_student')
             ->join('users', 'users.id', '=', 'project_student.student_id')
             ->leftJoin('student_profiles', 'student_profiles.student_id', '=', 'users.id')
             ->join('projects', 'projects.id', '=', 'project_student.project_id');
 
-        // Filter by assigned projects if the faculty has project assignments
+        // If faculty has assigned projects, include only students under those projects,
+        // but retrieve ALL projects those students are part of!
         if ($projectIds->isNotEmpty()) {
-            $query->whereIn('project_student.project_id', $projectIds);
+            if ($facultyStudentIds->isEmpty()) {
+                return response()->json([]);
+            }
+            $query->whereIn('project_student.student_id', $facultyStudentIds);
         }
 
         $studentRecords = $query->select(
@@ -344,11 +448,51 @@ class FacultyController extends Controller
                 return $item->student_id . '_' . $item->project_id;
             });
 
-        $students = $studentRecords->map(function ($s) use ($taskRatings) {
+        // Also calculate average ratings from student_work_logs table for each student per project
+        $workLogRatings = DB::table('student_work_logs')
+            ->join('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
+            ->where(function ($q) {
+                $q->whereNotNull('student_work_logs.rating')
+                  ->orWhereNotNull('student_work_logs.ratings');
+            })
+            ->select(
+                'project_student.student_id',
+                'project_student.project_id',
+                DB::raw('ROUND(AVG(COALESCE(student_work_logs.rating, student_work_logs.ratings)), 1) as avg_rating'),
+                DB::raw('COUNT(student_work_logs.id) as rated_tasks_count')
+            )
+            ->groupBy('project_student.student_id', 'project_student.project_id')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->student_id . '_' . $item->project_id;
+            });
+
+        $students = $studentRecords->map(function ($s) use ($taskRatings, $workLogRatings, $projectIds) {
             $key = $s->student_id . '_' . $s->project_id;
             $ratingObj = $taskRatings->get($key);
-            $avgRating = $ratingObj ? (float) $ratingObj->avg_rating : null;
-            $ratedTasksCount = $ratingObj ? (int) $ratingObj->rated_tasks_count : 0;
+            $wlRatingObj = $workLogRatings->get($key);
+            $avgRating = $ratingObj ? (float) $ratingObj->avg_rating : ($wlRatingObj ? (float) $wlRatingObj->avg_rating : null);
+            $ratedTasksCount = $ratingObj ? (int) $ratingObj->rated_tasks_count : ($wlRatingObj ? (int) $wlRatingObj->rated_tasks_count : 0);
+
+            // Calculate other projects this student is working in (excluding this faculty's assigned projects)
+            $allStudentProjectIds = DB::table('project_student')
+                ->where('student_id', $s->student_id)
+                ->pluck('project_id');
+
+            $otherProjectsQuery = DB::table('projects')
+                ->whereIn('id', $allStudentProjectIds);
+
+            if ($projectIds->isNotEmpty()) {
+                $otherProjectsQuery->whereNotIn('id', $projectIds);
+            } else {
+                $otherProjectsQuery->where('id', '!=', $s->project_id);
+            }
+
+            $otherProjects = $otherProjectsQuery
+                ->pluck('title')
+                ->unique()
+                ->values()
+                ->toArray();
 
             return [
                 'student_id' => $s->student_id,
@@ -367,6 +511,7 @@ class FacultyController extends Controller
                 'rating' => $avgRating,
                 'avg_rating' => $avgRating,
                 'rated_tasks_count' => $ratedTasksCount,
+                'other_projects' => $otherProjects,
             ];
         });
 
@@ -646,7 +791,9 @@ class FacultyController extends Controller
 
         $query = DB::table('student_reports')
             ->leftJoin('projects', 'projects.id', '=', 'student_reports.project_id')
-            ->leftJoin('users', 'users.id', '=', 'student_reports.student_id');
+            ->leftJoin('users', 'users.id', '=', 'student_reports.student_id')
+            ->leftJoin('tasks', 'tasks.id', '=', 'student_reports.task_id')
+            ->leftJoin('github_repositories', 'github_repositories.id', '=', 'tasks.github_repository_id');
 
         if ($request->filled('project_id')) {
             $query->where('student_reports.project_id', $request->input('project_id'));
@@ -670,7 +817,12 @@ class FacultyController extends Controller
             'student_reports.report_file',
             'student_reports.approval_status',
             'student_reports.feedback',
-            'student_reports.submitted_at'
+            'student_reports.submitted_at',
+            'student_reports.task_id',
+            'tasks.title as task_title',
+            'tasks.github_pr_url',
+            'github_repositories.branch_name',
+            'github_repositories.branch_url'
         )
         ->orderBy('student_reports.submitted_at', 'desc')
         ->get()
@@ -693,6 +845,11 @@ class FacultyController extends Controller
                 'file_name' => $fileName,
                 'file_url' => $r->report_file ? asset('storage/' . $r->report_file) : null,
                 'download_url' => $r->report_file ? url('api/faculty/reports/' . $r->id . '/download') : null,
+                'task_id' => $r->task_id,
+                'task_title' => $r->task_title,
+                'github_pr_url' => $r->github_pr_url,
+                'branch_name' => $r->branch_name,
+                'branch_url' => $r->branch_url,
             ];
         });
 
@@ -909,16 +1066,22 @@ class FacultyController extends Controller
 
         // GitHub repository details from github_repositories table
         $repositories = DB::table('github_repositories')
-            ->where('project_id', $id)
+            ->leftJoin('users', 'users.id', '=', 'github_repositories.student_id')
+            ->where('github_repositories.project_id', $id)
             ->select(
-                'id',
-                'project_id',
-                'repository_name',
-                'repository_url',
-                'submitted_date',
-                'is_verified',
-                'verified_by',
-                'verified_at'
+                'github_repositories.id',
+                'github_repositories.project_id',
+                'github_repositories.student_id',
+                'users.name as student_name',
+                'github_repositories.link_type',
+                'github_repositories.repository_name',
+                'github_repositories.repository_url',
+                'github_repositories.branch_name',
+                'github_repositories.branch_url',
+                'github_repositories.submitted_date',
+                'github_repositories.is_verified',
+                'github_repositories.verified_by',
+                'github_repositories.verified_at'
             )
             ->get();
 
@@ -934,6 +1097,7 @@ class FacultyController extends Controller
         $tasks = DB::table('tasks')
             ->leftJoin('users', 'users.id', '=', 'tasks.assigned_to')
             ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->leftJoin('github_repositories', 'github_repositories.id', '=', 'tasks.github_repository_id')
             ->whereIn('tasks.module_id', $moduleIds)
             ->select(
                 'tasks.id',
@@ -945,7 +1109,11 @@ class FacultyController extends Controller
                 'tasks.status',
                 'tasks.due_date',
                 'tasks.assigned_to',
-                'users.name as assigned_to_name'
+                'users.name as assigned_to_name',
+                'tasks.github_repository_id',
+                'tasks.github_pr_url',
+                'github_repositories.branch_name',
+                'github_repositories.branch_url'
             )
             ->get();
 
@@ -964,6 +1132,8 @@ class FacultyController extends Controller
      */
     public function getProjectModulesAndTasks($id, Request $request)
     {
+        $facultyId = $this->getFacultyId($request);
+
         $project = DB::table('projects')->where('id', $id)->first();
         if (!$project) {
             return response()->json(['error' => 'Project not found'], 404);
@@ -1013,6 +1183,7 @@ class FacultyController extends Controller
             ->leftJoin('users as assigned_user', 'assigned_user.id', '=', 'tasks.assigned_to')
             ->leftJoin('users as reviewer', 'reviewer.id', '=', 'tasks.reviewed_by')
             ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->leftJoin('github_repositories', 'github_repositories.id', '=', 'tasks.github_repository_id')
             ->whereIn('tasks.module_id', $moduleIds)
             ->select(
                 'tasks.id',
@@ -1024,6 +1195,10 @@ class FacultyController extends Controller
                 'tasks.status',
                 'tasks.due_date',
                 'tasks.assigned_to',
+                'tasks.github_repository_id',
+                'tasks.github_pr_url',
+                'github_repositories.branch_name',
+                'github_repositories.branch_url',
                 'tasks.reviewed_by',
                 'tasks.reviewed_at',
                 'assigned_user.name as assigned_to_name',
@@ -1162,6 +1337,7 @@ class FacultyController extends Controller
             'module_name' => 'nullable|string|max:150',
             'new_description' => 'nullable|string',
             'description' => 'nullable|string',
+            'document_path' => 'nullable|string|max:1000',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'integer'
         ]);
@@ -1178,6 +1354,7 @@ class FacultyController extends Controller
         $moduleId = $validated['module_id'] ?? 'new';
         $moduleName = $validated['new_module_name'] ?? $validated['name'] ?? $validated['module_name'] ?? null;
         $moduleDesc = $validated['new_description'] ?? $validated['description'] ?? null;
+        $moduleDoc = $validated['document_path'] ?? $request->input('document_path');
 
         if ($moduleId === 'new' || !is_numeric($moduleId)) {
             if (empty($moduleName)) {
@@ -1187,6 +1364,7 @@ class FacultyController extends Controller
                 'project_id' => $id,
                 'module_name' => $moduleName,
                 'description' => $moduleDesc,
+                'document_path' => $moduleDoc,
                 'weight_percentage' => 25.00,
                 'status' => 'not_started',
                 'created_by' => $facultyId,
@@ -1199,6 +1377,12 @@ class FacultyController extends Controller
                 return response()->json(['error' => 'Selected module not found for this project.'], 404);
             }
             $moduleName = $module->module_name;
+            if ($request->has('document_path')) {
+                DB::table('modules')->where('id', $moduleId)->update([
+                    'document_path' => $moduleDoc,
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
         $assignedStudentIds = $validated['student_ids'] ?? [];
@@ -1543,7 +1727,7 @@ class FacultyController extends Controller
     /**
      * Get student work logs for a specific project assigned to the logged-in faculty.
      */
-    public function getProjectWorkLogs($id, Request $request)
+    public function getProjectWorkLogs($id, Request $request = null)
     {
         $facultyId = $this->getFacultyId($request);
 
@@ -1562,15 +1746,19 @@ class FacultyController extends Controller
             return response()->json(['error' => 'You are not assigned to this project.'], 403);
         }
 
-        // Fetch student work logs related to this project
+        // Fetch student work logs related to this project (matched by task's module project OR project_student project)
         $workLogs = DB::table('student_work_logs')
-            ->join('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
-            ->join('users as student', 'student.id', '=', 'project_student.student_id')
-            ->leftJoin('student_profiles', 'student_profiles.student_id', '=', 'student.id')
             ->leftJoin('tasks', 'tasks.id', '=', 'student_work_logs.task_id')
             ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->leftJoin('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
+            ->leftJoin('users as student', 'student.id', '=', DB::raw('COALESCE(tasks.assigned_to, project_student.student_id)'))
+            ->leftJoin('student_profiles', 'student_profiles.student_id', '=', 'student.id')
+            ->leftJoin('github_repositories', 'github_repositories.id', '=', 'tasks.github_repository_id')
             ->leftJoin('users as approver', 'approver.id', '=', 'student_work_logs.approved_by')
-            ->where('project_student.project_id', $id)
+            ->where(function ($q) use ($id) {
+                $q->where('modules.project_id', $id)
+                  ->orWhere('project_student.project_id', $id);
+            })
             ->select(
                 'student_work_logs.id',
                 'student_work_logs.project_student_id',
@@ -1591,6 +1779,9 @@ class FacultyController extends Controller
                 'tasks.weight as task_weight',
                 'tasks.status as task_status',
                 'tasks.due_date as task_due_date',
+                'tasks.github_pr_url',
+                'github_repositories.branch_name',
+                'github_repositories.branch_url',
                 'modules.id as module_id',
                 'modules.module_name',
                 'approver.name as approved_by_name'
@@ -1599,8 +1790,8 @@ class FacultyController extends Controller
             ->orderBy('student_work_logs.id', 'desc')
             ->get();
 
-        // Calculate deadline compliance for each work log
-        $workLogs = $workLogs->map(function ($log) {
+        // Calculate deadline compliance, time overrun and coordinator notification status
+        $workLogs = $workLogs->map(function ($log) use ($id) {
             $isLate = false;
             $daysLate = 0;
             if (!empty($log->task_due_date)) {
@@ -1613,7 +1804,26 @@ class FacultyController extends Controller
             }
             $log->is_late = $isLate;
             $log->days_late = $daysLate;
-            $log->task_weight = (int) ($log->task_weight ?? 1);
+            $taskWeight = (float) ($log->task_weight ?? 1);
+            $hoursWorked = (float) ($log->hours_worked ?? 0);
+            $log->task_weight = $taskWeight;
+            $log->hours_worked = $hoursWorked;
+
+            $isExceeded = ($taskWeight > 0 && $hoursWorked > $taskWeight);
+            $log->is_time_exceeded = $isExceeded;
+            $log->time_overrun = $isExceeded ? round($hoursWorked - $taskWeight, 1) : 0;
+
+            // Check if coordinator has already been notified about this task overrun
+            $notifExists = false;
+            if (Schema::hasTable('notifications')) {
+                $notifExists = DB::table('notifications')
+                    ->where('project_id', $id)
+                    ->where('type', 'task_time_exceeded')
+                    ->where('message', 'like', "%task '{$log->task_title}'%")
+                    ->exists();
+            }
+            $log->coordinator_notified = $notifExists;
+
             return $log;
         });
 
@@ -1684,6 +1894,187 @@ class FacultyController extends Controller
     }
 
     /**
+     * Download formatted work log for a specific project.
+     * Organized hierarchically: Month -> Week -> Module -> Task, showing student work logs.
+     */
+    public function downloadProjectWorkLogs(Request $request, $id)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $project = DB::table('projects')->where('id', $id)->first();
+        if (!$project) {
+            return response()->json(['error' => 'Project not found.'], 404);
+        }
+
+        // Verify project assignment for faculty
+        $isAssigned = DB::table('project_faculty')
+            ->where('faculty_id', $facultyId)
+            ->where('project_id', $id)
+            ->exists();
+        $hasAnyAssignments = DB::table('project_faculty')->where('faculty_id', $facultyId)->exists();
+        if ($hasAnyAssignments && !$isAssigned) {
+            return response()->json(['error' => 'You are not assigned to this project.'], 403);
+        }
+
+        // Fetch student work logs related to this project
+        $logs = DB::table('student_work_logs')
+            ->leftJoin('tasks', 'tasks.id', '=', 'student_work_logs.task_id')
+            ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->leftJoin('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
+            ->leftJoin('users as student', 'student.id', '=', DB::raw('COALESCE(tasks.assigned_to, project_student.student_id)'))
+            ->leftJoin('student_profiles', 'student_profiles.student_id', '=', 'student.id')
+            ->leftJoin('users as approver', 'approver.id', '=', 'student_work_logs.approved_by')
+            ->where(function ($q) use ($id) {
+                $q->where('modules.project_id', $id)
+                  ->orWhere('project_student.project_id', $id);
+            })
+            ->select(
+                'student_work_logs.id',
+                'student_work_logs.work_date',
+                'student_work_logs.hours_worked',
+                'student_work_logs.description',
+                'student_work_logs.approval_status',
+                'student_work_logs.ratings',
+                'student_work_logs.rating',
+                'student_work_logs.created_at',
+                'student.name as student_name',
+                'student.email as student_email',
+                'student_profiles.designation as student_designation',
+                'tasks.title as task_title',
+                'tasks.weight as task_weight',
+                'tasks.status as task_status',
+                'modules.module_name',
+                'approver.name as approved_by_name'
+            )
+            ->orderBy('student_work_logs.work_date', 'asc')
+            ->orderBy('student_work_logs.id', 'asc')
+            ->get();
+
+        // Group hierarchical structure: Month -> Week -> Module -> Task
+        $structured = [];
+        $totalHours = 0;
+        foreach ($logs as $log) {
+            $dateStr = $log->work_date ?: ($log->created_at ? substr($log->created_at, 0, 10) : date('Y-m-d'));
+            $timestamp = strtotime($dateStr) ?: time();
+            $monthKey = date('F Y', $timestamp); // e.g. "October 2026"
+
+            // Calculate week of month (1 to 5)
+            $dayOfMonth = (int) date('j', $timestamp);
+            $weekNum = (int) ceil($dayOfMonth / 7);
+            $weekKey = "Week " . $weekNum;
+
+            $moduleKey = $log->module_name ?: 'General Module';
+            $taskKey = $log->task_title ?: 'General Task';
+
+            if (!isset($structured[$monthKey])) {
+                $structured[$monthKey] = [];
+            }
+            if (!isset($structured[$monthKey][$weekKey])) {
+                $structured[$monthKey][$weekKey] = [];
+            }
+            if (!isset($structured[$monthKey][$weekKey][$moduleKey])) {
+                $structured[$monthKey][$weekKey][$moduleKey] = [];
+            }
+            if (!isset($structured[$monthKey][$weekKey][$moduleKey][$taskKey])) {
+                $structured[$monthKey][$weekKey][$moduleKey][$taskKey] = [];
+            }
+
+            $structured[$monthKey][$weekKey][$moduleKey][$taskKey][] = $log;
+            $totalHours += (float) ($log->hours_worked ?? 0);
+        }
+
+        $structuredTree = [];
+        foreach ($structured as $month => $weeks) {
+            $monthData = ['month' => $month, 'weeks' => []];
+            foreach ($weeks as $week => $modules) {
+                $weekData = ['week' => $week, 'modules' => []];
+                foreach ($modules as $module => $tasks) {
+                    $moduleData = ['module_name' => $module, 'tasks' => []];
+                    foreach ($tasks as $task => $entries) {
+                        $moduleData['tasks'][] = [
+                            'task_title' => $task,
+                            'logs' => $entries
+                        ];
+                    }
+                    $weekData['modules'][] = $moduleData;
+                }
+                $monthData['weeks'][] = $weekData;
+            }
+            $structuredTree[] = $monthData;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'project' => $project,
+            'total_hours' => round($totalHours, 2),
+            'total_logs' => count($logs),
+            'hierarchical' => $structuredTree,
+        ]);
+    }
+
+    /**
+     * Change password for the logged-in faculty user.
+     * Validates current password and updates the password field in the users table.
+     */
+    public function changePassword(Request $request)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $currentPassword = $request->input('current_password');
+        $newPassword = $request->input('new_password');
+        $confirmPassword = $request->input('confirm_password') ?: $request->input('new_password_confirmation');
+
+        if (!$currentPassword) {
+            return response()->json(['error' => 'Current password is required.'], 422);
+        }
+
+        if (!$newPassword) {
+            return response()->json(['error' => 'New password is required.'], 422);
+        }
+
+        if (strlen($newPassword) < 6) {
+            return response()->json(['error' => 'New password must be at least 6 characters long.'], 422);
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            return response()->json(['error' => 'New password and confirmation do not match.'], 422);
+        }
+
+        $user = DB::table('users')->where('id', $facultyId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Faculty account not found.'], 404);
+        }
+
+        // Verify current password against users table
+        if (!Hash::check($currentPassword, $user->password)) {
+            return response()->json(['error' => 'Current password is incorrect.'], 400);
+        }
+
+        // Update password in users table
+        DB::table('users')
+            ->where('id', $facultyId)
+            ->update([
+                'password' => Hash::make($newPassword),
+                'updated_at' => now(),
+            ]);
+
+        // Audit log if table exists
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $facultyId,
+                'action' => 'Password Changed',
+                'description' => "Faculty {$user->name} changed their account password.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password updated successfully.'
+        ]);
+    }
+
+    /**
      * Approve or reject a student work log.
      * When faculty approves it:
      * - Update approval_status = 'approved', approved_by, approved_at in student_work_logs.
@@ -1706,13 +2097,28 @@ class FacultyController extends Controller
             return response()->json(['error' => 'Work log entry not found.'], 404);
         }
 
-        // Verify that the project student belongs to a project assigned to this faculty
+        // Resolve the project and student associated with this work log
         $projectStudent = DB::table('project_student')->where('id', $workLog->project_student_id)->first();
-        if (!$projectStudent) {
-            return response()->json(['error' => 'Project student record not found.'], 404);
+        $task = null;
+        $projectId = null;
+        if ($workLog->task_id) {
+            $task = DB::table('tasks')
+                ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+                ->where('tasks.id', $workLog->task_id)
+                ->select('tasks.*', 'modules.project_id')
+                ->first();
+            if ($task && $task->project_id) {
+                $projectId = $task->project_id;
+            }
+        }
+        if (!$projectId && $projectStudent) {
+            $projectId = $projectStudent->project_id;
         }
 
-        $projectId = $projectStudent->project_id;
+        if (!$projectId) {
+            return response()->json(['error' => 'Project record not found for this work log.'], 404);
+        }
+
         $isAssigned = DB::table('project_faculty')
             ->where('faculty_id', $facultyId)
             ->where('project_id', $projectId)
@@ -1766,26 +2172,29 @@ class FacultyController extends Controller
         }
 
         // 3. Send notification to the student
-        $taskTitle = $updatedTask ? $updatedTask->title : 'Assigned Task';
+        $taskTitle = $updatedTask ? $updatedTask->title : ($task ? $task->title : 'Assigned Task');
         $notifMessage = $newStatus === 'approved'
             ? "Your work log for task \"{$taskTitle}\" ({$workLog->hours_worked} hrs on {$workLog->work_date}) has been APPROVED by faculty, and the task status has been updated to COMPLETED."
             : "Your work log for task \"{$taskTitle}\" has been marked as REJECTED by faculty.";
 
-        DB::table('notifications')->insert([
-            'user_id' => $projectStudent->student_id,
-            'type' => 'work_log_review',
-            'message' => $notifMessage,
-            'is_read' => false,
-            'created_at' => $now,
-            'updated_at' => $now
-        ]);
+        $studentUserId = $projectStudent ? $projectStudent->student_id : ($task ? $task->assigned_to : null);
+        if ($studentUserId) {
+            DB::table('notifications')->insert([
+                'user_id' => $studentUserId,
+                'type' => 'work_log_review',
+                'message' => $notifMessage,
+                'is_read' => false,
+                'created_at' => $now,
+                'updated_at' => $now
+            ]);
+        }
 
         // Fetch refreshed work log
         $refreshedLog = DB::table('student_work_logs')
-            ->join('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
-            ->join('users as student', 'student.id', '=', 'project_student.student_id')
             ->leftJoin('tasks', 'tasks.id', '=', 'student_work_logs.task_id')
             ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->leftJoin('project_student', 'project_student.id', '=', 'student_work_logs.project_student_id')
+            ->leftJoin('users as student', 'student.id', '=', DB::raw('COALESCE(tasks.assigned_to, project_student.student_id)'))
             ->leftJoin('users as approver', 'approver.id', '=', 'student_work_logs.approved_by')
             ->where('student_work_logs.id', $id)
             ->select(
@@ -1854,6 +2263,114 @@ class FacultyController extends Controller
             'message' => "Rating of {$ratingInt} star(s) saved successfully.",
             'rating' => $ratingInt,
             'ratings' => $ratingStr
+        ]);
+    }
+
+    /**
+     * Alert / notify the corresponding coordinator about a task time overrun or deadline variance.
+     */
+    public function notifyCoordinator($id, Request $request = null)
+    {
+        $request = $request ?: request();
+        $facultyId = $this->getFacultyId($request);
+
+        $workLog = DB::table('student_work_logs')->where('id', $id)->first();
+        if (!$workLog) {
+            return response()->json(['error' => 'Work log not found.'], 404);
+        }
+
+        $task = DB::table('tasks')
+            ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->where('tasks.id', $workLog->task_id)
+            ->select('tasks.*', 'modules.project_id')
+            ->first();
+
+        $projectId = $task->project_id ?? null;
+        if (!$projectId) {
+            $ps = DB::table('project_student')->where('id', $workLog->project_student_id)->first();
+            $projectId = $ps ? $ps->project_id : null;
+        }
+
+        $project = DB::table('projects')->where('id', $projectId)->first();
+        if (!$project) {
+            return response()->json(['error' => 'Project not found for this work log.'], 404);
+        }
+
+        // Identify corresponding coordinator (project creator coordinator or all coordinators)
+        $coordinatorIds = [];
+        if (!empty($project->created_by)) {
+            $creator = DB::table('users')->where('id', $project->created_by)->first();
+            if ($creator && $creator->role === 'coordinator') {
+                $coordinatorIds[] = $creator->id;
+            }
+        }
+        if (empty($coordinatorIds)) {
+            $coordinatorIds = DB::table('users')->where('role', 'coordinator')->pluck('id')->toArray();
+        }
+
+        $student = DB::table('users')->where('id', $task->assigned_to ?? null)->first();
+        if (!$student && $workLog->project_student_id) {
+            $psRow = DB::table('project_student')->where('id', $workLog->project_student_id)->first();
+            if ($psRow) {
+                $student = DB::table('users')->where('id', $psRow->student_id)->first();
+            }
+        }
+        $studentName = $student ? $student->name : 'Student';
+
+        $faculty = DB::table('users')->where('id', $facultyId)->first();
+        $facultyName = $faculty ? $faculty->name : 'Faculty Mentor';
+
+        $hoursWorked = floatval($workLog->hours_worked);
+        $taskWeight = floatval($task->weight ?? 1);
+        $diff = round($hoursWorked - $taskWeight, 1);
+        $taskTitle = $task->title ?? 'Assigned Task';
+        $projTitle = $project->title ?? 'Project';
+
+        if ($hoursWorked > $taskWeight) {
+            $alertMsg = "Alert: Expected time exceeded for task '{$taskTitle}' in project '{$projTitle}'. {$hoursWorked} hrs logged (expected: {$taskWeight} hrs, +{$diff} hrs) by {$studentName}. (Flagged by {$facultyName})";
+            if (!empty($task->due_date) && $workLog->work_date > $task->due_date) {
+                $alertMsg .= " Also logged past due date ({$task->due_date}).";
+            }
+        } else {
+            $alertMsg = "Alert: Task '{$taskTitle}' in project '{$projTitle}' logged work on {$workLog->work_date} exceeding expected due date ({$task->due_date}) by {$studentName}. (Flagged by {$facultyName})";
+        }
+
+        if (Schema::hasTable('notifications')) {
+            foreach (array_unique($coordinatorIds) as $coordId) {
+                $existing = DB::table('notifications')
+                    ->where('user_id', $coordId)
+                    ->where('project_id', $project->id)
+                    ->where('type', 'task_time_exceeded')
+                    ->where('message', 'like', "%task '{$taskTitle}'%")
+                    ->where('is_read', 0)
+                    ->first();
+
+                if ($existing) {
+                    DB::table('notifications')->where('id', $existing->id)->update([
+                        'message' => $alertMsg,
+                        'urgency' => 'high',
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    DB::table('notifications')->insert([
+                        'user_id' => $coordId,
+                        'project_id' => $project->id,
+                        'type' => 'task_time_exceeded',
+                        'urgency' => 'high',
+                        'message' => $alertMsg,
+                        'is_read' => 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Coordinator notified successfully about task '{$taskTitle}'.",
+            'task_title' => $taskTitle,
+            'coordinator_notified' => true
         ]);
     }
 

@@ -45,7 +45,8 @@ class ProjectTaskController extends Controller
         
         $request->validate([
             'name' => 'required|string',
-            'description' => 'nullable|string'
+            'description' => 'nullable|string',
+            'document_path' => 'nullable|string|max:1000'
         ]);
 
         // Further check: ensure faculty is assigned to this project
@@ -68,6 +69,7 @@ class ProjectTaskController extends Controller
             'project_id' => $projectId,
             'module_name' => $request->name,
             'description' => $request->description,
+            'document_path' => $request->document_path ?? null,
             'status' => 'not_started',
             'created_by' => $userId
         ]);

@@ -200,10 +200,15 @@ export async function DashboardLayout(contentChild, route, router) {
   const currentPath = window.location.pathname;
 
   const wrapper = document.createElement('div');
-  wrapper.className = 'dashboard-layout animate-fade-in';
+  const isStudentPortal = currentPath.startsWith('/student');
+  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
 
   const user = authStore.user;
   const isStudent = authStore.role === 'student';
+  const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
+  const studentPhoto = (isStudent && studentIdentifier)
+    ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
+    : null;
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
@@ -218,28 +223,18 @@ export async function DashboardLayout(contentChild, route, router) {
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
-          <img src="/favicon.png" alt="RLabZ" class="sidebar-watermark" />
-          <span>RLabZ-ERP</span>
+          <img src="/assets/Rlabz_Logo_dark.png" alt="RLabZ ERP" class="sidebar-watermark" style="height: 84px; width: auto;" />
         </div>
       </div>
       <nav class="sidebar-nav">
       </nav>
-      <div class="sidebar-footer">
-        <button id="logout-btn" class="logout-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
-          <span>Logout</span>
-        </button>
-      </div>
     </aside>
 
     <div class="main-wrapper">
       <header class="topbar">
         <div class="topbar-title">${route.title || (route.name === 'faculty-sprints' ? 'PROJECT MODULES & TASKS' : (route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'RLABZ ERP'))}</div>
         <div style="display:flex; align-items:center; gap:0.85rem;">
+          ${!isStudentPortal ? `
           <div class="notification-container">
             <button id="noti-bell-btn" class="noti-bell-btn" title="Notifications" aria-label="Notifications">
               ${BELL_ICON}
@@ -253,9 +248,12 @@ export async function DashboardLayout(contentChild, route, router) {
               <div id="noti-list-container" class="noti-list-container"><p class="noti-empty">Loading...</p></div>
             </div>
           </div>
+          ` : ''}
 
         <div class="user-profile" id="user-profile-header">
-          <div class="avatar">${initial}</div>
+          <div class="avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+            ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+          </div>
           <div class="user-details">
             <span class="user-name">${displayName}</span>
             <span class="user-role" style="color: var(--primary-accent); font-weight: 600;">${roleName}</span>
@@ -264,7 +262,9 @@ export async function DashboardLayout(contentChild, route, router) {
           <!-- Floating Profile Popover -->
           <div class="profile-popover" id="profile-popover">
             <div class="profile-popover-header">
-              <div class="profile-popover-avatar" id="popover-avatar">${initial}</div>
+              <div class="profile-popover-avatar" id="popover-avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+                ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+              </div>
               <div class="profile-popover-meta">
                 <span class="profile-popover-name" id="popover-name">${displayName}</span>
                 <span class="profile-popover-role" id="popover-role">${roleName}</span>
@@ -292,12 +292,25 @@ export async function DashboardLayout(contentChild, route, router) {
                 <span class="profile-popover-value" id="popover-semester">${semester}</span>
               </div>
             </div>
+            <div class="profile-popover-footer" style="padding: 10px 14px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end;">
+              <a href="/student/profile" id="popover-student-profile-link" style="font-size: 0.8rem; font-weight: 600; color: #059669; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                Profile Settings & Change Password &rarr;
+              </a>
+            </div>
           </div>
         </div>
+        
+        <button id="logout-btn" class="logout-icon-btn" title="Logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
         </div>
       </header>
 
-      <main class="content-outlet" id="layout-outlet"></main>
+      <main class="content-outlet${isStudentPortal ? ' student-content-outlet' : ''}" id="layout-outlet"></main>
     </div>
   `;
 
@@ -367,12 +380,15 @@ export async function DashboardLayout(contentChild, route, router) {
 
     bellBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const isShown = notiDropdown.style.display === 'block';
-      if (isShown) {
-        closeDropdown();
+      e.preventDefault();
+      closeDropdown();
+      const notiRoute = (currentPath.startsWith('/faculty') || authStore.role === 'faculty')
+        ? '/faculty/notifications'
+        : `/${authStore.role || 'faculty'}/notifications`;
+      if (router && typeof router.push === 'function') {
+        router.push(notiRoute);
       } else {
-        notiDropdown.style.display = 'block';
-        positionDropdown();
+        window.location.href = notiRoute;
       }
     });
 
@@ -408,65 +424,94 @@ export async function DashboardLayout(contentChild, route, router) {
     router.push('/auth/login');
   });
 
-  // Bind User Profile Popover Click
+  // Bind User Profile Header Click
   const userProfileHeader = wrapper.querySelector('#user-profile-header');
   const profilePopover = wrapper.querySelector('#profile-popover');
-  if (userProfileHeader && profilePopover && authStore.role === 'student') {
-    userProfileHeader.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isVisible = window.getComputedStyle(profilePopover).display === 'block';
-      profilePopover.style.display = isVisible ? 'none' : 'block';
-    });
+  if (userProfileHeader) {
+    if (authStore.role === 'student' && profilePopover) {
+      userProfileHeader.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = window.getComputedStyle(profilePopover).display === 'block';
+        profilePopover.style.display = isVisible ? 'none' : 'block';
+      });
 
-    // Close popover when clicking anywhere else
-    document.addEventListener('click', () => {
-      profilePopover.style.display = 'none';
-    });
+      // Close popover when clicking anywhere else
+      document.addEventListener('click', () => {
+        profilePopover.style.display = 'none';
+      });
 
-    // Prevent popover inside click from closing it
-    profilePopover.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+      // Prevent popover inside click from closing it
+      profilePopover.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
 
-    // Sync live profile from database
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetch(`${API_BASE}/student/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const profileLink = profilePopover.querySelector('#popover-student-profile-link');
+      if (profileLink) {
+        profileLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          profilePopover.style.display = 'none';
+          if (router && typeof router.push === 'function') {
+            router.push('/student/profile');
+          } else {
+            window.location.href = '/student/profile';
+          }
+        });
+      }
+
+      // Sync live profile from database
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch(`${API_BASE}/student/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(r => r.ok ? r.json() : null)
+        .then(p => {
+          if (!p) return;
+          const desEl = wrapper.querySelector('#popover-designation');
+          const emailEl = wrapper.querySelector('#popover-email');
+          const deptEl = wrapper.querySelector('#popover-department');
+          const courseEl = wrapper.querySelector('#popover-course');
+          const semEl = wrapper.querySelector('#popover-semester');
+          const nameEl = wrapper.querySelector('#popover-name');
+          
+          if (desEl && p.designation) desEl.textContent = p.designation;
+          if (emailEl && p.email) emailEl.textContent = p.email;
+          if (deptEl && p.department) deptEl.textContent = p.department;
+          if (courseEl && p.course) courseEl.textContent = p.course;
+          if (semEl && (p.semester_text || p.semester)) {
+            semEl.textContent = p.semester_text || `${p.semester}th Semester`;
+          }
+          if (nameEl && p.name) nameEl.textContent = p.name;
+
+          if (user) {
+            user.name = p.name || user.name;
+            user.designation = p.designation || user.designation;
+            user.course = p.course || user.course;
+            user.semester = p.semester || user.semester;
+            user.semester_text = p.semester_text || user.semester_text;
+            user.department = p.department || user.department;
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+        })
+        .catch(() => {});
+      }
+    } else {
+      userProfileHeader.style.cursor = 'pointer';
+      userProfileHeader.title = 'View Profile';
+      userProfileHeader.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const profileRoute = (currentPath.startsWith('/faculty') || authStore.role === 'faculty')
+          ? '/faculty/profile'
+          : `/${authStore.role || 'faculty'}/profile`;
+        if (router && typeof router.push === 'function') {
+          router.push(profileRoute);
+        } else {
+          window.location.href = profileRoute;
         }
-      })
-      .then(r => r.ok ? r.json() : null)
-      .then(p => {
-        if (!p) return;
-        const desEl = wrapper.querySelector('#popover-designation');
-        const emailEl = wrapper.querySelector('#popover-email');
-        const deptEl = wrapper.querySelector('#popover-department');
-        const courseEl = wrapper.querySelector('#popover-course');
-        const semEl = wrapper.querySelector('#popover-semester');
-        const nameEl = wrapper.querySelector('#popover-name');
-        
-        if (desEl && p.designation) desEl.textContent = p.designation;
-        if (emailEl && p.email) emailEl.textContent = p.email;
-        if (deptEl && p.department) deptEl.textContent = p.department;
-        if (courseEl && p.course) courseEl.textContent = p.course;
-        if (semEl && (p.semester_text || p.semester)) {
-          semEl.textContent = p.semester_text || `${p.semester}th Semester`;
-        }
-        if (nameEl && p.name) nameEl.textContent = p.name;
-
-        if (user) {
-          user.name = p.name || user.name;
-          user.designation = p.designation || user.designation;
-          user.course = p.course || user.course;
-          user.semester = p.semester || user.semester;
-          user.semester_text = p.semester_text || user.semester_text;
-          user.department = p.department || user.department;
-          localStorage.setItem('user', JSON.stringify(user));
-        }
-      })
-      .catch(() => {});
+      });
     }
   }
 

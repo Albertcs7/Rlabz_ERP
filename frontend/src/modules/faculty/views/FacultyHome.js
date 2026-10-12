@@ -66,9 +66,9 @@ export function FacultyHome(route, router) {
                 <div class="page-header" style="margin-bottom: 0;">
                     <h1 style="margin: 0 0 0.4rem; font-size: 1.65rem; font-weight: 700; color: var(--text-main, var(--text-primary));">Faculty Dashboard</h1>
                     <p style="margin: 0; font-size: 0.92rem; color: var(--text-muted, var(--text-muted)); line-height: 1.5;">
-                        Welcome back, <strong style="color: var(--text-main, var(--text-primary)); font-weight: 600;">${faculty.name}</strong> 
-                        &bull; <span style="color: var(--primary, var(--primary)); font-weight: 600;">${faculty.designation}</span> 
-                        &bull; ${faculty.department} (${faculty.email})
+                        Welcome back, <a href="/faculty/profile" class="faculty-profile-link" style="color: var(--primary, #059669); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;" title="Click to view Profile">${faculty.name}</a> 
+                        &bull; <a href="/faculty/profile" class="faculty-profile-link" style="color: var(--primary, #059669); font-weight: 600; text-decoration: none; cursor: pointer;" title="Click to view Profile">${faculty.designation}</a> 
+                        &bull; <a href="/faculty/profile" class="faculty-profile-link" style="color: inherit; text-decoration: none; cursor: pointer;" title="Click to view Profile">${faculty.department} (${faculty.email})</a>
                     </p>
                 </div>
             </div>
@@ -164,9 +164,9 @@ export function FacultyHome(route, router) {
                                         <div style="margin-top: 1.25rem;">
                                             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.4rem;">
                                                 <span style="color: var(--text-muted, var(--text-muted)); font-weight: 500;">
-                                                    Tasks Completion: <strong style="color: var(--text-main, var(--text-primary));">${p.completed_tasks || 0} / ${p.total_tasks || 0}</strong> Tasks
+                                                    ${p.total_modules > 0 ? `Modules Completed: <strong style="color: var(--text-main, var(--text-primary));">${p.completed_modules || 0} / ${p.total_modules}</strong> Modules (${p.completed_tasks || 0}/${p.total_tasks || 0} Tasks)` : `Tasks Completed: <strong style="color: var(--text-main, var(--text-primary));">${p.completed_tasks || 0} / ${p.total_tasks || 0}</strong> Tasks`}
                                                 </span>
-                                                <strong style="color: var(--primary, var(--primary)); font-weight: 700;">${progress}%</strong>
+                                                <strong style="color: var(--primary, var(--primary)); font-weight: 700;">${progress}% Overall</strong>
                                             </div>
                                             <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 9999px; overflow: hidden;">
                                                 <div style="width: ${progress}%; height: 100%; background: var(--primary, var(--primary)); border-radius: 9999px; transition: width 0.4s ease;"></div>
@@ -285,6 +285,15 @@ export function FacultyHome(route, router) {
         container.querySelectorAll('.btn-nav-assign').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (router) router.push('/faculty/sprints');
+            });
+        });
+
+        // Faculty member writings redirect to profile
+        container.querySelectorAll('.faculty-profile-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (router) router.push('/faculty/profile');
+                else window.location.href = '/faculty/profile';
             });
         });
     }

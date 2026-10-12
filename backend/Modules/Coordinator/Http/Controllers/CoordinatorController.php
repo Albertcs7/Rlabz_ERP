@@ -23,9 +23,31 @@ use Modules\Student\Models\StudentReport;
 
 class CoordinatorController extends Controller
 {
-    protected function currentUserId(Request $request): ?int
+    protected function currentUserId(?Request $request = null): ?int
     {
-        return $request->auth_user['sub'] ?? null;
+        $request = $request ?: request();
+        if (!$request) return null;
+
+        if (isset($request->auth_user['sub'])) {
+            return (int) $request->auth_user['sub'];
+        }
+
+        $token = $request->bearerToken() ?: $request->query('token');
+        if ($token) {
+            $parts = explode('.', $token);
+            if (count($parts) === 3) {
+                $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1])), true);
+                if (isset($payload['sub'])) {
+                    return (int) $payload['sub'];
+                }
+            }
+        }
+
+        if ($request->filled('user_id')) {
+            return (int) $request->input('user_id');
+        }
+
+        return DB::table('users')->where('role', 'coordinator')->value('id');
     }
 
     protected function isAuthorized(Request $request, array $requiredPermissions = ['view-coordinator']): bool
@@ -790,6 +812,7 @@ class CoordinatorController extends Controller
     }
 
     /**
+
      * List student daily/weekly reports, optionally filtered by project, student,
      * report type, approval status, and date range. Coordinators are global in this
      * app (no per-coordinator project assignment table exists — every other
@@ -1059,5 +1082,83 @@ class CoordinatorController extends Controller
                 'approval_status' => ucfirst($weekly->approval_status ?: 'pending'),
             ],
         ]);
+    }
+
+    /**
+     * Get notifications for the logged-in coordinator.
+     */
+    public function getNotifications(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $notifications = DB::table('notifications')
+            ->leftJoin('projects', 'projects.id', '=', 'notifications.project_id')
+            ->where('notifications.user_id', $userId)
+            ->select(
+                'notifications.*',
+                'projects.title as project_title'
+            )
+            ->orderBy('notifications.created_at', 'desc')
+            ->get()
+            ->map(function ($n) {
+                return [
+                    'id' => $n->id,
+                    'user_id' => $n->user_id,
+                    'project_id' => $n->project_id,
+                    'project_title' => $n->project_title,
+                    'type' => $n->type,
+                    'urgency' => $n->urgency ?? 'normal',
+                    'title' => $n->type ? ucwords(str_replace('_', ' ', $n->type)) : 'Notification',
+                    'description' => $n->message,
+                    'message' => $n->message,
+                    'is_read' => (bool) $n->is_read,
+                    'unread' => empty($n->is_read) || $n->is_read == 0,
+                    'time' => $n->created_at ? date('M d, Y h:i A', strtotime($n->created_at)) : 'Recently',
+                    'created_at' => $n->created_at,
+                ];
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $notifications,
+            'unread_count' => $notifications->where('unread', true)->count(),
+        ]);
+    }
+
+    /**
+     * Mark a single notification as read for coordinator.
+     */
+    public function markNotificationRead($id, Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        DB::table('notifications')
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->update([
+                'is_read' => 1,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Mark all notifications as read for coordinator.
+     */
+    public function markAllNotificationsRead(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        DB::table('notifications')
+            ->where('user_id', $userId)
+            ->update([
+                'is_read' => 1,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json(['success' => true]);
+
     }
 }

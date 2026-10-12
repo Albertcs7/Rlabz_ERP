@@ -43,4 +43,8 @@ Route::group(['prefix' => 'coordinator', 'middleware' => ['auth.jwt']], function
     Route::post('/reports/{id}/review', [CoordinatorController::class, 'reviewReport']);
     Route::get('/reports/{id}/download', [CoordinatorController::class, 'downloadReportFile']);
     Route::post('/reports/weekly/generate', [CoordinatorController::class, 'generateWeeklyReport']);
+    Route::get('/notifications', [CoordinatorController::class, 'getNotifications']);
+    Route::post('/notifications/{id}/read', [CoordinatorController::class, 'markNotificationRead']);
+    Route::post('/notifications/mark-all-read', [CoordinatorController::class, 'markAllNotificationsRead']);
 });
+

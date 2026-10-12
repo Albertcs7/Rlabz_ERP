@@ -5,7 +5,12 @@ import {
   getProjects,
   getMeetings,
   getNotifications,
-  updateStudentTaskStatus
+  getStudentProfile,
+  fetchLiveStudentProfile,
+  updateStudentTaskStatus,
+  markStudentNotificationRead,
+  markAllStudentNotificationsRead,
+  getStudentProfilePhoto
 } from './studentStore.js';
 import { useAuthStore } from '@/core/stores/auth.js';
 import { StudentSwal, showStudentSuccess, showStudentError } from '../studentAlerts.js';
@@ -15,7 +20,7 @@ export async function StudentDashboard(route, router) {
   renderStudentSidebar();
 
   const container = document.createElement('div');
-  container.className = 'student-portal-container animate-fade-in';
+  container.className = 'student-portal-container animate-fade-in student-dashboard-view';
 
   const authStore = useAuthStore();
   const currentUser = authStore.user;
@@ -25,19 +30,105 @@ export async function StudentDashboard(route, router) {
   let isSyncing = false;
 
   // Initial fresh fetch from backend
-  await fetchLiveDashboard(true);
+  await Promise.all([
+    fetchLiveDashboard(true),
+    fetchLiveStudentProfile().catch(() => null)
+  ]);
+
+  function renderNotificationCard(n) {
+    const isUnread = !n.is_read && !n.isRead;
+    const isUrgent = (n.urgency === 'high' || n.urgency === 'urgent' || (n.type && (n.type.includes('rework') || n.type.includes('rejected'))) || (n.message && n.message.toLowerCase().includes('overdue')));
+
+    let typeNorm = (n.type || 'general').toLowerCase().replace(/_/g, '-');
+    if (typeNorm.includes('meeting')) typeNorm = 'meeting';
+    else if (typeNorm.includes('task')) typeNorm = 'task';
+    else if (typeNorm.includes('module') || typeNorm.includes('sprint')) typeNorm = 'sprint';
+    else if (typeNorm.includes('work-log') || typeNorm.includes('worklog')) typeNorm = 'work-log';
+    else if (typeNorm.includes('github')) typeNorm = 'github';
+    else if (typeNorm.includes('password') || typeNorm.includes('security')) typeNorm = 'security';
+
+    let category = n.category;
+    if (!category) {
+      if (typeNorm === 'meeting') category = 'Meeting';
+      else if (typeNorm === 'task') category = 'Task';
+      else if (typeNorm === 'sprint') category = 'Sprint';
+      else if (typeNorm === 'work-log') category = 'Work Log';
+      else if (typeNorm === 'github') category = 'GitHub';
+      else if (typeNorm === 'security') category = 'Security';
+      else category = 'General';
+    }
+
+    const urgencyTag = isUrgent
+      ? '<span class="student-countdown-tag tag-red">Urgent Action</span>'
+      : (isUnread ? '<span class="student-countdown-tag tag-amber">Unread</span>' : '<span class="student-countdown-tag tag-slate">Info</span>');
+
+    const cardClass = isUrgent ? 'card-overdue' : (isUnread ? 'card-upcoming' : 'card-info');
+
+    return `
+      <div class="student-action-card ${cardClass} ${isUnread ? 'is-unread' : ''}" data-id="${n.id}" data-unread="${isUnread ? '1' : '0'}" title="${isUnread ? 'Click to mark as read' : ''}">
+        <div class="student-card-header-row">
+          <span class="student-cat-badge student-cat-${typeNorm}">${category}</span>
+          ${urgencyTag}
+        </div>
+        <div class="student-card-msg">${n.message || n.title || ''}</div>
+        <div class="student-card-meta">
+          <span class="student-project-name">${n.projectName || (n.project ? `Project: ${n.project}` : 'Academic ERP')}</span>
+          <span class="student-card-time" style="display: flex; align-items: center; gap: 5px;">
+            ${isUnread ? '<span style="width: 7px; height: 7px; border-radius: 50%; background: #059669; display: inline-block;"></span>' : ''}
+            ${n.time || 'Recently'}
+          </span>
+        </div>
+      </div>
+    `;
+  }
 
   function render() {
     const dashboard = getDashboardData() || {};
     const projects = dashboard.projects || getProjects() || [];
     const tasks = dashboard.tasks || [];
     const modules = dashboard.modules || [];
-    const meetings = dashboard.meetings || getMeetings() || [];
     const notifications = dashboard.notifications || getNotifications() || [];
     const stats = dashboard.stats || {};
+    const unreadCount = notifications.filter(n => !n.is_read && !n.isRead).length;
 
-    // Display latest 1 or 2 meetings and notifications
-    const displayedMeetings = meetings.slice(0, 2);
+    const allMeetings = (dashboard.meetings && dashboard.meetings.length > 0)
+      ? dashboard.meetings
+      : (getMeetings() || []);
+
+    // Filter strictly for UPCOMING meetings from today onwards
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    function getMeetingTime(m) {
+      if (!m) return 0;
+      if (m.scheduled_at) {
+        const t = new Date(m.scheduled_at).getTime();
+        if (!isNaN(t)) return t;
+      }
+      if (m.date) {
+        const s = String(m.date).trim();
+        const parts = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (parts) {
+          const d = new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 23, 59, 59);
+          return d.getTime();
+        }
+        const parsed = new Date(s).getTime();
+        if (!isNaN(parsed)) return parsed;
+      }
+      return 0;
+    }
+
+    const upcomingMeetings = allMeetings.filter(m => {
+      const rawStatus = (m.raw_status || m.status || '').toLowerCase().trim();
+      if (rawStatus === 'completed' || rawStatus === 'cancelled' || m.is_completed || m.is_cancelled) {
+        return false;
+      }
+      const mTime = getMeetingTime(m);
+      return mTime >= todayStart;
+    }).sort((a, b) => getMeetingTime(a) - getMeetingTime(b));
+
+    // Next 3 upcoming meetings and top 2 alerts
+    const displayedMeetings = upcomingMeetings.slice(0, 3);
     const displayedNotifications = notifications.slice(0, 2);
 
     // KPIs
@@ -45,64 +136,59 @@ export async function StudentDashboard(route, router) {
     const pendingTasksCount = stats.pendingTasksCount ?? tasks.filter(t => t.rawStatus !== 'completed').length;
     const completedTasksCount = stats.completedTasksCount ?? tasks.filter(t => t.rawStatus === 'completed').length;
     const assignedModulesCount = stats.assignedModulesCount ?? modules.length;
-    const upcomingMeetingsCount = stats.upcomingMeetingsCount ?? meetings.filter(m => m.status === 'Scheduled').length;
+    const upcomingMeetingsCount = upcomingMeetings.length;
 
     // Display only the latest 3 tasks in the dashboard
     const displayedTasks = tasks.slice(0, 3);
 
-    // Student Designation / Role Label
-    const studentDesignation = currentUser?.designation || (projects.length > 0 ? projects[0].designation : 'Nova');
-    const studentName = currentUser?.name || 'Student';
+    // Student Designation / Role / Profile Picture (Dashboard only)
+    const profile = getStudentProfile() || {};
+    const studentName = profile.name || currentUser?.name || currentUser?.username || 'Student';
+    const studentEmail = profile.email || currentUser?.email || 'student@rajagiri.edu';
+    const studentDesignation = profile.designation || currentUser?.designation || 'Nova';
+    const studentCourse = profile.course || currentUser?.course || 'MCA';
+    const studentSemester = profile.semester_text || currentUser?.semester_text || '3rd Semester';
+    const studentPhoto = getStudentProfilePhoto(currentUser) || profile.avatar || currentUser?.avatar || null;
+
+    const studentInitials = (studentName || 'Student')
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'ST';
 
     // 1. Build Task Rows (Latest 3)
     const taskRows = displayedTasks.map(t => {
-      const isCompleted = t.rawStatus === 'completed';
-      const isInProgress = t.rawStatus === 'in_progress';
-      const isBlocked = t.rawStatus === 'blocked';
-
-      let statusBadgeClass = 'student-badge-warning';
-      if (isCompleted) statusBadgeClass = 'student-badge-success';
-      else if (isInProgress) statusBadgeClass = 'student-badge-info';
-      else if (isBlocked) statusBadgeClass = 'student-badge-danger';
-
       return `
         <tr>
-          <td style="max-width: 240px;">
-            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${t.title}</div>
-            ${t.description ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${t.description}</div>` : ''}
-            <div style="display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap;">
-              <span class="student-badge" style="background: ${t.type === 'module' ? '#fdf4ff' : '#eff6ff'}; color: ${t.type === 'module' ? '#9333ea' : '#2563eb'}; font-size: 0.7rem; padding: 2px 6px; font-weight: 700;">
+          <td style="max-width: 320px;">
+            <div class="student-dash-task-title">${t.title}</div>
+            ${t.description ? `<div class="student-dash-task-sub" title="${t.description}">${t.description}</div>` : ''}
+            <div class="student-dash-task-pills">
+              <span class="student-dash-tag ${t.type === 'module' ? 'module' : 'task'}">
                 ${t.type === 'module' ? 'Module / Sprint' : 'Sub-Task'}
               </span>
-              <span class="student-badge" style="background: #f1f5f9; color: #475569; font-size: 0.7rem; padding: 2px 6px;">${t.project}</span>
-              <span class="student-badge" style="background: var(--primary-light); color: var(--primary-hover); font-size: 0.7rem; padding: 2px 6px;">${t.module}</span>
+              <span class="student-dash-tag project">${t.project}</span>
+              <span class="student-dash-tag" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">${t.module}</span>
             </div>
           </td>
           <td>
-            <div style="font-size: 0.825rem; font-weight: 600; color: #334155;">${t.assignedBy}</div>
-          </td>
-          <td>
-            <div style="display: flex; flex-direction: column; gap: 3px;">
-              <span style="font-size: 0.825rem; font-weight: 500; color: ${t.isOverdue ? '#dc2626' : '#475569'};">
-                ${t.dueDate}
-              </span>
-              ${t.isOverdue ? `<span class="student-badge-overdue" style="width: fit-content;">Overdue</span>` : ''}
+            <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              ${t.assignedBy || 'Supervisor'}
             </div>
           </td>
         </tr>
       `;
     }).join('');
 
-
-
-    // 2.5. Identify Genuine Bug Fixes & Rework Assigned by Faculty or Coordinator (strictly no demo data or heuristics)
+    // 2. Identify Genuine Bug Fixes & Rework Assigned by Faculty or Coordinator
     const completedProjects = projects.filter(p => (p.status || '').toLowerCase() === 'completed' || p.progress === 100);
     const completedProjectsCount = completedProjects.length;
 
     const bugFixList = [];
     const seenTaskIds = new Set();
 
-    // Collect all tasks assigned to student across projects and granular tasks
     const allProjectTasks = projects.flatMap(p => {
       const pModules = p.modulesList || p.modules || [];
       return pModules.flatMap(m => (m.tasks || []).map(t => ({
@@ -117,7 +203,6 @@ export async function StudentDashboard(route, router) {
     combinedStudentTasks.forEach(t => {
       if (!t.id || seenTaskIds.has(String(t.id))) return;
       
-      // In RLabz ERP, a task is ONLY a rework / bug fix if Faculty or Coordinator reviewed it and requested changes/rework (rejected)
       const isReworkByFaculty = t.isRework === true || (t.reviewStatus && t.reviewStatus.toLowerCase() === 'rejected');
 
       if (isReworkByFaculty) {
@@ -135,26 +220,34 @@ export async function StudentDashboard(route, router) {
 
     const bugFixesCount = bugFixList.length;
 
-    // 3. Build Meeting Items (Latest 1 or 2)
+    // 3. Build Meeting Items (Next 2 Upcoming Meetings)
     const meetingItems = displayedMeetings.map(m => {
-      // Parse day & month from date string (e.g. "Mar 15, 2026" or "2026-03-15")
       let day = '—';
       let month = 'MTG';
       if (m.date) {
-        const dObj = new Date(m.date);
-        if (!isNaN(dObj.getTime())) {
+        const dStr = String(m.date).trim();
+        const parts = dStr.split('-');
+        if (parts.length === 3 && !isNaN(Number(parts[0]))) {
+          const dObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
           day = dObj.getDate();
           month = dObj.toLocaleString('default', { month: 'short' });
         } else {
-          const parts = m.date.split(' ');
-          if (parts.length >= 2) {
-            month = parts[0];
-            day = parts[1].replace(',', '');
+          const dObj = new Date(dStr);
+          if (!isNaN(dObj.getTime())) {
+            day = dObj.getDate();
+            month = dObj.toLocaleString('default', { month: 'short' });
+          } else {
+            const spaceParts = dStr.split(' ');
+            if (spaceParts.length >= 2) {
+              month = spaceParts[0];
+              day = spaceParts[1].replace(',', '');
+            }
           }
         }
       }
 
-      const hasLink = Boolean(m.meetingLink && m.meetingLink.startsWith('http'));
+      const linkUrl = m.meetingLink || m.meeting_link;
+      const hasLink = Boolean(linkUrl && String(linkUrl).startsWith('http'));
 
       return `
         <div class="student-dash-meeting-item">
@@ -167,221 +260,234 @@ export async function StudentDashboard(route, router) {
             <div class="student-dash-meeting-meta">
               <span>⏰ ${m.time || '10:00 AM'}</span>
               <span>•</span>
-              <span style="color: var(--primary); font-weight: 600;">${m.project}</span>
-              ${m.scheduledBy ? `<span>• By: ${m.scheduledBy}</span>` : ''}
+              <span style="color: #00796B; font-weight: 700;">${m.project || 'Project Review'}</span>
             </div>
           </div>
           ${hasLink ? `
-            <a href="${m.meetingLink}" target="_blank" rel="noopener noreferrer" class="student-dash-meeting-btn" title="Join Video Session">
+            <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="student-dash-meeting-btn" title="Join Video Session">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l5-5v14l-5-5"></path><rect x="2" y="6" width="13" height="12" rx="2"></rect></svg>
               <span>Join</span>
             </a>
           ` : `
-            <span class="student-badge student-badge-info" style="font-size: 0.7rem; flex-shrink: 0;">${m.status}</span>
+            <span class="student-badge student-badge-info" style="font-size: 0.7rem; flex-shrink: 0;">${m.status || 'Scheduled'}</span>
           `}
         </div>
       `;
     }).join('');
 
-    // 4. Build Notifications List (Latest 1 or 2)
-    const notifItems = displayedNotifications.map(n => {
-      let iconColor = 'var(--primary)';
-      if (n.type === 'meeting_scheduled') iconColor = '#2563eb';
-      else if (n.type === 'task_assigned') iconColor = '#d97706';
-      else if (n.type === 'module_assigned') iconColor = '#7c3aed';
+    // 4. Build Native Notification Drawer HTML (Identical to Finance Dashboard)
+    const drawerHtml = `
+      <!-- Floating Bell Button -->
+      <button class="student-bell-trigger ${unreadCount > 0 ? 'student-bell-shake' : ''}" id="student-bell-btn" title="View Action Items & Notifications">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        ${unreadCount > 0 ? `<span class="student-bell-badge">${unreadCount}</span>` : ''}
+      </button>
 
-      return `
-        <div class="student-notif-item">
-          <div class="student-notif-icon-box" style="color: ${iconColor};">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
+      <!-- Drawer Backdrop -->
+      <div class="student-drawer-backdrop" id="student-drawer-backdrop"></div>
+
+      <!-- Notification Drawer -->
+      <div class="student-notification-drawer" id="student-notification-drawer">
+        <div class="student-drawer-header">
+          <div class="student-drawer-title-wrap">
+            <span class="student-drawer-title">Action Items &amp; Alerts</span>
+            ${unreadCount > 0 ? `<span class="student-drawer-count">${unreadCount} Unread</span>` : `<span class="student-drawer-count">${notifications.length} Total</span>`}
           </div>
-          <div class="student-notif-content">
-            <span class="student-notif-title">${n.message}</span>
-            <span class="student-notif-time">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${unreadCount > 0 ? `
+              <button type="button" id="student-btn-mark-all-read" style="background: none; border: 1px solid var(--border-color, #cbd5e1); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; color: #059669; cursor: pointer; transition: all 0.2s ease;">
+                Mark all read
+              </button>
+            ` : ''}
+            <button class="student-drawer-close" id="student-drawer-close" title="Close">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
-              ${n.time || 'Recently'}
-            </span>
+            </button>
           </div>
         </div>
-      `;
-    }).join('');
-
-    // HTML Output
-    container.innerHTML = `
-      <!-- Dashboard Top Header -->
-      <div class="student-dashboard-header">
-        <div class="student-header-text">
-
-          <h1>Student Dashboard</h1>
-          <p>Welcome back, <strong>${studentName}</strong>! Track your assigned academic projects, tasks, meetings, and faculty reviews.</p>
+        <div class="student-drawer-body">
+          ${notifications.length > 0
+            ? notifications.map(n => renderNotificationCard(n)).join('')
+            : `<div style="text-align:center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.9rem;">
+                <div style="font-size: 1.8rem; margin-bottom: 6px;">🔔</div>
+                <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">No notifications</div>
+                <div style="font-size: 0.78rem;">All your project updates and supervisor alerts will appear here.</div>
+              </div>`
+          }
         </div>
-
-      
-
-         
       </div>
+    `;
 
-      <!-- KPI Strip (Strict Single Row of 6 Cards) -->
-      <div class="student-kpi-grid">
+    // 5. Render HTML Output
+    container.innerHTML = `
+      <!-- Native Notification Drawer & Floating Bell -->
+      ${drawerHtml}
+
+
+      <!-- Advanced 6-Card KPI Grid -->
+      <div class="student-dash-kpi-grid">
         <!-- 1. Active Projects -->
-        <div class="student-kpi-card" id="kpi-projects" style="cursor: pointer;" title="Click to view active projects">
-          <div class="student-kpi-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-            </svg>
+        <div class="student-dash-kpi-card kpi-blue" id="kpi-projects" title="Click to view active projects">
+          <div class="student-dash-kpi-top">
+            <div class="student-dash-kpi-icon blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div class="student-dash-kpi-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-          <div class="student-kpi-info">
-            <span class="student-kpi-value">${activeProjectsCount}</span>
-            <span class="student-kpi-label">Active Projects</span>
-          </div>
-          <div class="student-kpi-arrow">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="student-dash-kpi-info">
+            <span class="student-dash-kpi-val">${activeProjectsCount}</span>
+            <span class="student-dash-kpi-lbl">Active Projects</span>
           </div>
         </div>
 
         <!-- 2. Completed Projects -->
-        <div class="student-kpi-card" id="kpi-completed-projects" style="cursor: pointer;" title="Click to view completed projects">
-          <div class="student-kpi-icon" style="background: linear-gradient(135deg, var(--bg-main) 0%, #dcfce7 100%); color: #16a34a; border: 1px solid #bbf7d0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
+        <div class="student-dash-kpi-card kpi-emerald" id="kpi-completed-projects" title="Click to view completed projects">
+          <div class="student-dash-kpi-top">
+            <div class="student-dash-kpi-icon emerald">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <div class="student-dash-kpi-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-          <div class="student-kpi-info">
-            <span class="student-kpi-value" style="color: #16a34a;">${completedProjectsCount}</span>
-            <span class="student-kpi-label">Completed Projects</span>
-          </div>
-          <div class="student-kpi-arrow">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="student-dash-kpi-info">
+            <span class="student-dash-kpi-val">${completedProjectsCount}</span>
+            <span class="student-dash-kpi-lbl">Completed Projects</span>
           </div>
         </div>
 
         <!-- 3. Pending Tasks -->
-        <div class="student-kpi-card" id="kpi-tasks" style="cursor: pointer;" title="Click to view assigned tasks">
-          <div class="student-kpi-icon" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 11l3 3L22 4"></path>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-            </svg>
+        <div class="student-dash-kpi-card kpi-indigo" id="kpi-tasks" title="Click to filter pending tasks">
+          <div class="student-dash-kpi-top">
+            <div class="student-dash-kpi-icon indigo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+            </div>
+            <div class="student-dash-kpi-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-          <div class="student-kpi-info">
-            <span class="student-kpi-value" style="color: #2563eb;">${pendingTasksCount}</span>
-            <span class="student-kpi-label">Pending Tasks</span>
-          </div>
-          <div class="student-kpi-arrow">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="student-dash-kpi-info">
+            <span class="student-dash-kpi-val">${pendingTasksCount}</span>
+            <span class="student-dash-kpi-lbl">Pending Tasks</span>
           </div>
         </div>
 
-        <!-- 4. Bug Fixes -->
-        <div class="student-kpi-card ${bugFixesCount > 0 ? 'kpi-card-alert' : ''}" id="kpi-bug-fixes" style="cursor: pointer;" title="${bugFixesCount > 0 ? 'Click to inspect ' + bugFixesCount + ' bug fixes / rework' : 'Click to view bug fixes status'}">
-          <div class="student-kpi-icon" style="${bugFixesCount > 0 ? 'background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #dc2626; border: 1px solid #fca5a5; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);' : 'background: linear-gradient(135deg, var(--bg-canvas-light) 0%, #f1f5f9 100%); color: var(--text-muted); border: 1px solid var(--border-subtle);'}">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="8" height="14" x="8" y="5" rx="4"></rect>
-              <path d="m19 7-3 2"></path>
-              <path d="m5 7 3 2"></path>
-              <path d="m19 19-3-2"></path>
-              <path d="m5 19 3-2"></path>
-              <path d="M20 13h-4"></path>
-              <path d="M4 13h4"></path>
-              <path d="m10 4 1 2"></path>
-              <path d="m14 4-1 2"></path>
-            </svg>
+        <!-- 4. Bug Fixes / Rework Required -->
+        <div class="student-dash-kpi-card ${bugFixesCount > 0 ? 'kpi-rose' : 'kpi-coral'}" id="kpi-bug-fixes" title="Click to view bug fixes / rework required" style="${bugFixesCount > 0 ? 'border-color: #fecdd3; background: #fff1f2;' : ''}">
+          <div class="student-dash-kpi-top">
+            <div class="student-dash-kpi-icon ${bugFixesCount > 0 ? 'rose' : 'coral'}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              </svg>
+            </div>
+            <div class="student-dash-kpi-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-          <div class="student-kpi-info">
-            <span class="student-kpi-value" style="color: ${bugFixesCount > 0 ? '#dc2626' : 'var(--text-muted)'};">${bugFixesCount}</span>
-            <span class="student-kpi-label">Bug Fixes</span>
-          </div>
-          <div class="student-kpi-arrow" style="${bugFixesCount > 0 ? 'color: #dc2626;' : ''}">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="student-dash-kpi-info">
+            <span class="student-dash-kpi-val" style="${bugFixesCount > 0 ? 'color: #dc2626;' : ''}">${bugFixesCount}</span>
+            <span class="student-dash-kpi-lbl">${bugFixesCount > 0 ? 'Rework / Fixes' : 'Zero Bug Fixes'}</span>
           </div>
         </div>
 
         <!-- 5. Assigned Modules -->
-        <div class="student-kpi-card" id="kpi-modules" style="cursor: pointer;" title="Click to view sprints & modules">
-          <div class="student-kpi-icon" style="background: #fdf4ff; color: #9333ea; border: 1px solid #e9d5ff;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-              <polyline points="2 17 12 22 22 17"></polyline>
-              <polyline points="2 12 12 17 22 12"></polyline>
-            </svg>
+        <div class="student-dash-kpi-card kpi-purple" id="kpi-modules" title="Click to view assigned modules">
+          <div class="student-dash-kpi-top">
+            <div class="student-dash-kpi-icon purple">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </div>
+            <div class="student-dash-kpi-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-          <div class="student-kpi-info">
-            <span class="student-kpi-value" style="color: #9333ea;">${assignedModulesCount}</span>
-            <span class="student-kpi-label">Assigned Modules</span>
-          </div>
-          <div class="student-kpi-arrow">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="student-dash-kpi-info">
+            <span class="student-dash-kpi-val">${assignedModulesCount}</span>
+            <span class="student-dash-kpi-lbl">Assigned Modules</span>
           </div>
         </div>
 
         <!-- 6. Upcoming Meetings -->
-        <div class="student-kpi-card" id="kpi-meetings" style="cursor: pointer;" title="Click to view scheduled meetings">
-          <div class="student-kpi-icon" style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
+        <div class="student-dash-kpi-card kpi-amber" id="kpi-meetings" title="Click to view scheduled meetings">
+          <div class="student-dash-kpi-top">
+            <div class="student-dash-kpi-icon amber">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div class="student-dash-kpi-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-          <div class="student-kpi-info">
-            <span class="student-kpi-value" style="color: #d97706;">${upcomingMeetingsCount}</span>
-            <span class="student-kpi-label">Upcoming Meetings</span>
-          </div>
-          <div class="student-kpi-arrow">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="student-dash-kpi-info">
+            <span class="student-dash-kpi-val">${upcomingMeetingsCount}</span>
+            <span class="student-dash-kpi-lbl">Upcoming Meetings</span>
           </div>
         </div>
       </div>
 
-      <!-- Dashboard Main Grid (2 Columns: Tasks / Meetings & Notifications) -->
-      <div class="student-dashboard-grid">
+      <!-- Main 2-Column Split Grid -->
+      <div class="student-dash-grid">
         
         <!-- Left Column: Tasks -->
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="student-dash-col-left">
 
           <!-- SECTION 1: My Assigned Tasks & Deliverables -->
-          <div class="student-card" id="card-assigned-tasks">
-            <div class="student-card-header">
-              <div class="student-card-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #2563eb;">
+          <div class="student-dash-card" id="card-assigned-tasks">
+            <div class="student-dash-card-header">
+              <div class="student-dash-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2">
                   <path d="M9 11l3 3L22 4"></path>
                   <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                 </svg>
-                <span>My Assigned Tasks & Deliverables</span>
-                <span class="student-badge student-badge-info" style="font-size: 0.75rem; margin-left: 6px;">
+                <span>My Assigned Tasks </span>
+                <span class="student-dash-card-badge" style="background: #E0F2F1; color: #00796B; border: 1px solid #B2DFDB;">
                   ${tasks.length} Assigned
                 </span>
-                <span class="student-badge" style="background: #f1f5f9; color: #475569; font-size: 0.72rem; margin-left: 4px; font-weight: 600;">
+                <span class="student-dash-card-badge" style="background: #F0FAF9; color: #004D40; border: 1px solid #B2DFDB;">
                   Latest 3
                 </span>
               </div>
             </div>
 
             <!-- Tasks Table -->
-            <div class="student-table-container">
-              <table class="student-table">
+            <div class="student-dash-table-wrap">
+              <table class="student-dash-table">
                 <thead>
                   <tr>
-                    <th style="width: 48%;">Task & Scope</th>
-                    <th style="width: 30%;">Assigned By</th>
-                    <th style="width: 22%;">Due Date</th>
+                    <th style="width: 65%;">Task &amp; Scope</th>
+                    <th style="width: 35%;">Assigned By</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${taskRows || `
                     <tr>
-                      <td colspan="3" style="text-align: center; padding: 36px 20px; color: var(--text-muted);">
+                      <td colspan="2" style="text-align: center; padding: 36px 20px; color: var(--text-muted);">
                         <div style="font-size: 1.75rem; margin-bottom: 6px;">📋</div>
-                        <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">No tasks assigned</div>
-    
+                        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">No tasks assigned</div>
+                        <div style="font-size: 0.78rem;">Your supervisor will assign project modules and deliverable tickets.</div>
                       </td>
                     </tr>
                   `}
@@ -389,80 +495,84 @@ export async function StudentDashboard(route, router) {
               </table>
 
               ${tasks.length > 0 ? `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--bg-canvas-light); border-top: 1px solid var(--border-subtle); font-size: 0.8rem; color: var(--text-muted);">
+                <div class="student-dash-table-footer" style="margin-top: 12px;">
                   <span>
                     Showing <strong>${displayedTasks.length}</strong> of <strong>${tasks.length}</strong> tasks (Latest 3)
                   </span>
-                  <button type="button" class="student-btn student-btn-outline student-btn-sm btn-view-all-tasks" style="font-size: 0.75rem; padding: 4px 12px; font-weight: 600;">
-                    View Projects & All Tasks (${tasks.length}) →
+                  <button type="button" class="student-btn student-btn-outline student-btn-sm btn-view-all-tasks" style="font-size: 0.75rem; padding: 4px 12px; font-weight: 700;">
+                    View Projects &amp; All Tasks (${tasks.length}) →
                   </button>
                 </div>
               ` : ''}
             </div>
           </div>
 
-          <!-- End of Tasks Column -->
         </div>
 
-        <!-- Right Column: Upcoming Meetings & Live Notifications -->
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Right Column: Upcoming Meetings & Action Items (Finance UI & UX) -->
+        <div class="student-dash-col-right">
 
-          <!-- SECTION 3: Upcoming Meetings & Sessions -->
-          <div class="student-card">
-            <div class="student-card-header">
-              <div class="student-card-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #d97706;">
+          <!-- SECTION 2: Upcoming Meetings & Sessions -->
+          <div class="student-dash-card student-dash-card-compact" id="card-upcoming-meetings">
+            <div class="student-dash-card-header">
+              <div class="student-dash-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
                 <span>Upcoming Meetings</span>
-                <span class="student-badge" style="background: #fffbeb; color: #b45309; font-size: 0.72rem; margin-left: 6px; font-weight: 600;">
-                  Latest ${displayedMeetings.length}
+                <span class="student-dash-card-badge" style="background: #E0F2F1; color: #00796B; border: 1px solid #B2DFDB;">
+                  ${upcomingMeetings.length > 0 ? `Next ${displayedMeetings.length} of ${upcomingMeetings.length}` : '0 Upcoming'}
                 </span>
               </div>
 
               <button type="button" class="student-btn student-btn-outline student-btn-sm btn-nav-meetings" style="font-size: 0.75rem; padding: 4px 10px;">
-                Calendar (${meetings.length}) →
+                Calendar (${allMeetings.length}) →
               </button>
             </div>
 
             <div class="student-dash-meetings-list">
               ${meetingItems || `
-                <div style="text-align: center; padding: 28px 16px; color: var(--text-muted);">
+                <div style="text-align: center; padding: 28px 16px; color: var(--text-muted); background: var(--bg-canvas-light); border-radius: 12px;">
                   <div style="font-size: 1.5rem; margin-bottom: 6px;">📅</div>
-                  <div style="font-size: 0.85rem; font-weight: 600; color: #334155;">No meetings scheduled</div>
+                  <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">No upcoming meetings</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">No reviews scheduled from today onwards.</div>
                 </div>
               `}
             </div>
           </div>
 
-          <!-- SECTION 4: Recent Assignment Activity & Notifications -->
-          <div class="student-card">
-            <div class="student-card-header">
-              <div class="student-card-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+          <!-- SECTION 3: Action Items & Alerts (Matching Finance Dashboard UI) -->
+          <div class="student-dash-card student-dash-card-compact" id="card-dashboard-alerts">
+            <div class="student-dash-card-header">
+              <div class="student-dash-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
-                <span>Recent Activity & Alerts</span>
-                <span class="student-badge" style="background: var(--primary-light); color: var(--primary-hover); font-size: 0.72rem; margin-left: 6px; font-weight: 600;">
-                  Latest ${displayedNotifications.length}
+                <span>Alerts</span>
+                <span class="student-dash-card-badge" style="background: #E0F2F1; color: #00796B; border: 1px solid #B2DFDB;">
+                  ${unreadCount > 0 ? `${unreadCount} Unread` : `${notifications.length} Total`}
                 </span>
               </div>
+              <button type="button" class="student-btn student-btn-outline student-btn-sm" id="btn-open-notif-drawer" style="font-size: 0.75rem; padding: 4px 10px;">
+                View Drawer (${notifications.length}) →
+              </button>
             </div>
 
-            <div class="student-notif-list">
-              ${notifItems || `
-                <div class="student-notif-empty">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-secondary);">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                  </svg>
-                  <div>No recent notifications found.</div>
-                </div>
-              `}
+            <div class="student-dash-notif-list" style="display: flex; flex-direction: column; gap: 10px;">
+              ${displayedNotifications.length > 0
+                ? displayedNotifications.map(n => renderNotificationCard(n)).join('')
+                : `
+                  <div style="text-align: center; padding: 28px 16px; color: var(--text-muted); background: var(--bg-canvas-light); border-radius: 12px;">
+                    <div style="font-size: 1.5rem; margin-bottom: 6px;">🔔</div>
+                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">No recent notifications</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">New task and meeting alerts will appear here.</div>
+                  </div>
+                `
+              }
             </div>
           </div>
 
@@ -474,31 +584,61 @@ export async function StudentDashboard(route, router) {
     // EVENT BINDINGS
     // -------------------------------------------------------------------------
 
-    // 1. Sync Live Data button
-    const syncBtn = container.querySelector('#btn-sync-data');
-    syncBtn?.addEventListener('click', async () => {
-      if (isSyncing) return;
-      isSyncing = true;
-      render();
+    // 1. Notification Drawer Interactive Controls (Matching Finance Dashboard)
+    const bellBtn = container.querySelector('#student-bell-btn');
+    const drawer = container.querySelector('#student-notification-drawer');
+    const backdrop = container.querySelector('#student-drawer-backdrop');
+    const closeBtn = container.querySelector('#student-drawer-close');
+    const btnOpenDrawer = container.querySelector('#btn-open-notif-drawer');
+    const btnMarkAll = container.querySelector('#student-btn-mark-all-read');
 
-      try {
+    const openDrawer = () => {
+      if (drawer) drawer.classList.add('open');
+      if (backdrop) backdrop.classList.add('open');
+      if (bellBtn) bellBtn.classList.add('drawer-open');
+    };
+
+    const closeDrawer = () => {
+      if (drawer) drawer.classList.remove('open');
+      if (backdrop) backdrop.classList.remove('open');
+      if (bellBtn) bellBtn.classList.remove('drawer-open');
+    };
+
+    if (bellBtn) bellBtn.addEventListener('click', openDrawer);
+    if (btnOpenDrawer) btnOpenDrawer.addEventListener('click', openDrawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+    if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+    if (btnMarkAll) {
+      btnMarkAll.addEventListener('click', async () => {
+        btnMarkAll.disabled = true;
+        btnMarkAll.textContent = 'Marking...';
+        await markAllStudentNotificationsRead();
         await fetchLiveDashboard(true);
-        StudentSwal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: 'Dashboard Synchronized',
-          text: 'Loaded live assignments from Coordinator & Faculty.',
-          showConfirmButton: false,
-          timer: 2500,
-          timerProgressBar: true
-        });
-      } catch (err) {
-        showStudentError('Sync Failed', err.message || 'Could not reach server.');
-      } finally {
-        isSyncing = false;
         render();
-      }
+      });
+    }
+
+    // Bind Mark as Read on clicking notification action cards
+    container.querySelectorAll('.student-action-card[data-unread="1"]').forEach(card => {
+      card.addEventListener('click', async () => {
+        const id = card.getAttribute('data-id');
+        if (id) {
+          await markStudentNotificationRead(id);
+          card.classList.remove('is-unread', 'card-upcoming');
+          card.classList.add('card-info');
+          card.setAttribute('data-unread', '0');
+          const unreadDot = card.querySelector('.student-card-time span');
+          if (unreadDot) unreadDot.remove();
+          const unreadTag = card.querySelector('.student-countdown-tag.tag-amber');
+          if (unreadTag) {
+            unreadTag.className = 'student-countdown-tag tag-slate';
+            unreadTag.textContent = 'Info';
+          }
+          await fetchLiveDashboard(false);
+          render();
+        }
+      });
     });
 
     // 2. Task status changes
@@ -580,7 +720,7 @@ export async function StudentDashboard(route, router) {
             </div>
           `,
           confirmButtonText: 'Go to Projects Workspace →',
-          confirmButtonColor: 'var(--primary)',
+          confirmButtonColor: '#0284c7',
           showCancelButton: true,
           cancelButtonText: 'Close'
         }).then((res) => {
@@ -593,8 +733,8 @@ export async function StudentDashboard(route, router) {
           icon: 'success',
           title: '0 Bug Fixes Pending',
           text: 'No bug fixes or rework tickets have been assigned by Faculty or Coordinator. All your deliverables are in order.',
-          confirmButtonText: 'Great!',
-          confirmButtonColor: 'var(--primary)'
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#0284c7'
         });
       }
     });
@@ -608,15 +748,11 @@ export async function StudentDashboard(route, router) {
     });
 
     // 5. Navigation buttons
-    container.querySelectorAll('.view-projects-btn').forEach(btn => {
+    container.querySelectorAll('.btn-nav-projects').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         router.push('/student/projects');
       });
-    });
-
-    container.querySelector('.btn-nav-projects')?.addEventListener('click', () => {
-      router.push('/student/projects');
     });
 
     container.querySelector('.btn-nav-meetings')?.addEventListener('click', () => {
@@ -627,6 +763,15 @@ export async function StudentDashboard(route, router) {
       btn.addEventListener('click', () => {
         router.push('/student/projects');
       });
+    });
+
+    // 6. Navigation to Student Profile & Settings
+    container.querySelector('#dash-avatar-wrapper')?.addEventListener('click', () => {
+      router.push('/student/profile');
+    });
+
+    container.querySelector('#dash-view-profile-btn')?.addEventListener('click', () => {
+      router.push('/student/profile');
     });
   }
 
