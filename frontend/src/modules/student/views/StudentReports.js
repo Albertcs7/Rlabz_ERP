@@ -185,7 +185,7 @@ export async function StudentReports(route, router) {
           <!-- Project Group Header -->
           <div class="student-rep-project-header">
             <div class="student-rep-project-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
               <span>${pg.projectTitle}</span>
             </div>
             <span class="student-badge student-badge-info" style="font-size: 0.78rem; font-weight: 800;">
@@ -257,8 +257,8 @@ export async function StudentReports(route, router) {
                               if (dateMatch) {
                                 return `
                                   <div class="student-rep-task-entry">
-                                    <span style="color: #059669; font-weight: 800;">✓</span>
-                                    <span style="font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0284c7; padding: 1px 6px; border-radius: 4px;">${dateMatch[1]}</span>
+                                    <span style="color: #00796B; font-weight: 800;">✓</span>
+                                    <span style="font-size: 0.72rem; font-weight: 700; background: #E0F2F1; color: #00796B; padding: 1px 6px; border-radius: 4px;">${dateMatch[1]}</span>
                                     <span>${dateMatch[2]}</span>
                                   </div>
                                 `;
@@ -370,7 +370,7 @@ export async function StudentReports(route, router) {
           </div>
           <div>
             <h1 class="student-rep-title">Progress Reports</h1>
-            <p class="student-rep-subtitle">Submit daily reports for assigned project tasks and inspect auto-compiled Weekly Progress Reports.</p>
+            <p class="student-rep-subtitle"></p>
           </div>
         </div>
       </div>
@@ -499,7 +499,7 @@ export async function StudentReports(route, router) {
             <!-- Submit Daily Report Form Card -->
             <div class="student-rep-form-card">
               <h3 class="student-rep-form-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 Submit Daily Report
               </h3>
               <form id="daily-report-form">
@@ -558,7 +558,7 @@ export async function StudentReports(route, router) {
                         ${selTask.githubPrUrl ? `
                           <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 4px;">
                             <span style="color: var(--text-muted); font-weight: 600;">Linked PR:</span>
-                            <a href="${selTask.githubPrUrl}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; font-weight: 700; text-decoration: underline; font-size: 0.75rem;">View PR ↗</a>
+                            <a href="${selTask.githubPrUrl}" target="_blank" rel="noopener noreferrer" style="color: #00796B; font-weight: 700; text-decoration: underline; font-size: 0.75rem;">View PR ↗</a>
                           </div>
                         ` : ''}
                       </div>
@@ -601,7 +601,7 @@ export async function StudentReports(route, router) {
             <div class="student-rep-history-card">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <h3 class="student-rep-form-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                   Daily Reports Log
                 </h3>
                 <span class="student-badge student-badge-info" style="font-size:0.75rem; font-weight: 800;">
@@ -760,7 +760,7 @@ export async function StudentReports(route, router) {
             icon: 'warning',
             title: 'Project Required',
             text: 'Please select a project for this daily report.',
-            confirmButtonColor: '#0284c7'
+            confirmButtonColor: '#00796B'
           });
           return;
         }
@@ -770,7 +770,7 @@ export async function StudentReports(route, router) {
             icon: 'warning',
             title: 'Task Required',
             text: 'Please select an assigned task you worked on today.',
-            confirmButtonColor: '#0284c7'
+            confirmButtonColor: '#00796B'
           });
           return;
         }
@@ -780,7 +780,7 @@ export async function StudentReports(route, router) {
             icon: 'warning',
             title: 'Description Required',
             text: 'Please describe the work completed for this task.',
-            confirmButtonColor: '#0284c7'
+            confirmButtonColor: '#00796B'
           });
           return;
         }
@@ -813,7 +813,7 @@ export async function StudentReports(route, router) {
             html: `
               <p>Your daily log has been recorded and the corresponding <strong>Weekly Progress Report</strong> has been automatically generated/updated.</p>
             `,
-            confirmButtonColor: '#0284c7',
+            confirmButtonColor: '#00796B',
             confirmButtonText: 'View Weekly Progress'
           }).then((result) => {
             if (result.isConfirmed) {
@@ -833,7 +833,7 @@ export async function StudentReports(route, router) {
             icon: 'error',
             title: 'Submission Error',
             text: err.message || 'Could not submit daily report.',
-            confirmButtonColor: '#0284c7'
+            confirmButtonColor: '#00796B'
           });
         }
       });

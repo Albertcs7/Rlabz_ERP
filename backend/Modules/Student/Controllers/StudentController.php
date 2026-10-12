@@ -5,6 +5,7 @@ namespace Modules\Student\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -1490,33 +1491,118 @@ class StudentController extends Controller
 
         $projectIds = DB::table('project_student')
             ->where('student_id', $studentId)
-            ->pluck('project_id');
+            ->pluck('project_id')
+            ->toArray();
+
+        $participantMeetingIds = [];
+        if (Schema::hasTable('meeting_participants')) {
+            $participantMeetingIds = DB::table('meeting_participants')
+                ->where('user_id', $studentId)
+                ->pluck('meeting_id')
+                ->toArray();
+        }
 
         $meetings = DB::table('meetings')
             ->join('projects', 'projects.id', '=', 'meetings.project_id')
-            ->whereIn('meetings.project_id', $projectIds)
+            ->leftJoin('users as creator', 'creator.id', '=', 'meetings.created_by')
+            ->where(function ($q) use ($projectIds, $participantMeetingIds) {
+                if (!empty($projectIds)) {
+                    $q->whereIn('meetings.project_id', $projectIds);
+                }
+                if (!empty($participantMeetingIds)) {
+                    $q->orWhereIn('meetings.id', $participantMeetingIds);
+                }
+            })
             ->select(
                 'meetings.id',
                 'meetings.title',
+                'meetings.project_id',
                 'projects.title as project',
-                'meetings.scheduled_at as date',
+                'meetings.scheduled_at',
                 'meetings.location',
                 'meetings.meeting_link',
-                'meetings.agenda as notes',
-                'meetings.status'
+                'meetings.agenda',
+                'meetings.status',
+                'creator.name as scheduled_by'
             )
+            ->distinct()
+            ->orderBy('meetings.scheduled_at', 'desc')
             ->get()
             ->map(function ($m) {
-                $parts = explode(' ', $m->date);
+                $ts = strtotime($m->scheduled_at);
+                $date = $ts ? date('Y-m-d', $ts) : date('Y-m-d');
+                $formattedDate = $ts ? date('M j, Y', $ts) : 'TBD';
+                $time = $ts ? date('h:i A', $ts) : '14:00';
+                $rawStatus = strtolower(trim($m->status ?: 'scheduled'));
+                $isCompleted = ($rawStatus === 'completed');
+                $isCancelled = ($rawStatus === 'cancelled');
+                $isUpcoming = ($rawStatus === 'scheduled' || $rawStatus === 'upcoming' || (!$isCompleted && !$isCancelled));
+
+                // Fetch meeting notes from meeting_notes table
+                $notesRecord = null;
+                if (Schema::hasTable('meeting_notes')) {
+                    $notesRecord = DB::table('meeting_notes')
+                        ->leftJoin('users as uploader', 'uploader.id', '=', 'meeting_notes.uploaded_by')
+                        ->where('meeting_id', $m->id)
+                        ->select(
+                            'meeting_notes.id',
+                            'meeting_notes.minutes',
+                            'meeting_notes.important_decisions',
+                            'meeting_notes.uploaded_on',
+                            'uploader.name as uploaded_by_name'
+                        )
+                        ->latest('meeting_notes.id')
+                        ->first();
+                }
+
+                // Fetch meeting participants from meeting_participants table
+                $participants = [];
+                if (Schema::hasTable('meeting_participants')) {
+                    $participants = DB::table('meeting_participants')
+                        ->join('users', 'users.id', '=', 'meeting_participants.user_id')
+                        ->where('meeting_participants.meeting_id', $m->id)
+                        ->select(
+                            'users.id as user_id',
+                            'users.name',
+                            'users.email',
+                            'users.role',
+                            'meeting_participants.attendance_status'
+                        )
+                        ->get();
+                }
+
                 return [
                     'id' => $m->id,
+                    'source_id' => $m->id,
+                    'category' => 'meeting',
+                    'category_label' => 'Project Review / Meeting',
                     'title' => $m->title,
                     'project' => $m->project,
-                    'date' => $parts[0],
-                    'time' => isset($parts[1]) ? substr($parts[1], 0, 5) : '14:00',
-                    'status' => ucfirst($m->status),
-                    'location' => $m->location . ($m->meeting_link ? ': ' . $m->meeting_link : ''),
-                    'notes' => $m->notes
+                    'projectId' => $m->project_id,
+                    'date' => $date,
+                    'formatted_date' => $formattedDate,
+                    'time' => $time,
+                    'status' => ucfirst($rawStatus),
+                    'raw_status' => $rawStatus,
+                    'is_completed' => $isCompleted,
+                    'is_cancelled' => $isCancelled,
+                    'is_upcoming' => $isUpcoming,
+                    'location' => $m->location ?: 'Google Meet',
+                    'meeting_link' => $m->meeting_link,
+                    'meetingLink' => $m->meeting_link,
+                    'agenda' => $m->agenda ?: '',
+                    'description' => $m->agenda ?: 'Scheduled standup and project evaluation session with supervisor.',
+                    'scheduled_by' => $m->scheduled_by ?: 'Supervisor / Faculty',
+                    'assigned_by' => $m->scheduled_by ?: 'Supervisor / Faculty',
+                    'notes' => $notesRecord ? ($notesRecord->minutes . ($notesRecord->important_decisions ? "\n\nImportant Decisions:\n" . $notesRecord->important_decisions : '')) : ($m->agenda ?: ''),
+                    'meeting_notes' => $notesRecord ? [
+                        'minutes' => $notesRecord->minutes,
+                        'important_decisions' => $notesRecord->important_decisions,
+                        'uploaded_by' => $notesRecord->uploaded_by_name,
+                        'uploaded_on' => $notesRecord->uploaded_on ? date('M j, Y h:i A', strtotime($notesRecord->uploaded_on)) : null
+                    ] : null,
+                    'participants' => $participants,
+                    'badge_color' => $isCompleted ? 'emerald' : ($isCancelled ? 'rose' : 'teal')
                 ];
             });
 
@@ -1556,10 +1642,23 @@ class StudentController extends Controller
             ->orderBy('chat_messages.created_at', 'asc')
             ->get()
             ->map(function ($msg) {
+                $rawText = $msg->text;
+                $displayText = $rawText;
+                $attachment = null;
+
+                if (is_string($rawText) && (str_starts_with($rawText, '{') || str_starts_with($rawText, '{\\'))) {
+                    $decoded = json_decode($rawText, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $displayText = $decoded['text'] ?? '';
+                        $attachment = $decoded['attachment'] ?? null;
+                    }
+                }
+
                 return [
                     'sender' => $msg->sender_role === 'student' ? 'student' : 'faculty',
                     'senderName' => $msg->sender_name,
-                    'text' => $msg->text,
+                    'text' => $displayText,
+                    'attachment' => $attachment,
                     'time' => $msg->time
                 ];
             });
@@ -1588,13 +1687,84 @@ class StudentController extends Controller
             $chatId = $chat->id;
         }
 
-        DB::table('chat_messages')->insert([
-            'chat_id' => $chatId,
-            'sender_id' => $studentId,
-            'message' => $request->input('text'),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        $text = $request->input('text', '');
+        $attachment = null;
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $path = $file->store('chat_attachments', 'public');
+            $url = Storage::disk('public')->url($path);
+            $attachment = [
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'type' => $file->getMimeType(),
+                'url' => $url
+            ];
+        } elseif ($request->has('attachment')) {
+            $rawAttach = $request->input('attachment');
+            if (is_array($rawAttach)) {
+                $attachment = $rawAttach;
+                // If dataUrl is present, write file to disk to keep database clean
+                if (!empty($rawAttach['dataUrl']) && str_starts_with($rawAttach['dataUrl'], 'data:')) {
+                    try {
+                        $parts = explode(',', $rawAttach['dataUrl'], 2);
+                        if (count($parts) === 2) {
+                            $fileData = base64_decode($parts[1]);
+                            $origName = $rawAttach['name'] ?? 'attachment';
+                            $ext = pathinfo($origName, PATHINFO_EXTENSION);
+                            if (!$ext) {
+                                if (str_contains($parts[0], 'pdf')) $ext = 'pdf';
+                                elseif (str_contains($parts[0], 'csv')) $ext = 'csv';
+                                else $ext = 'bin';
+                            }
+                            $safeName = 'chat_' . time() . '_' . uniqid() . '.' . $ext;
+                            Storage::disk('public')->put('chat_attachments/' . $safeName, $fileData);
+                            $url = Storage::disk('public')->url('chat_attachments/' . $safeName);
+                            $attachment = [
+                                'name' => $origName,
+                                'size' => $rawAttach['size'] ?? strlen($fileData),
+                                'type' => $rawAttach['type'] ?? 'application/octet-stream',
+                                'url' => $url
+                            ];
+                        }
+                    } catch (\Exception $e) {
+                        $attachment = $rawAttach;
+                    }
+                }
+            }
+        }
+
+        $finalMessage = $text;
+        if ($attachment) {
+            $finalMessage = json_encode([
+                'text' => $text,
+                'attachment' => $attachment
+            ]);
+        }
+
+        try {
+            DB::table('chat_messages')->insert([
+                'chat_id' => $chatId,
+                'sender_id' => $studentId,
+                'message' => $finalMessage,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        } catch (\Exception $e) {
+            // In case of any schema limitation, alter table and retry
+            try {
+                DB::statement('ALTER TABLE chat_messages MODIFY message LONGTEXT');
+                DB::table('chat_messages')->insert([
+                    'chat_id' => $chatId,
+                    'sender_id' => $studentId,
+                    'message' => $finalMessage,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            } catch (\Exception $retryEx) {
+                return response()->json(['error' => $retryEx->getMessage()], 500);
+            }
+        }
 
         return response()->json(['success' => true]);
     }
@@ -1697,14 +1867,31 @@ class StudentController extends Controller
 
         $formatted = $notifs->map(function ($n) {
             $created = Carbon::parse($n->created_at);
+            $projectName = null;
+            if (!empty($n->project_id) && Schema::hasTable('projects')) {
+                $projectName = DB::table('projects')->where('id', $n->project_id)->value('title');
+            }
+            $cat = 'General';
+            if ($n->type === 'meeting' || $n->type === 'meeting_scheduled') $cat = 'Meeting';
+            elseif ($n->type === 'task' || $n->type === 'task_assigned') $cat = 'Task';
+            elseif ($n->type === 'module' || $n->type === 'module_assigned') $cat = 'Sprint';
+            elseif ($n->type === 'work_log') $cat = 'Work Log';
+            elseif ($n->type === 'github') $cat = 'GitHub';
+            elseif (str_contains($n->type, 'password')) $cat = 'Security';
+            elseif ($n->type) $cat = ucfirst(str_replace(['_', '-'], ' ', $n->type));
+
             return [
                 'id' => $n->id,
                 'title' => $n->message,
                 'message' => $n->message,
                 'type' => $n->type,
+                'category' => $cat,
+                'urgency' => $n->urgency ?? 'normal',
+                'projectName' => $projectName,
                 'time' => $created->diffForHumans(),
                 'created_at' => $n->created_at,
                 'is_read' => (bool)$n->is_read,
+                'isRead' => (bool)$n->is_read,
             ];
         });
 
@@ -2096,18 +2283,29 @@ class StudentController extends Controller
             ->get()
             ->map(function ($m) {
                 $timestamp = strtotime($m->scheduled_at);
+                $rawStatus = strtolower(trim($m->status ?: 'scheduled'));
+                $isCompleted = ($rawStatus === 'completed');
+                $isCancelled = ($rawStatus === 'cancelled');
+                $isUpcoming = $timestamp ? ($timestamp >= (time() - 86400)) : true;
+
                 return [
                     'id' => $m->id,
                     'title' => $m->title,
                     'project' => $m->project,
-                    'date' => $timestamp ? date('M j, Y', $timestamp) : 'TBD',
+                    'scheduled_at' => $m->scheduled_at,
+                    'date' => $timestamp ? date('Y-m-d', $timestamp) : date('Y-m-d'),
+                    'formatted_date' => $timestamp ? date('M j, Y', $timestamp) : 'TBD',
                     'time' => $timestamp ? date('h:i A', $timestamp) : 'TBD',
                     'status' => ucfirst($m->status),
+                    'raw_status' => $rawStatus,
+                    'is_completed' => $isCompleted,
+                    'is_cancelled' => $isCancelled,
                     'location' => $m->location ?: 'Google Meet',
                     'meetingLink' => $m->meeting_link,
+                    'meeting_link' => $m->meeting_link,
                     'agenda' => $m->agenda ?: '',
                     'scheduledBy' => $m->scheduled_by ?: 'Coordinator / Faculty',
-                    'isUpcoming' => $timestamp ? ($timestamp >= time()) : true,
+                    'isUpcoming' => $isUpcoming,
                 ];
             });
 
@@ -2132,7 +2330,9 @@ class StudentController extends Controller
         $pendingTasksCount = $tasks->filter(fn($t) => $t['rawStatus'] !== 'completed')->count();
         $completedTasksCount = $tasks->filter(fn($t) => $t['rawStatus'] === 'completed')->count();
         $activeProjectsCount = $projects->filter(fn($p) => $p['status'] === 'In Progress')->count();
-        $upcomingMeetingsCount = $meetings->filter(fn($m) => $m['status'] === 'Scheduled' && $m['isUpcoming'])->count();
+        $upcomingMeetingsCount = $meetings->filter(function($m) {
+            return !$m['is_completed'] && !$m['is_cancelled'] && $m['isUpcoming'];
+        })->count();
 
         return response()->json([
             'projects' => $projects,
@@ -2227,5 +2427,614 @@ class StudentController extends Controller
             'message' => 'Task status updated to ' . ucfirst(str_replace('_', ' ', $statusNormalized)),
             'status' => $statusNormalized,
         ]);
+    }
+
+    /**
+     * Get the student's latest password change request status.
+     * Reuses existing notifications & audit_logs tables.
+     */
+    public function getPasswordRequestStatus(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Query the latest password change notification/record for this student
+        $latest = DB::table('notifications')
+            ->where('user_id', $studentId)
+            ->whereIn('type', ['password_change_request', 'password_change_approved', 'password_change_rejected'])
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (!$latest || $latest->urgency === 'completed' || $latest->urgency === 'cancelled') {
+            return response()->json([
+                'has_request' => false,
+                'status' => 'none',
+                'request' => null,
+            ]);
+        }
+
+        // Determine status from notification type and urgency
+        $status = 'pending';
+        if ($latest->type === 'password_change_approved' || $latest->urgency === 'approved') {
+            $status = 'approved';
+        } elseif ($latest->type === 'password_change_rejected' || $latest->urgency === 'rejected') {
+            $status = 'rejected';
+        } elseif ($latest->urgency === 'pending' || $latest->type === 'password_change_request') {
+            $status = 'pending';
+        }
+
+        return response()->json([
+            'has_request' => true,
+            'status' => $status,
+            'request' => [
+                'id' => $latest->id,
+                'status' => $status,
+                'message' => $latest->message,
+                'created_at' => $latest->created_at,
+                'updated_at' => $latest->updated_at,
+            ],
+        ]);
+    }
+
+    /**
+     * Submit a request to coordinator for password change access.
+     * Reuses existing notifications & audit_logs tables.
+     */
+    public function requestPasswordChange(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')->where('id', $studentId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        // Check for an existing pending request
+        $existingPending = DB::table('notifications')
+            ->where('user_id', $studentId)
+            ->where('type', 'password_change_request')
+            ->where('urgency', 'pending')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($existingPending) {
+            return response()->json([
+                'error' => 'Your password change request is awaiting coordinator approval. Please wait for review before submitting another request.',
+                'status' => 'pending',
+            ], 400);
+        }
+
+        // Create notification record for the student representing their request state
+        $notifId = DB::table('notifications')->insertGetId([
+            'user_id' => $studentId,
+            'project_id' => null,
+            'type' => 'password_change_request',
+            'urgency' => 'pending',
+            'message' => 'Your password change request is awaiting coordinator approval.',
+            'is_read' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Notify coordinators
+        $coordinatorIds = DB::table('users')->where('role', 'coordinator')->pluck('id')->toArray();
+        foreach ($coordinatorIds as $coordId) {
+            DB::table('notifications')->insert([
+                'user_id' => $coordId,
+                'project_id' => null,
+                'type' => 'password_change_request',
+                'urgency' => 'high',
+                'message' => "Student {$user->name} ({$user->email}) has submitted a request to change their account password.",
+                'is_read' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Record audit log
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $studentId,
+                'action' => 'Password Change Request Submitted',
+                'description' => "Student {$user->name} submitted a password change access request to coordinator.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Password change access request submitted successfully. Awaiting coordinator approval.',
+            'status' => 'pending',
+            'request' => [
+                'id' => $notifId,
+                'status' => 'pending',
+                'created_at' => now()->toDateTimeString(),
+            ],
+        ], 201);
+    }
+
+    /**
+     * Change password once approved.
+     * Reuses existing users hashing & notifications/audit tables.
+     */
+    public function updatePassword(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')->where('id', $studentId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        // Check if latest request is approved
+        $latestRequest = DB::table('notifications')
+            ->where('user_id', $studentId)
+            ->whereIn('type', ['password_change_request', 'password_change_approved'])
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $isApproved = $latestRequest && (
+            $latestRequest->type === 'password_change_approved' ||
+            $latestRequest->urgency === 'approved'
+        );
+
+        if (!$isApproved) {
+            return response()->json([
+                'error' => 'You must have an approved password change request from a coordinator before updating your password.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'new_password' => 'required|string|min:6',
+            'confirm_password' => 'required|string|same:new_password',
+        ], [
+            'new_password.required' => 'Please enter your new password.',
+            'new_password.min' => 'Password must be at least 6 characters.',
+            'confirm_password.required' => 'Please confirm your new password.',
+            'confirm_password.same' => 'New password and confirmation password do not match.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $newPassword = $request->input('new_password');
+
+        // Update password with Laravel's standard Hash::make
+        DB::table('users')->where('id', $studentId)->update([
+            'password' => Hash::make($newPassword),
+            'updated_at' => now(),
+        ]);
+
+        // Mark the request notification as completed
+        DB::table('notifications')->where('id', $latestRequest->id)->update([
+            'urgency' => 'completed',
+            'is_read' => 1,
+            'updated_at' => now(),
+        ]);
+
+        // Record audit log
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $studentId,
+                'action' => 'Password Changed Successfully',
+                'description' => "Student {$user->name} updated their account password following coordinator approval.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Password changed successfully! You can now use your new password.'
+        ]);
+    }
+
+    /**
+     * Cancel / withdraw a pending or approved password change request.
+     */
+    public function cancelPasswordRequest(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')->where('id', $studentId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        DB::table('notifications')
+            ->where('user_id', $studentId)
+            ->whereIn('type', ['password_change_request', 'password_change_approved', 'password_change_rejected'])
+            ->where(function ($q) {
+                $q->whereNotIn('urgency', ['completed', 'cancelled'])
+                  ->orWhereNull('urgency');
+            })
+            ->update([
+                'urgency' => 'cancelled',
+                'is_read' => 1,
+                'updated_at' => now(),
+            ]);
+
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $studentId,
+                'action' => 'Password Change Request Cancelled',
+                'description' => "Student {$user->name} cancelled their password change request.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Password change request cancelled successfully.'
+        ]);
+    }
+
+    /**
+     * Mark a student notification as read.
+     */
+    public function markNotificationRead(Request $request, $id)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        DB::table('notifications')
+            ->where('id', $id)
+            ->where('user_id', $studentId)
+            ->update([
+                'is_read' => 1,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json(['success' => true, 'message' => 'Notification marked as read']);
+    }
+
+    /**
+     * Mark all student notifications as read.
+     */
+    public function markAllNotificationsRead(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return response()->json(['success' => true, 'message' => 'All notifications marked as read']);
+    }
+
+    /**
+     * Aggregate ERP-related Calendar Highlights & Activities for the logged-in student.
+     * Includes project deadlines, task deadlines, sprints, reviews/meetings, reports, and announcements.
+     */
+    public function getCalendarEvents(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // 1. Fetch project IDs assigned to this student
+        $projectStudentData = DB::table('project_student')
+            ->where('student_id', $studentId)
+            ->get();
+        $projectIds = $projectStudentData->pluck('project_id')->toArray();
+
+        $moduleProjectIds = DB::table('module_student')
+            ->join('modules', 'modules.id', '=', 'module_student.module_id')
+            ->where('module_student.student_id', $studentId)
+            ->pluck('modules.project_id')
+            ->toArray();
+
+        $allProjectIds = array_values(array_unique(array_merge($projectIds, $moduleProjectIds)));
+
+        $events = [];
+        $today = Carbon::today()->toDateString();
+
+        // 2. Project Review Meetings & Evaluations
+        if (!empty($allProjectIds)) {
+            $meetings = DB::table('meetings')
+                ->join('projects', 'projects.id', '=', 'meetings.project_id')
+                ->leftJoin('users as creator', 'creator.id', '=', 'meetings.created_by')
+                ->whereIn('meetings.project_id', $allProjectIds)
+                ->select(
+                    'meetings.id',
+                    'meetings.title',
+                    'meetings.project_id',
+                    'projects.title as project_title',
+                    'meetings.scheduled_at',
+                    'meetings.location',
+                    'meetings.meeting_link',
+                    'meetings.agenda',
+                    'meetings.status',
+                    'creator.name as scheduled_by'
+                )
+                ->get();
+
+            foreach ($meetings as $m) {
+                if (!$m->scheduled_at) continue;
+                $date = Carbon::parse($m->scheduled_at)->toDateString();
+                $time = Carbon::parse($m->scheduled_at)->format('h:i A');
+                $rawStatus = strtolower($m->status ?: 'scheduled');
+                $isCompleted = ($rawStatus === 'completed');
+                $isOverdue = (!$isCompleted && $date < $today);
+
+                // Fetch meeting notes from meeting_notes table
+                $notesRecord = null;
+                if (Schema::hasTable('meeting_notes')) {
+                    $notesRecord = DB::table('meeting_notes')
+                        ->leftJoin('users as uploader', 'uploader.id', '=', 'meeting_notes.uploaded_by')
+                        ->where('meeting_id', $m->id)
+                        ->select(
+                            'meeting_notes.id',
+                            'meeting_notes.minutes',
+                            'meeting_notes.important_decisions',
+                            'meeting_notes.uploaded_on',
+                            'uploader.name as uploaded_by_name'
+                        )
+                        ->latest('meeting_notes.id')
+                        ->first();
+                }
+
+                // Fetch meeting participants from meeting_participants table
+                $participants = [];
+                if (Schema::hasTable('meeting_participants')) {
+                    $participants = DB::table('meeting_participants')
+                        ->join('users', 'users.id', '=', 'meeting_participants.user_id')
+                        ->where('meeting_participants.meeting_id', $m->id)
+                        ->select(
+                            'users.id as user_id',
+                            'users.name',
+                            'users.email',
+                            'users.role',
+                            'meeting_participants.attendance_status'
+                        )
+                        ->get();
+                }
+
+                $events[] = [
+                    'id' => 'meet-' . $m->id,
+                    'source_id' => $m->id,
+                    'category' => 'meeting',
+                    'category_label' => 'Project Review / Meeting',
+                    'title' => $m->title,
+                    'description' => $notesRecord ? ($notesRecord->minutes . ($notesRecord->important_decisions ? "\n\nImportant Decisions:\n" . $notesRecord->important_decisions : '')) : ($m->agenda ?: 'Scheduled standup and project evaluation session with supervisor.'),
+                    'project' => $m->project_title,
+                    'projectId' => $m->project_id,
+                    'date' => $date,
+                    'time' => $time,
+                    'status' => ucfirst($rawStatus),
+                    'raw_status' => $rawStatus,
+                    'is_completed' => $isCompleted,
+                    'is_overdue' => $isOverdue,
+                    'is_upcoming' => (!$isCompleted && $date >= $today),
+                    'location' => $m->location ?: 'Google Meet',
+                    'meeting_link' => $m->meeting_link,
+                    'meetingLink' => $m->meeting_link,
+                    'assigned_by' => $m->scheduled_by ?: 'Faculty Supervisor',
+                    'notes' => $notesRecord ? $notesRecord->minutes : ($m->agenda ?: ''),
+                    'meeting_notes' => $notesRecord ? [
+                        'minutes' => $notesRecord->minutes,
+                        'important_decisions' => $notesRecord->important_decisions,
+                        'uploaded_by' => $notesRecord->uploaded_by_name,
+                        'uploaded_on' => $notesRecord->uploaded_on ? date('M j, Y h:i A', strtotime($notesRecord->uploaded_on)) : null
+                    ] : null,
+                    'participants' => $participants,
+                    'badge_color' => 'blue'
+                ];
+            }
+        }
+
+        // 3. Task Deadlines & Deliverables assigned to this student
+        $assignedModuleIds = DB::table('module_student')
+            ->where('student_id', $studentId)
+            ->pluck('module_id')
+            ->toArray();
+
+        $tasks = DB::table('tasks')
+            ->leftJoin('modules', 'modules.id', '=', 'tasks.module_id')
+            ->leftJoin('projects', 'projects.id', '=', 'modules.project_id')
+            ->leftJoin('users as creator', 'creator.id', '=', 'tasks.created_by')
+            ->where(function ($q) use ($studentId, $assignedModuleIds) {
+                $q->where('tasks.assigned_to', $studentId);
+                if (!empty($assignedModuleIds)) {
+                    $q->orWhereIn('tasks.module_id', $assignedModuleIds);
+                }
+            })
+            ->whereNotNull('tasks.due_date')
+            ->select(
+                'tasks.id',
+                'tasks.title',
+                'tasks.description',
+                'tasks.status',
+                'tasks.due_date',
+                'modules.module_name',
+                'projects.id as project_id',
+                'projects.title as project_title',
+                'creator.name as creator_name'
+            )
+            ->get();
+
+        foreach ($tasks as $t) {
+            if (!$t->due_date) continue;
+            $date = Carbon::parse($t->due_date)->toDateString();
+            $rawStatus = strtolower($t->status ?: 'todo');
+            $isCompleted = ($rawStatus === 'completed');
+            $isOverdue = (!$isCompleted && $date < $today);
+
+            $events[] = [
+                'id' => 'task-' . $t->id,
+                'source_id' => $t->id,
+                'category' => 'task',
+                'category_label' => 'Task & Deliverable Deadline',
+                'title' => $t->title,
+                'description' => $t->description ?: ('Deliverable under module ' . ($t->module_name ?: 'General')),
+                'project' => $t->project_title ?: 'Academic Project',
+                'projectId' => $t->project_id,
+                'module' => $t->module_name,
+                'date' => $date,
+                'time' => '11:59 PM',
+                'status' => ucfirst(str_replace('_', ' ', $rawStatus)),
+                'raw_status' => $rawStatus,
+                'is_completed' => $isCompleted,
+                'is_overdue' => $isOverdue,
+                'is_upcoming' => (!$isCompleted && $date >= $today),
+                'assigned_by' => $t->creator_name ?: 'Supervisor',
+                'badge_color' => $isOverdue ? 'red' : ($isCompleted ? 'emerald' : 'amber')
+            ];
+        }
+
+        // 4. Sprint / Module Start and End Dates
+        if (!empty($allProjectIds)) {
+            $modules = DB::table('modules')
+                ->join('projects', 'projects.id', '=', 'modules.project_id')
+                ->whereIn('modules.project_id', $allProjectIds)
+                ->select('modules.*', 'projects.title as project_title')
+                ->get();
+
+            foreach ($modules as $m) {
+                $meta = [];
+                if (!empty($m->description) && str_starts_with(trim($m->description), '{')) {
+                    $meta = json_decode($m->description, true) ?: [];
+                }
+
+                $startDate = $meta['startDate'] ?? null;
+                $endDate = $meta['endDate'] ?? null;
+                $objective = $meta['objective'] ?? ($m->description ?: 'Sprint module milestone.');
+                $rawStatus = strtolower($m->status ?: 'not_started');
+                $isCompleted = ($rawStatus === 'completed');
+
+                if ($startDate) {
+                    $sDate = Carbon::parse($startDate)->toDateString();
+                    $events[] = [
+                        'id' => 'sprint-start-' . $m->id,
+                        'source_id' => $m->id,
+                        'category' => 'sprint',
+                        'category_label' => 'Sprint Kickoff',
+                        'title' => 'Sprint Start: ' . $m->module_name,
+                        'description' => 'Kickoff date for ' . $m->module_name . '. ' . $objective,
+                        'project' => $m->project_title,
+                        'projectId' => $m->project_id,
+                        'date' => $sDate,
+                        'time' => '09:00 AM',
+                        'status' => ucfirst(str_replace('_', ' ', $rawStatus)),
+                        'raw_status' => $rawStatus,
+                        'is_completed' => $isCompleted,
+                        'is_overdue' => false,
+                        'is_upcoming' => ($sDate >= $today),
+                        'badge_color' => 'purple'
+                    ];
+                }
+
+                if ($endDate) {
+                    $eDate = Carbon::parse($endDate)->toDateString();
+                    $isOverdue = (!$isCompleted && $eDate < $today);
+                    $events[] = [
+                        'id' => 'sprint-end-' . $m->id,
+                        'source_id' => $m->id,
+                        'category' => 'sprint',
+                        'category_label' => 'Sprint Deadline',
+                        'title' => 'Sprint End: ' . $m->module_name,
+                        'description' => 'Target completion deadline for ' . $m->module_name . '. ' . $objective,
+                        'project' => $m->project_title,
+                        'projectId' => $m->project_id,
+                        'date' => $eDate,
+                        'time' => '11:59 PM',
+                        'status' => ucfirst(str_replace('_', ' ', $rawStatus)),
+                        'raw_status' => $rawStatus,
+                        'is_completed' => $isCompleted,
+                        'is_overdue' => $isOverdue,
+                        'is_upcoming' => (!$isCompleted && $eDate >= $today),
+                        'badge_color' => $isOverdue ? 'red' : 'purple'
+                    ];
+                }
+            }
+        }
+
+
+        // 6. Progress Reports submitted & daily/weekly activity
+        if (Schema::hasTable('student_reports')) {
+            $reports = DB::table('student_reports')
+                ->leftJoin('projects', 'projects.id', '=', 'student_reports.project_id')
+                ->where('student_reports.student_id', $studentId)
+                ->whereNotNull('student_reports.report_date')
+                ->select('student_reports.*', 'projects.title as project_title')
+                ->get();
+
+            foreach ($reports as $r) {
+                if (!$r->report_date) continue;
+                $rDate = Carbon::parse($r->report_date)->toDateString();
+                $rawStatus = strtolower($r->approval_status ?: 'pending');
+                $isCompleted = ($rawStatus === 'approved');
+
+                $events[] = [
+                    'id' => 'rep-' . $r->id,
+                    'source_id' => $r->id,
+                    'category' => 'report',
+                    'category_label' => ucfirst($r->report_type ?: 'Daily') . ' Report Submission',
+                    'title' => ucfirst($r->report_type ?: 'Daily') . ' Report: ' . ($r->project_title ?: 'Project Task'),
+                    'description' => $r->work_done ?: 'Progress report submitted for supervisor review.',
+                    'project' => $r->project_title ?: 'Academic Project',
+                    'projectId' => $r->project_id,
+                    'date' => $rDate,
+                    'time' => $r->submitted_at ? Carbon::parse($r->submitted_at)->format('h:i A') : '05:00 PM',
+                    'status' => ucfirst($rawStatus),
+                    'raw_status' => $rawStatus,
+                    'is_completed' => $isCompleted,
+                    'is_overdue' => false,
+                    'is_upcoming' => false,
+                    'feedback' => $r->feedback,
+                    'badge_color' => 'emerald'
+                ];
+            }
+        }
+
+        // 7. Important Announcements & Scheduled Academic Activities
+        if (Schema::hasTable('notifications')) {
+            $notifs = DB::table('notifications')
+                ->where('user_id', $studentId)
+                ->whereIn('type', ['announcement', 'academic_event', 'evaluation', 'deadline_reminder', 'security', 'meeting'])
+                ->orderBy('created_at', 'desc')
+                ->limit(15)
+                ->get();
+
+            foreach ($notifs as $n) {
+                $nDate = Carbon::parse($n->created_at)->toDateString();
+                $events[] = [
+                    'id' => 'notif-' . $n->id,
+                    'source_id' => $n->id,
+                    'category' => 'announcement',
+                    'category_label' => 'Academic Announcement',
+                    'title' => 'Announcement: ' . mb_strimwidth($n->message, 0, 45, '...'),
+                    'description' => $n->message,
+                    'project' => 'RLabZ Academic ERP',
+                    'date' => $nDate,
+                    'time' => Carbon::parse($n->created_at)->format('h:i A'),
+                    'status' => $n->is_read ? 'Acknowledged' : 'Active',
+                    'raw_status' => $n->is_read ? 'read' : 'unread',
+                    'is_completed' => (bool)$n->is_read,
+                    'is_overdue' => false,
+                    'is_upcoming' => ($nDate >= $today),
+                    'badge_color' => 'cyan'
+                ];
+            }
+        }
+
+        // Sort events by date ascending, then time
+        usort($events, function ($a, $b) {
+            $cmp = strcmp($a['date'], $b['date']);
+            if ($cmp !== 0) return $cmp;
+            return strcmp($a['time'], $b['time']);
+        });
+
+        return response()->json($events);
     }
 }

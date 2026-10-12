@@ -23,6 +23,13 @@ class DevUserSeeder extends Seeder
                 'email' => 'director@rajagiri.edu',
                 'password' => Hash::make('director123'),
                 'role' => 'director',
+                'permissions' => ['view-dashboard', 'view-finance-readonly', 'view-projects', 'view-github', 'view-audit-notifications', 'project.view_global', 'project.client_requirements.view'],
+            ],
+            [
+                'name' => 'Developer',
+                'email' => 'developer@rajagiri.edu',
+                'password' => Hash::make('developer123'),
+                'role' => 'developer',
                 'permissions' => ['view-dashboard', 'view-finance-readonly', 'view-projects', 'view-github', 'view-audit-notifications', 'project.assign_faculty', 'project.view_global', 'project.client_requirements.view'],
             ],
             [
@@ -122,6 +129,7 @@ class DevUserSeeder extends Seeder
         DB::table('chat_messages')->truncate();
         DB::table('meetings')->truncate();
         DB::table('meeting_participants')->truncate();
+        DB::table('meeting_notes')->truncate();
         if (Schema::hasTable('notifications')) {
             DB::table('notifications')->truncate();
         }
@@ -447,7 +455,7 @@ class DevUserSeeder extends Seeder
             'location' => 'Google Meet',
             'meeting_link' => 'https://meet.google.com/abc-defg-hij',
             'agenda' => "Agenda:\n1. Showcase current prototype UI screens.\n2. Review work log submissions flow.\n3. Discuss GitHub verification status flow with supervisor.",
-            'status' => 'scheduled',
+            'status' => 'completed',
             'created_by' => $facultyId,
             'created_at' => now(),
             'updated_at' => now(),
@@ -466,13 +474,147 @@ class DevUserSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
+        $meetingId3 = DB::table('meetings')->insertGetId([
+            'project_id' => $projectId1,
+            'title' => 'Sprint 3 Review & Evaluation Standup',
+            'scheduled_at' => '2026-10-18 14:00:00',
+            'location' => 'Google Meet',
+            'meeting_link' => 'https://meet.google.com/rlabz-eval-sprint3',
+            'agenda' => "1. Standup evaluation with Faculty Supervisor.\n2. Review Reports and Work Logs submission flows.\n3. Student evaluation sign-off.",
+            'status' => 'scheduled',
+            'created_by' => $facultyId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $meetingId4 = DB::table('meetings')->insertGetId([
+            'project_id' => $projectId1,
+            'title' => 'Mid-Term Progress & Code Review',
+            'scheduled_at' => '2026-09-15 11:00:00',
+            'location' => 'Faculty Conference Room 101',
+            'meeting_link' => null,
+            'agenda' => "Mid-term code evaluation, architecture review and performance sign-off.",
+            'status' => 'completed',
+            'created_by' => $facultyId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $meetingId5 = DB::table('meetings')->insertGetId([
+            'project_id' => $projectId1,
+            'title' => 'Sprint 2 Milestone Sign-off & Retrospective',
+            'scheduled_at' => '2026-10-08 11:00:00',
+            'location' => 'Faculty Research Lab 302',
+            'meeting_link' => null,
+            'agenda' => "1. Review completion of Sprint 2 deliverables.\n2. Verify student work logs and code quality.\n3. Milestone evaluation and sign-off.",
+            'status' => 'completed',
+            'created_by' => $facultyId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $meetingId6 = DB::table('meetings')->insertGetId([
+            'project_id' => $projectId1,
+            'title' => 'Sprint 3 Mid-Review & Progress Standup',
+            'scheduled_at' => '2026-10-14 15:00:00',
+            'location' => 'Google Meet',
+            'meeting_link' => 'https://meet.google.com/rlabz-sprint3-mid',
+            'agenda' => "1. Mid-sprint check-in on Reports submission module.\n2. Discuss GitHub PR reviews and merge conflicts.\n3. Faculty feedback on UX styling.",
+            'status' => 'scheduled',
+            'created_by' => $facultyId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $meetingId7 = DB::table('meetings')->insertGetId([
+            'project_id' => $projectId1,
+            'title' => 'Sprint 3 Code Review & API Verification',
+            'scheduled_at' => '2026-10-22 14:00:00',
+            'location' => 'Google Meet',
+            'meeting_link' => 'https://meet.google.com/rlabz-code-rev3',
+            'agenda' => "1. Live code review of REST API controllers.\n2. Attendance and evaluation checklist.\n3. Preparation for Final Sprint 4 presentation.",
+            'status' => 'scheduled',
+            'created_by' => $facultyId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $meetingId8 = DB::table('meetings')->insertGetId([
+            'project_id' => $projectId1,
+            'title' => 'Initial Sprint Tooling & Setup Sync',
+            'scheduled_at' => '2026-08-25 16:00:00',
+            'location' => 'Faculty Conference Room 101',
+            'meeting_link' => null,
+            'agenda' => "Discussion on developer tooling and local database configuration (Session cancelled).",
+            'status' => 'cancelled',
+            'created_by' => $facultyId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         DB::table('meeting_participants')->insert([
-            ['meeting_id' => $meetingId1, 'user_id' => $novaId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
-            ['meeting_id' => $meetingId1, 'user_id' => $orbitId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
-            ['meeting_id' => $meetingId1, 'user_id' => $facultyId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId1, 'user_id' => $novaId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId1, 'user_id' => $orbitId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId1, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
             
             ['meeting_id' => $meetingId2, 'user_id' => $novaId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
             ['meeting_id' => $meetingId2, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+
+            ['meeting_id' => $meetingId3, 'user_id' => $novaId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId3, 'user_id' => $orbitId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId3, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+
+            ['meeting_id' => $meetingId4, 'user_id' => $novaId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId4, 'user_id' => $orbitId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId4, 'user_id' => $sparkId, 'attendance_status' => 'absent', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId4, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+
+            ['meeting_id' => $meetingId5, 'user_id' => $novaId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId5, 'user_id' => $orbitId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId5, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+
+            ['meeting_id' => $meetingId6, 'user_id' => $novaId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId6, 'user_id' => $orbitId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId6, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+
+            ['meeting_id' => $meetingId7, 'user_id' => $novaId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId7, 'user_id' => $orbitId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId7, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+
+            ['meeting_id' => $meetingId8, 'user_id' => $novaId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId8, 'user_id' => $orbitId, 'attendance_status' => 'invited', 'created_at' => now(), 'updated_at' => now()],
+            ['meeting_id' => $meetingId8, 'user_id' => $facultyId, 'attendance_status' => 'attended', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        DB::table('meeting_notes')->insert([
+            [
+                'meeting_id' => $meetingId1,
+                'minutes' => "1. Architecture review of RLabZ ERP Student Portal with supervisor.\n2. Student Nova demoed work logs, time tracking, and chat communication features.\n3. Student Orbit presented Git branch synchronization and task tracking.\n4. Reviewed student weekly reports and code quality guidelines.",
+                'important_decisions' => "1. Approved implementation of modular monolith architecture.\n2. Work log submissions to be closed every Friday at 5:00 PM.\n3. Proceed with Sprint 3 review and evaluation milestones.\n4. Supervisor approved current sprint progress.",
+                'uploaded_by' => $facultyId,
+                'uploaded_on' => '2026-08-11 15:30:00'
+            ],
+            [
+                'meeting_id' => $meetingId2,
+                'minutes' => "1. Inception and ideation meeting for CMS Academic Module.\n2. Evaluated relational schema, student-course mappings, and grade distribution models.\n3. Defined requirements for faculty review workspaces and exportable grade reports.",
+                'important_decisions' => "1. Approved MySQL database schema with foreign key constraints.\n2. Standardized REST API endpoints for enrollment and grading.\n3. Sign-off granted by faculty supervisor for project implementation.",
+                'uploaded_by' => $facultyId,
+                'uploaded_on' => '2026-08-05 12:00:00'
+            ],
+            [
+                'meeting_id' => $meetingId4,
+                'minutes' => "1. Code review conducted for Authentication, Navigation, and Work Log models.\n2. Assessed modular directory layout and security compliance.\n3. Verified student attendance and team deliverables.",
+                'important_decisions' => "1. Code quality rating approved at 9.5/10.\n2. Approved transition to Sprint 3 Core Integration module.\n3. Supervisor signed off on mid-term review.",
+                'uploaded_by' => $facultyId,
+                'uploaded_on' => '2026-09-15 12:45:00'
+            ],
+            [
+                'meeting_id' => $meetingId5,
+                'minutes' => "1. Evaluation of Sprint 2: Student Dashboard, Navigation Sidebar, and Work Logs table.\n2. Code inspection completed with 98% test coverage.\n3. Student Nova presented architecture blueprints.",
+                'important_decisions' => "1. Formally signed off Sprint 2 milestone as 100% complete.\n2. Authorized kickoff for Sprint 3 Core Integration.\n3. Scheduled next sprint review for October 18.",
+                'uploaded_by' => $facultyId,
+                'uploaded_on' => '2026-10-08 12:30:00'
+            ]
         ]);
 
         // 13. Seed Chats

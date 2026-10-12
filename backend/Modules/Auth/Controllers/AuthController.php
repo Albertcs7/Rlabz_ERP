@@ -19,7 +19,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:150',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:director,coordinator,finance,faculty,student',
+            'role' => 'required|in:director,coordinator,finance,faculty,student,developer',
             'phone' => 'nullable|string|max:20',
         ]);
         $validated['password'] = Hash::make($validated['password']);
@@ -111,7 +111,8 @@ class AuthController extends Controller
         $role = $user->role ?? 'student';
         
         $defaultRoutes = [
-            'director' => '/dashboard',
+            'director' => '/director',
+            'developer' => '/developer',
             'coordinator' => '/coordinator',
             'finance' => '/finance',
             'faculty' => '/faculty',
@@ -119,7 +120,8 @@ class AuthController extends Controller
         ];
         
         $modules = [
-            'director' => ['dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
+            'director' => ['director', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
+            'developer' => ['developer', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
             'coordinator' => ['coordinator', 'project', 'student', 'communication', 'github', 'certificates'],
             'finance' => ['finance', 'project'],
             'faculty' => ['faculty', 'project', 'communication', 'github'],

@@ -15,7 +15,11 @@ class ProjectController extends Controller
         $user = $request->input('auth_user');
         $role = $user['role'] ?? '';
 
-        if (in_array($permission, ['project.create', 'project.close']) && in_array($role, ['director', 'coordinator'])) {
+        if ($role === 'director' && in_array($permission, ['project.create', 'project.close'])) {
+            abort(403, 'Forbidden: Director has read-only access to projects');
+        }
+
+        if (in_array($permission, ['project.create', 'project.close']) && in_array($role, ['developer', 'coordinator'])) {
             return;
         }
 
@@ -39,7 +43,7 @@ class ProjectController extends Controller
         
         $query = Project::query();
 
-        if ($role === 'director' || $role === 'coordinator' || in_array('project.view_global', $permissions)) {
+        if ($role === 'director' || $role === 'coordinator' || $role === 'developer' || in_array('project.view_global', $permissions)) {
             // Can see all projects
         } elseif ($role === 'faculty' || $role === 'student' || in_array('project.view_assigned', $permissions)) {
             $userId = $this->getUserId($request);
@@ -71,7 +75,7 @@ class ProjectController extends Controller
         }
 
         $role = $user['role'] ?? '';
-        if ($role !== 'director' && $role !== 'coordinator' && !in_array('project.view_global', $permissions)) {
+        if ($role !== 'director' && $role !== 'coordinator' && $role !== 'developer' && !in_array('project.view_global', $permissions)) {
             if (!in_array('project.view_assigned', $permissions) && $role !== 'faculty' && $role !== 'student') {
                 return response()->json(['error' => 'Forbidden'], 403);
             }
@@ -169,7 +173,7 @@ class ProjectController extends Controller
         $permissions = $user['permissions'] ?? [];
 
         // Allow faculty, coordinator, and director
-        if (!in_array($role, ['faculty', 'coordinator', 'director']) && !in_array('view-github', $permissions)) {
+        if (!in_array($role, ['faculty', 'coordinator', 'director', 'developer']) && !in_array('view-github', $permissions)) {
             return response()->json(['error' => 'Forbidden: Only faculty or coordinators can verify repository.'], 403);
         }
 

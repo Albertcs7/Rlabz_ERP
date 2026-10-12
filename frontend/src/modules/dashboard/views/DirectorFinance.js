@@ -1,4 +1,5 @@
 import { DirectorService } from '../services/DirectorService.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 
 function formatMoney(amount) {
   if (amount === undefined || amount === null || isNaN(Number(amount))) return '0';
@@ -8,6 +9,8 @@ function formatMoney(amount) {
 export function DirectorFinance(route, router) {
   const container = document.createElement('div');
   container.className = 'director-dashboard';
+  const authStore = useAuthStore();
+  const roleName = authStore.role === 'developer' ? 'Developer' : 'Director';
 
   function render(fin = DirectorService.getFinanceSummary(), projects = DirectorService.getProjects()) {
     const totalBudget = fin.totalBudget || 0;
@@ -21,7 +24,7 @@ export function DirectorFinance(route, router) {
       <div class="director-header">
         <div>
           <h1>Finance & Payroll Oversight (Read-Only)</h1>
-          <p>Director executive control & read-access oversight for financial allocations and project billings.</p>
+          <p>${roleName} executive control & read-access oversight for financial allocations and project billings.</p>
         </div>
         <div class="director-badge-role">
           Read-Only Access

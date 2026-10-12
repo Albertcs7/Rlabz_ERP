@@ -69,7 +69,9 @@ class VanillaRouter {
 
     // 2. Root redirect
     if (path === '/') {
-      const r = this.routes.find(r => r.path === '/dashboard') || this.routes[0];
+      const authStore = useAuthStore();
+      const defaultRoute = authStore?.user?.defaultRoute || (authStore?.role === 'developer' ? '/developer' : (authStore?.role === 'director' ? '/director' : '/dashboard'));
+      const r = this.routes.find(r => r.path === defaultRoute) || this.routes.find(r => r.path === '/developer') || this.routes.find(r => r.path === '/dashboard') || this.routes[0];
       return r ? { route: r, params: {} } : null;
     }
 
@@ -97,7 +99,7 @@ class VanillaRouter {
 
   async handleRoute(rawPath) {
     const authStore = useAuthStore();
-    const defaultRoute = authStore.user?.defaultRoute || '/dashboard';
+    const defaultRoute = authStore.user?.defaultRoute || (authStore.role === 'developer' ? '/developer' : (authStore.role === 'director' ? '/director' : '/dashboard'));
 
     const [pathname, queryString] = (rawPath || '').split('?');
 
@@ -194,12 +196,28 @@ class VanillaRouter {
       }
       // Update sidebar and active state to reflect the new route
       const currentPath = window.location.pathname;
+      const isStudentPortal = currentPath.startsWith('/student');
+      const layoutEl = this.container.querySelector('.dashboard-layout');
+      if (layoutEl) {
+        layoutEl.classList.toggle('student-layout', isStudentPortal);
+      }
+      if (outlet) {
+        outlet.classList.toggle('student-content-outlet', isStudentPortal);
+      }
       const { updateSidebar } = await import('../layouts/DashboardLayout.js');
       updateSidebar(currentPath);
       // Update topbar title
       const topbarTitle = this.container.querySelector('.topbar-title');
-      if (topbarTitle && route.name) {
-        topbarTitle.textContent = route.name.toUpperCase().replace(/-/g, ' ');
+      if (topbarTitle) {
+        const authStore = useAuthStore();
+        if (authStore?.role === 'developer' || currentPath.startsWith('/developer') || (route.name && route.name.includes('developer'))) {
+          topbarTitle.textContent = 'DEVELOPER DASHBOARD';
+        } else if (authStore?.role === 'director' || currentPath.startsWith('/director') || (route.name && route.name.includes('director'))) {
+          topbarTitle.textContent = 'DIRECTOR DASHBOARD';
+        } else {
+          let titleText = route.title || (route.name === 'faculty-sprints' ? 'PROJECT MODULES & TASKS' : (route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'RLABZ ERP'));
+          topbarTitle.textContent = titleText;
+        }
       }
     } else {
       this.container.innerHTML = '';
@@ -211,6 +229,21 @@ class VanillaRouter {
       } else if (contentElement) {
         this.container.appendChild(contentElement);
         this.currentLayoutName = 'none';
+      }
+
+      // Ensure topbar title is updated for new layout mounting
+      const topbarTitle = this.container.querySelector('.topbar-title');
+      if (topbarTitle) {
+        const authStore = useAuthStore();
+        const currentPath = window.location.pathname;
+        if (authStore?.role === 'developer' || currentPath.startsWith('/developer') || (route.name && route.name.includes('developer'))) {
+          topbarTitle.textContent = 'DEVELOPER DASHBOARD';
+        } else if (authStore?.role === 'director' || currentPath.startsWith('/director') || (route.name && route.name.includes('director'))) {
+          topbarTitle.textContent = 'DIRECTOR DASHBOARD';
+        } else {
+          let titleText = route.title || (route.name === 'faculty-sprints' ? 'PROJECT MODULES & TASKS' : (route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'RLABZ ERP'));
+          topbarTitle.textContent = titleText;
+        }
       }
     }
   }
@@ -256,7 +289,12 @@ export async function setupRouter() {
                 if (indexChild) {
                   router.addRoute({
                     path: r.path,
-                    name: r.name || (module.name + '-index'),
+                    name: indexChild.name || r.name || (module.name + '-dashboard'),
+                    title: (module.name === 'developer' || r.path === '/developer' || indexChild.name?.includes('developer'))
+                      ? 'DEVELOPER DASHBOARD'
+                      : ((module.name === 'director' || r.path === '/director' || indexChild.name?.includes('director'))
+                        ? 'DIRECTOR DASHBOARD'
+                        : (indexChild.title || r.title || null)),
                     component: indexChild.component,
                     layout: r.component,  // parent component is the layout (DashboardLayout)
                     meta: { ...baseMeta, ...indexChild.meta }
@@ -269,6 +307,11 @@ export async function setupRouter() {
                   router.addRoute({
                     path: childPath,
                     name: child.name,
+                    title: (module.name === 'developer' || r.path === '/developer' || child.name?.includes('developer'))
+                      ? 'DEVELOPER DASHBOARD'
+                      : ((module.name === 'director' || r.path === '/director' || child.name?.includes('director'))
+                        ? 'DIRECTOR DASHBOARD'
+                        : (child.title || r.title || null)),
                     component: child.component,
                     layout: r.component,  // DashboardLayout is the parent component
                     meta: { ...baseMeta, ...child.meta }
@@ -278,6 +321,11 @@ export async function setupRouter() {
                 router.addRoute({
                   path: r.path,
                   name: r.name,
+                  title: (module.name === 'developer' || r.path === '/developer' || r.name?.includes('developer'))
+                    ? 'DEVELOPER DASHBOARD'
+                    : ((module.name === 'director' || r.path === '/director' || r.name?.includes('director'))
+                      ? 'DIRECTOR DASHBOARD'
+                      : (r.title || null)),
                   component: r.component,
                   layout: layoutComponent || r.layout,
                   meta: baseMeta

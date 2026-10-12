@@ -13,12 +13,24 @@ export function DirectorStudents(route, router) {
     'all': 'All'
   };
   let currentTrackFilter = trackMap[trackParam.toLowerCase()] || 'All';
+  let searchQuery = (route && route.query && route.query.search) || urlParams.get('search') || '';
   let activeStudentList = DirectorService.getStudents('All') || [];
 
   function render() {
-    const students = currentTrackFilter === 'All' 
-      ? activeStudentList 
-      : activeStudentList.filter(s => s.track.toLowerCase() === currentTrackFilter.toLowerCase());
+    const q = searchQuery.trim().toLowerCase();
+    const students = activeStudentList.filter(s => {
+      const matchesTrack = currentTrackFilter === 'All' || s.track.toLowerCase() === currentTrackFilter.toLowerCase();
+      if (!matchesTrack) return false;
+      if (!q) return true;
+      const name = (s.name || '').toLowerCase();
+      const id = (s.id || '').toLowerCase();
+      const track = (s.track || '').toLowerCase();
+      const email = (s.email || '').toLowerCase();
+      const projects = Array.isArray(s.projects) 
+        ? s.projects.map(p => typeof p === 'string' ? p : (p.title || '')).join(' ').toLowerCase() 
+        : (typeof s.project === 'string' ? s.project.toLowerCase() : '');
+      return name.includes(q) || id.includes(q) || track.includes(q) || email.includes(q) || projects.includes(q);
+    });
 
     const counts = {
       all: activeStudentList.length,
@@ -41,7 +53,7 @@ export function DirectorStudents(route, router) {
           <div class="student-projects-cell">
             ${projects.map(p => {
               const pTitle = typeof p === 'string' ? p : p.title;
-              return `<span class="student-project-chip" title="${pTitle}">${pTitle}</span>`;
+              return `<span class="student-project-chip student-project-chip-clickable" data-project-title="${pTitle}" style="cursor:pointer;" title="Click to view ${pTitle} details in Project Oversight">${pTitle}</span>`;
             }).join('')}
           </div>
         `;
@@ -56,7 +68,7 @@ export function DirectorStudents(route, router) {
         <div class="student-projects-cell">
           ${firstTwo.map(p => {
             const pTitle = typeof p === 'string' ? p : p.title;
-            return `<span class="student-project-chip" title="${pTitle}">${pTitle}</span>`;
+            return `<span class="student-project-chip student-project-chip-clickable" data-project-title="${pTitle}" style="cursor:pointer;" title="Click to view ${pTitle} details in Project Oversight">${pTitle}</span>`;
           }).join('')}
           <button class="student-project-more-btn" data-student-id="${s.id}" title="Click to view all ${projects.length} projects and tasks assigned to ${s.name}">
             +${remainingCount} more
@@ -122,12 +134,25 @@ export function DirectorStudents(route, router) {
 
       <!-- Student Table -->
       <div class="director-panel">
-        <div class="director-panel-header">
+        <div class="director-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
           <div>
             <h2>Student Roster (${students.length} Showing)</h2>
-            <span style="font-size:0.82rem; color:#6b7280;">Click any row to open the complete student profile, assigned projects, and task execution progress.</span>
+            <span style="font-size:0.82rem; color:#6b7280;">Click any row to open student profile, or click an assigned project to view its details.</span>
           </div>
-          <span style="font-size:0.85rem; color:#6b7280;">Live records from MySQL database</span>
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <div style="position:relative; width:280px;">
+              <input 
+                type="text" 
+                id="input-search-director-students" 
+                class="director-search-input" 
+                placeholder="Search students or projects..." 
+                value="${searchQuery}" 
+              />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:11px; top:11px; color:#9ca3af; pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              ${searchQuery ? `<button id="btn-clear-search-students" style="position:absolute; right:8px; top:9px; background:none; border:none; cursor:pointer; color:#9ca3af; font-size:13px;" title="Clear search">✕</button>` : ''}
+            </div>
+            <span style="font-size:0.85rem; color:#6b7280; white-space:nowrap;">Live MySQL Records</span>
+          </div>
         </div>
 
         <div class="director-table-responsive">
@@ -145,7 +170,9 @@ export function DirectorStudents(route, router) {
             </thead>
             <tbody>
               ${students.length === 0 ? `
-                <tr><td colspan="7" style="text-align:center; padding:2rem; color:#9ca3af;">No students found in this track.</td></tr>
+                <tr><td colspan="7" style="text-align:center; padding:2.5rem; color:#9ca3af;">
+                  ${searchQuery ? `No students found matching "${searchQuery}". Clear search to view all.` : 'No students found in this track.'}
+                </td></tr>
               ` : students.map(s => {
                 const initials = s.name.split(' ').map(n => n[0]).join('').slice(0, 2);
                 const trackLower = (s.track || 'orbit').toLowerCase();
@@ -197,10 +224,23 @@ export function DirectorStudents(route, router) {
     // Attach Click Event Listeners to rows and more buttons
     container.querySelectorAll('.student-row-clickable').forEach(row => {
       row.addEventListener('click', (e) => {
-        if (e.target.closest('a')) return;
+        if (e.target.closest('a') || e.target.closest('.student-project-chip-clickable') || e.target.closest('.student-project-more-btn')) return;
         const studentId = row.getAttribute('data-id');
         if (studentId) {
           router ? router.push(`/dashboard/students/${studentId}`) : (window.location.href = `/dashboard/students/${studentId}`);
+        }
+      });
+    });
+
+    container.querySelectorAll('.student-project-chip-clickable').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const pTitle = chip.getAttribute('data-project-title');
+        if (pTitle) {
+          const targetUrl = `/dashboard/projects?tab=all&search=${encodeURIComponent(pTitle)}`;
+          if (router) router.push(targetUrl);
+          else window.location.href = targetUrl;
         }
       });
     });
@@ -213,6 +253,32 @@ export function DirectorStudents(route, router) {
           router ? router.push(`/dashboard/students/${studentId}`) : (window.location.href = `/dashboard/students/${studentId}`);
         }
       });
+    });
+
+    // Search input events
+    const searchInput = container.querySelector('#input-search-director-students');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        const url = new URL(window.location);
+        if (searchQuery) url.searchParams.set('search', searchQuery);
+        else url.searchParams.delete('search');
+        window.history.replaceState({}, '', url.toString());
+        render();
+        const reInput = container.querySelector('#input-search-director-students');
+        if (reInput) {
+          reInput.focus();
+          reInput.setSelectionRange(reInput.value.length, reInput.value.length);
+        }
+      });
+    }
+
+    container.querySelector('#btn-clear-search-students')?.addEventListener('click', () => {
+      searchQuery = '';
+      const url = new URL(window.location);
+      url.searchParams.delete('search');
+      window.history.replaceState({}, '', url.toString());
+      render();
     });
 
     // Attach Filter Listeners

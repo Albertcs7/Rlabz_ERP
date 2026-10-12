@@ -3,6 +3,208 @@
    (Sidebar is preserved untouched with original colors)
    ========================================================================== */
 
+/* Main Content Theme - Matching Navbar Colour (#FFFFFF) Scoped to Student Portal */
+.dashboard-layout.student-layout .content-outlet,
+.student-layout .content-outlet,
+.student-content-outlet,
+.content-outlet:has(.student-portal-container) {
+  background-color: #ffffff !important;
+}
+
+/* Hide Notification Bell in Student Portal */
+.dashboard-layout.student-layout .notification-container,
+.dashboard-layout.student-layout #noti-bell-btn,
+.dashboard-layout.student-layout .noti-bell-btn,
+.student-layout .notification-container,
+.student-layout #noti-bell-btn,
+.student-layout .noti-bell-btn,
+.dashboard-layout:has(.student-portal-container) .notification-container,
+.dashboard-layout:has(.student-portal-container) #noti-bell-btn,
+.dashboard-layout:has(.student-portal-container) .noti-bell-btn,
+body:has(.student-portal-container) .notification-container,
+body:has(.student-portal-container) #noti-bell-btn,
+body:has(.student-portal-container) .noti-bell-btn {
+  display: none !important;
+}
+
+/* ==========================================================================
+   STUDENT PORTAL MAIN CONTENT TEAL THEME UNIFICATION
+   (Matches navbar brand teal palette: #009688, #00897B, #004D40, #E0F2F1, #B2DFDB)
+   Replaces all out-of-place orange, yellow, and blue colors across main content.
+   ========================================================================== */
+
+/* 1. All Student Portal KPI Card Stripes */
+.student-portal-container [class*="-kpi-card"].kpi-blue::before,
+.student-portal-container [class*="-kpi-card"].kpi-indigo::before,
+.student-portal-container [class*="-kpi-card"].kpi-amber::before,
+.student-portal-container [class*="-kpi-card"].kpi-purple::before,
+.student-portal-container [class*="-kpi-card"].kpi-coral::before,
+.student-portal-container [class*="-kpi-card"].kpi-emerald::before {
+  background: linear-gradient(90deg, #009688, #00796B) !important;
+}
+
+.student-portal-container [class*="-kpi-card"].kpi-blue,
+.student-portal-container [class*="-kpi-card"].kpi-indigo,
+.student-portal-container [class*="-kpi-card"].kpi-amber,
+.student-portal-container [class*="-kpi-card"].kpi-purple,
+.student-portal-container [class*="-kpi-card"].kpi-emerald {
+  border-left-color: #00897B !important;
+}
+
+/* 2. All Student Portal KPI Card Icons */
+.student-portal-container [class*="-kpi-icon"].blue,
+.student-portal-container [class*="-kpi-icon"].indigo,
+.student-portal-container [class*="-kpi-icon"].amber,
+.student-portal-container [class*="-kpi-icon"].purple,
+.student-portal-container [class*="-kpi-icon"].emerald,
+.student-portal-container [class*="-kpi-icon"].kpi-blue,
+.student-portal-container [class*="-kpi-icon"].kpi-indigo,
+.student-portal-container [class*="-kpi-icon"].kpi-amber,
+.student-portal-container [class*="-kpi-icon"].kpi-purple,
+.student-portal-container [class*="-kpi-icon"].kpi-emerald {
+  background: #E0F2F1 !important;
+  color: #00796B !important;
+  border: 1px solid #B2DFDB !important;
+}
+
+/* 3. Card Hover Elevation */
+.student-portal-container [class*="-kpi-card"]:hover {
+  border-color: #80CBC4 !important;
+  box-shadow: 0 12px 28px -6px rgba(0, 150, 136, 0.18) !important;
+}
+
+/* 4. Badges & Chips */
+.student-portal-container .student-badge-warning,
+.student-portal-container .student-badge-info,
+.student-portal-container .student-badge-success {
+  background: #E0F2F1 !important;
+  color: #00695C !important;
+  border: 1px solid #B2DFDB !important;
+}
+
+.student-portal-container .student-history-role-chip,
+.student-portal-container .student-history-role-chip.is-lead {
+  background: #E0F2F1 !important;
+  color: #00695C !important;
+  border: 1px solid #B2DFDB !important;
+}
+
+/* 5. Progress Bars */
+.student-portal-container .student-proj-progress-bar-fill,
+.student-portal-container [class*="-progress-bar-fill"] {
+  background: linear-gradient(90deg, #26A69A 0%, #00897B 100%) !important;
+}
+
+.student-portal-container .student-proj-progress-pct,
+.student-portal-container [class*="-progress-pct"] {
+  color: #00796B !important;
+}
+
+/* 6. Dateboxes */
+.student-portal-container [class*="-datebox"] {
+  background: #E0F2F1 !important;
+  border: 1px solid #B2DFDB !important;
+}
+
+.student-portal-container [class*="-day"] {
+  color: #00796B !important;
+}
+
+.student-portal-container [class*="-month"] {
+  color: #00695C !important;
+}
+
+/* 7. Action & View Buttons */
+.student-portal-container .student-dash-meeting-btn,
+.student-portal-container .student-proj-view-btn,
+.student-portal-container .student-comm-file-download-btn,
+.student-portal-container .student-cert-btn-download,
+.student-portal-container .student-comm-send-btn,
+.student-portal-container .student-btn-primary {
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(0, 150, 136, 0.25) !important;
+}
+
+.student-portal-container .student-dash-meeting-btn:hover,
+.student-portal-container .student-proj-view-btn:hover,
+.student-portal-container .student-comm-file-download-btn:hover,
+.student-portal-container .student-cert-btn-download:hover,
+.student-portal-container .student-comm-send-btn:hover,
+.student-portal-container .student-btn-primary:hover {
+  background: linear-gradient(135deg, #00695C 0%, #004D40 100%) !important;
+  box-shadow: 0 4px 10px rgba(0, 150, 136, 0.35) !important;
+}
+
+/* 8. Active Switchers, Tabs, & Filter Pills */
+.student-portal-container .student-proj-switcher-btn.active,
+.student-portal-container .student-tab-btn.active,
+.student-portal-container .student-rep-tab-btn.active,
+.student-portal-container .student-proj-filter-pill.active {
+  color: #00796B !important;
+  border-color: #00796B !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.15) !important;
+}
+
+.student-portal-container .student-rep-tab-btn.active {
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%) !important;
+  color: #ffffff !important;
+}
+
+/* 8b. Brand Icons */
+.student-portal-container .student-cert-brand-icon,
+.student-portal-container .student-rep-brand-icon,
+.student-portal-container .student-comm-brand-icon,
+.student-portal-container .student-proj-brand-icon {
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%) !important;
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25) !important;
+  color: #ffffff !important;
+}
+
+/* 8c. Chat Elements */
+.student-portal-container .student-comm-msg-wrap.sent .student-comm-bubble {
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.25) !important;
+}
+
+.student-portal-container .student-comm-avatar {
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%) !important;
+  color: #ffffff !important;
+}
+
+.student-portal-container .student-comm-item.active {
+  border-left: 4px solid #00897B !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 150, 136, 0.12) !important;
+}
+
+/* 9. Member Chips */
+.student-portal-container .student-proj-member-chip.is-me,
+.student-portal-container .member-chip.is-me {
+  background: #E0F2F1 !important;
+  border-color: #B2DFDB !important;
+  color: #00695C !important;
+}
+
+.student-portal-container .student-proj-member-avatar,
+.student-portal-container .member-avatar {
+  background: #00897B !important;
+  color: #ffffff !important;
+}
+
+.student-portal-container .student-proj-member-avatar.is-lead,
+.student-portal-container .member-avatar.is-lead {
+  background: #004D40 !important;
+}
+
+/* 10. Links and Active Titles */
+.student-portal-container a.student-link,
+.student-portal-container .student-proj-card:hover .student-proj-card-title {
+  color: #00796B !important;
+}
+
 /* Main Container */
 .student-portal-container {
   display: flex;
@@ -4229,13 +4431,13 @@
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
 }
 
 .student-git-title {
@@ -4267,8 +4469,8 @@
 }
 
 .student-git-project-selector:focus-within {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+  border-color: #00897B;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-git-select-label {
@@ -4337,7 +4539,7 @@
 }
 
 .student-git-kpi-card.kpi-blue::before {
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  background: linear-gradient(90deg, #00897B, #26A69A);
 }
 
 .student-git-kpi-card.kpi-emerald::before {
@@ -4345,7 +4547,7 @@
 }
 
 .student-git-kpi-card.kpi-indigo::before {
-  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  background: linear-gradient(90deg, #00796B, #26A69A);
 }
 
 .student-git-kpi-card.kpi-amber::before {
@@ -4369,8 +4571,9 @@
 }
 
 .student-git-kpi-icon.kpi-blue {
-  background: rgba(2, 132, 199, 0.1);
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-git-kpi-icon.kpi-emerald {
@@ -4379,8 +4582,9 @@
 }
 
 .student-git-kpi-icon.kpi-indigo {
-  background: rgba(79, 70, 229, 0.1);
-  color: #4f46e5;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-git-kpi-icon.kpi-amber {
@@ -4428,7 +4632,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #0f172a 0%, #3b82f6 50%, #059669 100%);
+  background: linear-gradient(90deg, #004D40 0%, #00897B 50%, #26A69A 100%);
 }
 
 .student-git-main-top {
@@ -4576,7 +4780,7 @@
 }
 
 .student-git-url-link {
-  color: #38bdf8;
+  color: #00796B;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.95rem;
   font-weight: 600;
@@ -4586,7 +4790,7 @@
 }
 
 .student-git-url-link:hover {
-  color: #7dd3fc;
+  color: #004D40;
   text-decoration: underline;
 }
 
@@ -4643,14 +4847,14 @@
 }
 
 .student-git-btn-action.btn-edit {
-  background: #2563eb;
+  background: linear-gradient(135deg, #00897B, #00695C);
   color: #ffffff;
-  border-color: #1d4ed8;
+  border-color: #00695C;
 }
 
 .student-git-btn-action.btn-edit:hover {
-  background: #1d4ed8;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #00796B, #004D40);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.3);
   transform: translateY(-1px);
 }
 
@@ -4802,10 +5006,10 @@
   align-items: center;
   gap: 4px;
   padding: 3px 9px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
   border-radius: 6px;
-  color: #1d4ed8;
+  color: #00695C;
   font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
@@ -4813,9 +5017,9 @@
 }
 
 .student-git-pr-chip:hover {
-  background: #dbeafe;
-  color: #1e40af;
-  border-color: #93c5fd;
+  background: #B2DFDB;
+  color: #004D40;
+  border-color: #80CBC4;
 }
 
 /* Action Icons */
@@ -4926,13 +5130,13 @@
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
 }
 
 .student-meet-title {
@@ -4996,7 +5200,7 @@
 }
 
 .student-meet-kpi-card.kpi-blue::before {
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  background: linear-gradient(90deg, #00897B, #26A69A);
 }
 
 .student-meet-kpi-card.kpi-emerald::before {
@@ -5004,7 +5208,7 @@
 }
 
 .student-meet-kpi-card.kpi-indigo::before {
-  background: linear-gradient(90deg, #6366f1, #a5b4fc);
+  background: linear-gradient(90deg, #00796B, #26A69A);
 }
 
 .student-meet-kpi-card.kpi-amber::before {
@@ -5028,8 +5232,9 @@
 }
 
 .student-meet-kpi-icon.blue {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-meet-kpi-icon.emerald {
@@ -5038,8 +5243,9 @@
 }
 
 .student-meet-kpi-icon.indigo {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-meet-kpi-icon.amber {
@@ -5111,9 +5317,9 @@
 }
 
 .student-meet-search-input:focus {
-  border-color: #0284c7;
+  border-color: #00897B;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-meet-pills-group {
@@ -5148,8 +5354,9 @@
 
 .student-meet-pill-btn.active {
   background: #ffffff;
-  color: #0284c7;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  color: #00796B;
+  border: 1px solid #00796B;
+  box-shadow: 0 1px 3px rgba(0, 150, 136, 0.15);
 }
 
 .student-meet-pill-badge {
@@ -5162,8 +5369,8 @@
 }
 
 .student-meet-pill-btn.active .student-meet-pill-badge {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
 }
 
 .student-meet-select {
@@ -5182,8 +5389,8 @@
 }
 
 .student-meet-select:focus {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+  border-color: #00897B;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-meet-btn-reset {
@@ -5279,8 +5486,8 @@
 
 .student-cal-btn-nav:hover {
   background: #ffffff;
-  color: #0284c7;
-  border-color: #93c5fd;
+  color: #00796B;
+  border-color: #80CBC4;
 }
 
 .student-cal-btn-today {
@@ -5299,8 +5506,8 @@
 
 .student-cal-btn-today:hover {
   background: #ffffff;
-  color: #0284c7;
-  border-color: #93c5fd;
+  color: #00796B;
+  border-color: #80CBC4;
 }
 
 /* Calendar Grid */
@@ -5348,17 +5555,17 @@
 
 .student-cal-day-cell.today {
   font-weight: 800;
-  color: #0284c7;
-  background: #f0f9ff;
-  border-color: #bae6fd;
+  color: #00796B;
+  background: #E0F2F1;
+  border-color: #B2DFDB;
 }
 
 .student-cal-day-cell.active-selected {
-  background: #0284c7 !important;
+  background: #00796B !important;
   color: #ffffff !important;
   font-weight: 800;
-  border-color: #0369a1 !important;
-  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+  border-color: #004D40 !important;
+  box-shadow: 0 4px 10px rgba(0, 150, 136, 0.35);
   transform: scale(1.04);
 }
 
@@ -5377,7 +5584,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #0284c7;
+  background: #00796B;
 }
 
 .student-cal-dot.completed {
@@ -5401,38 +5608,14 @@
   gap: 5px;
 }
 
-/* Sessions List Card */
-.student-meet-list-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 18px 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.02);
-}
-
-.student-meet-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.student-meet-list-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
 .student-meet-active-tag {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #e0f2fe;
-  border: 1px solid #bae6fd;
-  color: #0369a1;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  color: #00695C;
   padding: 6px 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -5485,7 +5668,7 @@
 }
 
 .student-meet-item.upcoming::before {
-  background: #0284c7;
+  background: #00796B;
 }
 
 .student-meet-item.completed::before {
@@ -5494,14 +5677,14 @@
 
 .student-meet-item:hover {
   background: var(--bg-canvas-light);
-  border-color: #cbd5e1;
+  border-color: #80CBC4;
   transform: translateX(2px);
 }
 
 .student-meet-item.active-selected {
   background: #f8fafc;
-  border-color: #0284c7;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+  border-color: #00796B;
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.15);
 }
 
 .student-meet-item-body {
@@ -5515,7 +5698,7 @@
 .student-meet-item-proj {
   font-size: 0.72rem;
   font-weight: 800;
-  color: #0284c7;
+  color: #00796B;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -5560,9 +5743,9 @@
 }
 
 .student-meet-status-badge.scheduled {
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background: #E0F2F1;
+  color: #00695C;
+  border: 1px solid #B2DFDB;
 }
 
 .student-meet-status-badge.completed {
@@ -5575,7 +5758,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #0284c7;
+  background: #00796B;
   animation: studentMeetPulse 1.8s infinite;
 }
 
@@ -5658,9 +5841,9 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
-  color: #0284c7;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  color: #00796B;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5768,7 +5951,7 @@
   padding: 9px 18px;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 800;
@@ -5776,7 +5959,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.35);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   font-family: inherit;
@@ -5784,7 +5967,8 @@
 
 .student-meet-btn-join:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.5);
+  background: linear-gradient(135deg, #00796B 0%, #004D40 100%);
+  box-shadow: 0 6px 16px rgba(0, 150, 136, 0.45);
   color: #ffffff;
 }
 
@@ -5803,9 +5987,9 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
-  color: #0284c7;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  color: #00796B;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5882,8 +6066,8 @@
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  background: #f0f9ff;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6133,33 +6317,34 @@
 }
 
 .student-dash-kpi-card.kpi-blue::before {
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  background: linear-gradient(90deg, #009688, #00796B);
 }
 
 .student-dash-kpi-card.kpi-emerald::before {
-  background: linear-gradient(90deg, #059669, #34d399);
+  background: linear-gradient(90deg, #26A69A, #00897B);
 }
 
 .student-dash-kpi-card.kpi-indigo::before {
-  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  background: linear-gradient(90deg, #00897B, #004D40);
 }
 
-.student-dash-kpi-card.kpi-coral::before {
-  background: linear-gradient(90deg, #dc2626, #f87171);
+.student-dash-kpi-card.kpi-coral::before,
+.student-dash-kpi-card.kpi-slate::before {
+  background: linear-gradient(90deg, #00796B, #009688);
 }
 
 .student-dash-kpi-card.kpi-purple::before {
-  background: linear-gradient(90deg, #9333ea, #c084fc);
+  background: linear-gradient(90deg, #4DB6AC, #00796B);
 }
 
 .student-dash-kpi-card.kpi-amber::before {
-  background: linear-gradient(90deg, #d97706, #fbbf24);
+  background: linear-gradient(90deg, #009688, #80CBC4);
 }
 
 .student-dash-kpi-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.09);
-  border-color: #cbd5e1;
+  box-shadow: 0 12px 28px -6px rgba(0, 150, 136, 0.18);
+  border-color: #80CBC4;
 }
 
 .student-dash-kpi-top {
@@ -6177,6 +6362,9 @@
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.2s ease;
+  border: 1px solid #B2DFDB;
+  background: #E0F2F1;
+  color: #00796B;
 }
 
 .student-dash-kpi-card:hover .student-dash-kpi-icon {
@@ -6184,33 +6372,40 @@
 }
 
 .student-dash-kpi-icon.blue {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-kpi-icon.emerald {
-  background: #dcfce7;
-  color: #059669;
+  background: #E0F2F1;
+  color: #00897B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-kpi-icon.indigo {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #E0F2F1;
+  color: #00695C;
+  border: 1px solid #B2DFDB;
 }
 
-.student-dash-kpi-icon.coral {
-  background: #fee2e2;
-  color: #dc2626;
+.student-dash-kpi-icon.coral,
+.student-dash-kpi-icon.slate {
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-kpi-icon.purple {
-  background: #f3e8ff;
-  color: #9333ea;
+  background: #E0F2F1;
+  color: #004D40;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-kpi-icon.amber {
-  background: #fef3c7;
-  color: #d97706;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-kpi-arrow {
@@ -6259,14 +6454,77 @@
 .student-dash-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
-  gap: 22px;
-  align-items: start;
+  gap: 20px;
+  align-items: stretch;
 }
 
 @media (max-width: 1080px) {
   .student-dash-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.student-dash-col-left {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.student-dash-col-left #card-assigned-tasks {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.student-dash-col-left #card-assigned-tasks .student-dash-table-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.student-dash-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.student-dash-card.student-dash-card-compact {
+  padding: 16px 20px;
+  gap: 12px;
+}
+
+.student-dash-card.student-dash-card-compact .student-dash-card-header {
+  padding-bottom: 10px;
+}
+
+.student-dash-card.student-dash-card-compact .student-dash-meeting-item {
+  padding: 9px 12px;
+  gap: 10px;
+}
+
+.student-dash-card.student-dash-card-compact .student-dash-meeting-datebox {
+  width: 40px;
+  height: 42px;
+}
+
+.student-dash-card.student-dash-card-compact .student-dash-meeting-day {
+  font-size: 1rem;
+}
+
+.student-dash-card.student-dash-card-compact .student-dash-meetings-list {
+  gap: 8px;
+}
+
+.student-dash-card.student-dash-card-compact .student-dash-notif-list {
+  gap: 8px;
+}
+
+.student-dash-card.student-dash-card-compact .student-action-card {
+  padding: 9px 12px;
+  gap: 4px;
 }
 
 /* Base Card Container */
@@ -6378,21 +6636,21 @@
 }
 
 .student-dash-tag.module {
-  background: #f3e8ff;
-  color: #7e22ce;
-  border: 1px solid #e9d5ff;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-tag.task {
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background: #E0F2F1;
+  color: #00695C;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-tag.project {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: #F0FAF9;
+  color: #004D40;
+  border: 1px solid #B2DFDB;
 }
 
 .student-dash-table-footer {
@@ -6433,8 +6691,8 @@
   width: 44px;
   height: 48px;
   border-radius: 10px;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6445,14 +6703,14 @@
 .student-dash-meeting-day {
   font-size: 1.1rem;
   font-weight: 800;
-  color: #0284c7;
+  color: #00796B;
   line-height: 1;
 }
 
 .student-dash-meeting-month {
   font-size: 0.65rem;
   font-weight: 800;
-  color: #0369a1;
+  color: #00695C;
   text-transform: uppercase;
   margin-top: 1px;
 }
@@ -6483,7 +6741,7 @@
 .student-dash-meeting-btn {
   padding: 6px 12px;
   border-radius: 8px;
-  background: #0284c7;
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   font-size: 0.75rem;
   font-weight: 700;
@@ -6493,12 +6751,14 @@
   gap: 4px;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 150, 136, 0.25);
 }
 
 .student-dash-meeting-btn:hover {
-  background: #0369a1;
+  background: linear-gradient(135deg, #00695C 0%, #004D40 100%);
   color: #ffffff;
   transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 150, 136, 0.35);
 }
 
 /* 5. Notifications List in Dashboard */
@@ -6585,13 +6845,13 @@
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
 }
 
 .student-wl-title {
@@ -6623,8 +6883,8 @@
 }
 
 .student-wl-project-selector:focus-within {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+  border-color: #00897B;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-wl-select-label {
@@ -6693,7 +6953,7 @@
 }
 
 .student-wl-kpi-card.kpi-blue::before {
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  background: linear-gradient(90deg, #00897B, #26A69A);
 }
 
 .student-wl-kpi-card.kpi-emerald::before {
@@ -6701,7 +6961,7 @@
 }
 
 .student-wl-kpi-card.kpi-indigo::before {
-  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  background: linear-gradient(90deg, #00796B, #26A69A);
 }
 
 .student-wl-kpi-card.kpi-amber::before {
@@ -6725,8 +6985,9 @@
 }
 
 .student-wl-kpi-icon.blue {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-wl-kpi-icon.emerald {
@@ -6735,8 +6996,9 @@
 }
 
 .student-wl-kpi-icon.indigo {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-wl-kpi-icon.amber {
@@ -6840,9 +7102,9 @@
 .student-wl-select:focus,
 .student-wl-input:focus,
 .student-wl-textarea:focus {
-  border-color: #0284c7;
+  border-color: #00897B;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-wl-textarea {
@@ -6872,9 +7134,9 @@
 }
 
 .student-wl-chip:hover {
-  background: #e0f2fe;
-  color: #0284c7;
-  border-color: #bae6fd;
+  background: #E0F2F1;
+  color: #00796B;
+  border-color: #B2DFDB;
 }
 
 .student-wl-btn-submit {
@@ -6882,7 +7144,7 @@
   padding: 12px;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   font-size: 0.9rem;
   font-weight: 800;
@@ -6891,14 +7153,15 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: inherit;
 }
 
 .student-wl-btn-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.45);
+  background: linear-gradient(135deg, #00796B 0%, #004D40 100%);
+  box-shadow: 0 6px 18px rgba(0, 150, 136, 0.35);
 }
 
 .student-wl-btn-submit:disabled {
@@ -6979,8 +7242,8 @@
 }
 
 .student-wl-search-input:focus {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.1);
+  border-color: #00897B;
+  box-shadow: 0 0 0 2px rgba(0, 150, 136, 0.12);
 }
 
 .student-wl-select-filter {
@@ -7070,8 +7333,9 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem;
   font-weight: 800;
-  color: #0284c7;
-  background: #e0f2fe;
+  color: #00796B;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
   padding: 2px 6px;
   border-radius: 6px;
   display: inline-block;
@@ -7086,7 +7350,7 @@
 
 .student-wl-hours-val {
   font-weight: 800;
-  color: #0284c7;
+  color: #00796B;
   font-size: 0.95rem;
   white-space: nowrap;
 }
@@ -7157,13 +7421,13 @@
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
 }
 
 .student-cert-title {
@@ -7227,19 +7491,19 @@
 }
 
 .student-cert-kpi-card.kpi-amber::before {
-  background: linear-gradient(90deg, #d97706, #fbbf24);
+  background: linear-gradient(90deg, #00897B, #26A69A);
 }
 
 .student-cert-kpi-card.kpi-emerald::before {
-  background: linear-gradient(90deg, #059669, #34d399);
+  background: linear-gradient(90deg, #009688, #4DB6AC);
 }
 
 .student-cert-kpi-card.kpi-indigo::before {
-  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  background: linear-gradient(90deg, #00796B, #80CBC4);
 }
 
 .student-cert-kpi-card.kpi-blue::before {
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  background: linear-gradient(90deg, #00695C, #26A69A);
 }
 
 .student-cert-kpi-card:hover {
@@ -7259,23 +7523,27 @@
 }
 
 .student-cert-kpi-icon.amber {
-  background: #fef3c7;
-  color: #d97706;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-cert-kpi-icon.emerald {
-  background: #dcfce7;
-  color: #059669;
+  background: #E0F2F1;
+  color: #004D40;
+  border: 1px solid #B2DFDB;
 }
 
 .student-cert-kpi-icon.indigo {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #E0F2F1;
+  color: #00695C;
+  border: 1px solid #B2DFDB;
 }
 
 .student-cert-kpi-icon.blue {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-cert-kpi-info {
@@ -7342,9 +7610,9 @@
 }
 
 .student-cert-search-input:focus {
-  border-color: #d97706;
+  border-color: #00897B;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-cert-select {
@@ -7363,8 +7631,8 @@
 }
 
 .student-cert-select:focus {
-  border-color: #d97706;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+  border-color: #00897B;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-cert-btn-reset {
@@ -7430,13 +7698,13 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #d97706, #fbbf24);
+  background: linear-gradient(90deg, #00897B, #26A69A);
 }
 
 .student-cert-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 14px 30px -6px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
+  box-shadow: 0 14px 30px -6px rgba(0, 150, 136, 0.15);
+  border-color: #80CBC4;
 }
 
 .student-cert-card-header {
@@ -7451,9 +7719,9 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #b45309;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  color: #00695C;
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -7534,7 +7802,7 @@
   padding: 8px 14px;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   font-size: 0.82rem;
   font-weight: 800;
@@ -7543,14 +7811,15 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.3);
   transition: all 0.2s ease;
   font-family: inherit;
 }
 
 .student-cert-btn-download:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+  background: linear-gradient(135deg, #00796B 0%, #004D40 100%);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.4);
 }
 
 .student-cert-btn-icon {
@@ -7692,7 +7961,7 @@
   font-size: 32px;
   font-style: italic;
   font-weight: 700;
-  color: #0284c7;
+  color: #00796B;
   border-bottom: 2px solid #cbd5e1;
   padding-bottom: 4px;
   margin: 0 auto 16px;
@@ -7766,12 +8035,12 @@
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
   flex-shrink: 0;
 }
 
@@ -7836,7 +8105,7 @@
 }
 
 .student-rep-kpi-card.kpi-blue::before {
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  background: linear-gradient(90deg, #00897B, #26A69A);
 }
 
 .student-rep-kpi-card.kpi-emerald::before {
@@ -7868,8 +8137,9 @@
 }
 
 .student-rep-kpi-icon.blue {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-rep-kpi-icon.emerald {
@@ -7942,9 +8212,9 @@
 }
 
 .student-rep-tab-btn.active {
-  background: #0284c7;
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.3);
 }
 
 .student-rep-tab-badge {
@@ -7952,8 +8222,8 @@
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 9999px;
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
 }
 
 .student-rep-tab-btn.active .student-rep-tab-badge {
@@ -8044,7 +8314,7 @@
 
 .student-rep-week-header.is-open .student-rep-chevron {
   transform: rotate(180deg);
-  color: #0284c7;
+  color: #00897B;
 }
 
 .student-rep-week-label {
@@ -8094,10 +8364,11 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   font-weight: 800;
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
   padding: 2px 7px;
   border-radius: 6px;
+  border: 1px solid #B2DFDB;
 }
 
 .student-rep-task-title {
@@ -8117,9 +8388,9 @@
 }
 
 .student-rep-feedback-callout {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-left: 4px solid #0284c7;
+  background: #F0FAF9;
+  border: 1px solid #B2DFDB;
+  border-left: 4px solid #00897B;
   border-radius: 10px;
   padding: 12px 16px;
   display: flex;
@@ -8130,7 +8401,7 @@
 .student-rep-feedback-head {
   font-size: 0.78rem;
   font-weight: 800;
-  color: #0369a1;
+  color: #00796B;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -8256,12 +8527,12 @@
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
   flex-shrink: 0;
 }
 
@@ -8301,10 +8572,10 @@
 
 .student-proj-back-btn:hover {
   background: var(--bg-canvas-light);
-  border-color: #0284c7;
-  color: #0284c7;
+  border-color: #00897B;
+  color: #00897B;
   transform: translateX(-3px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.15);
 }
 
 /* 4-Card KPI Grid */
@@ -8326,27 +8597,29 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  border-left: 4px solid #00897B;
 }
 
 .student-proj-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 16px -2px rgba(0, 150, 136, 0.15);
+  border-color: #80CBC4;
 }
 
 .student-proj-kpi-card.kpi-blue {
-  border-left: 4px solid #0284c7;
+  border-left: 4px solid #00897B;
 }
 
 .student-proj-kpi-card.kpi-amber {
-  border-left: 4px solid #d97706;
+  border-left: 4px solid #009688;
 }
 
 .student-proj-kpi-card.kpi-emerald {
-  border-left: 4px solid #059669;
+  border-left: 4px solid #26A69A;
 }
 
 .student-proj-kpi-card.kpi-indigo {
-  border-left: 4px solid #4f46e5;
+  border-left: 4px solid #004D40;
 }
 
 .student-proj-kpi-icon {
@@ -8357,16 +8630,33 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-proj-kpi-icon.blue {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-proj-kpi-icon.amber {
-  background: #fef3c7;
-  color: #d97706;
+  background: #E0F2F1;
+  color: #00897B;
+  border: 1px solid #B2DFDB;
+}
+
+.student-proj-kpi-icon.emerald {
+  background: #E0F2F1;
+  color: #004D40;
+  border: 1px solid #B2DFDB;
+}
+
+.student-proj-kpi-icon.indigo {
+  background: #E0F2F1;
+  color: #00695C;
+  border: 1px solid #B2DFDB;
 }
 
 .student-proj-kpi-icon.emerald {
@@ -8445,9 +8735,9 @@
 
 .student-proj-search-input:focus {
   outline: none;
-  border-color: #0284c7;
+  border-color: #00897B;
   background: var(--surface-card);
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.15);
 }
 
 .student-proj-filter-pills {
@@ -8480,7 +8770,7 @@
 
 .student-proj-filter-pill.active {
   background: #ffffff;
-  color: #0284c7;
+  color: #00796B;
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
@@ -8508,8 +8798,8 @@
 
 .student-proj-card:hover {
   transform: translateY(-4px);
-  border-color: #93c5fd;
-  box-shadow: 0 12px 24px -4px rgba(2, 132, 199, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04);
+  border-color: #80CBC4;
+  box-shadow: 0 12px 24px -4px rgba(0, 150, 136, 0.16), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .student-proj-card-top {
@@ -8530,7 +8820,7 @@
 }
 
 .student-proj-card:hover .student-proj-card-title {
-  color: #0284c7;
+  color: #00796B;
 }
 
 .student-proj-card-timeline {
@@ -8581,7 +8871,7 @@
 
 .student-proj-progress-pct {
   font-weight: 800;
-  color: #0284c7;
+  color: #00796B;
   font-size: 0.82rem;
 }
 
@@ -8595,7 +8885,7 @@
 
 .student-proj-progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);
+  background: linear-gradient(90deg, #26A69A 0%, #00897B 100%);
   border-radius: 9999px;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -8638,9 +8928,9 @@
 }
 
 .student-proj-member-chip.is-me {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #0284c7;
+  background: #E0F2F1;
+  border-color: #B2DFDB;
+  color: #00695C;
   font-weight: 700;
 }
 
@@ -8648,7 +8938,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #0284c7;
+  background: #00897B;
   color: #ffffff;
   font-size: 0.65rem;
   font-weight: 800;
@@ -8658,11 +8948,11 @@
 }
 
 .student-proj-member-avatar.is-lead {
-  background: #d97706;
+  background: #004D40;
 }
 
 .student-proj-member-avatar.is-designer {
-  background: #8b5cf6;
+  background: #00796B;
 }
 
 /* Card Footer */
@@ -8683,19 +8973,19 @@
   font-size: 0.8rem;
   font-weight: 700;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 150, 136, 0.25);
 }
 
 .student-proj-view-btn:hover {
-  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  background: linear-gradient(135deg, #00695C 0%, #004D40 100%);
   transform: translateX(2px);
-  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 4px 10px rgba(0, 150, 136, 0.35);
 }
 
 /* ==========================================================================
@@ -9193,12 +9483,12 @@
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
   flex-shrink: 0;
 }
 
@@ -9243,11 +9533,11 @@
 }
 
 .student-comm-kpi-card.kpi-blue {
-  border-left: 4px solid #0284c7;
+  border-left: 4px solid #00897B;
 }
 
 .student-comm-kpi-card.kpi-indigo {
-  border-left: 4px solid #4f46e5;
+  border-left: 4px solid #00897B;
 }
 
 .student-comm-kpi-card.kpi-emerald {
@@ -9269,13 +9559,15 @@
 }
 
 .student-comm-kpi-icon.blue {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-comm-kpi-icon.indigo {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
 }
 
 .student-comm-kpi-icon.emerald {
@@ -9321,7 +9613,8 @@
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 16px rgba(0, 0, 0, 0.03);
-  height: 680px;
+  height: min(700px, calc(100vh - 200px));
+  min-height: 500px;
   display: flex;
   flex-direction: column;
 }
@@ -9396,15 +9689,35 @@
 .student-comm-sidebar-search-input:focus {
   outline: none;
   background: var(--surface-card);
-  border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+  border-color: #00897B;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-comm-sidebar-list {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto !important;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #80CBC4 #f8fafc;
+}
+
+.student-comm-sidebar-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.student-comm-sidebar-list::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.student-comm-sidebar-list::-webkit-scrollbar-thumb {
+  background: #B2DFDB;
+  border-radius: 4px;
+}
+
+.student-comm-sidebar-list::-webkit-scrollbar-thumb:hover {
+  background: #00897B;
 }
 
 .student-comm-item {
@@ -9424,15 +9737,15 @@
 
 .student-comm-item.active {
   background: #ffffff;
-  border-left: 4px solid #0284c7;
-  box-shadow: inset 0 0 0 1px rgba(2, 132, 199, 0.12);
+  border-left: 4px solid #00897B;
+  box-shadow: inset 0 0 0 1px rgba(0, 150, 136, 0.12);
 }
 
 .student-comm-avatar {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -9441,7 +9754,7 @@
   font-weight: 800;
   flex-shrink: 0;
   position: relative;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 150, 136, 0.2);
 }
 
 .student-comm-online-dot {
@@ -9522,12 +9835,34 @@
 .student-comm-body {
   flex: 1;
   padding: 24px;
-  overflow-y: auto;
+  overflow-y: auto !important;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 16px;
   background-color: var(--bg-canvas-light);
   min-height: 0;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #00897B #f1f5f9;
+}
+
+.student-comm-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.student-comm-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.student-comm-body::-webkit-scrollbar-thumb {
+  background: #80CBC4;
+  border-radius: 4px;
+}
+
+.student-comm-body::-webkit-scrollbar-thumb:hover {
+  background: #00897B;
 }
 
 .student-comm-date-pill {
@@ -9565,10 +9900,10 @@
 }
 
 .student-comm-msg-wrap.sent .student-comm-bubble {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.25);
 }
 
 .student-comm-msg-wrap.received .student-comm-bubble {
@@ -9595,33 +9930,7 @@
   align-self: flex-start;
 }
 
-/* Quick Prompt Suggestions */
-.student-comm-quick-prompts {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 10px 24px 0 24px;
-  background: var(--surface-card);
-}
 
-.student-comm-prompt-chip {
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: #0284c7;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  padding: 4px 12px;
-  border-radius: 16px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-
-.student-comm-prompt-chip:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
-}
 
 /* Chat Footer Input */
 .student-comm-footer {
@@ -9649,8 +9958,8 @@
 .student-comm-input:focus {
   outline: none;
   background: #ffffff;
-  border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+  border-color: #00897B;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
 }
 
 .student-comm-send-btn {
@@ -9659,7 +9968,7 @@
   gap: 8px;
   padding: 11px 24px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
   color: #ffffff;
   border: none;
   font-weight: 700;
@@ -9667,12 +9976,2753 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.25);
   white-space: nowrap;
 }
 
 .student-comm-send-btn:hover {
-  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  background: linear-gradient(135deg, #00796B 0%, #004D40 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.35);
 }
+
+/* Student Profile & Settings Styles */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@media (max-width: 900px) {
+  .profile-settings-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============================================================
+   RLABZ ERP — Student Native Right Notification Bell & Slide-Out Drawer
+   (Matching Finance Dashboard Notification UI & UX)
+   ============================================================ */
+
+@keyframes student-bell-shake {
+  0%, 100% { transform: rotate(0deg); }
+  20%, 60% { transform: rotate(14deg); }
+  40%, 80% { transform: rotate(-14deg); }
+}
+
+/* Floating Permanent Notification Bell Button */
+.student-bell-trigger {
+  position: fixed;
+  right: 0;
+  top: 180px;
+  z-index: 9999;
+  width: 42px;
+  height: 42px;
+  border-radius: 20px 0 0 20px;
+  background: var(--primary, #059669);
+  border: none;
+  box-shadow: -2px 4px 10px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffffff;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, visibility 0.2s ease;
+}
+
+.student-bell-trigger.drawer-open {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transform: translateX(100%);
+}
+
+.student-bell-trigger:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  background: var(--primary-hover, #047857);
+  color: #ffffff;
+}
+
+.student-bell-trigger.student-bell-shake {
+  animation: student-bell-shake 1.2s ease-in-out 0.4s 1;
+}
+
+.student-bell-badge {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 2px 6px;
+  border: 2px solid var(--surface-card, #ffffff);
+  min-width: 18px;
+  text-align: center;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+}
+
+/* Drawer Backdrop */
+.student-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 1060;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.student-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Native ERP Slide-Out Right Notification Drawer */
+.student-notification-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 410px;
+  max-width: 90vw;
+  height: 100vh;
+  background: var(--surface-card, #ffffff);
+  box-shadow: -8px 0 30px rgba(15, 23, 42, 0.16);
+  z-index: 1070;
+  transform: translateX(120%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  font-family: inherit;
+}
+
+.student-notification-drawer.open {
+  transform: translateX(0);
+}
+
+.student-drawer-header {
+  padding: 1.2rem 1.4rem;
+  background: var(--surface-card, #ffffff);
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.student-drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.student-drawer-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.student-drawer-count {
+  background: var(--primary-light, #ecfdf5);
+  color: var(--primary, #059669);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #a7f3d0);
+}
+
+.student-drawer-close {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.student-drawer-close:hover {
+  background: var(--border-subtle, #e2e8f0);
+  color: var(--text-primary);
+}
+
+.student-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.2rem;
+  background: var(--bg-canvas-light, #f8fafc);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Action Item / Notification Alert Card */
+.student-action-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.student-action-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07);
+  border-color: #cbd5e1;
+}
+
+.student-action-card.card-overdue {
+  border-left: 4px solid #ef4444;
+}
+
+.student-action-card.card-upcoming {
+  border-left: 4px solid #f59e0b;
+}
+
+.student-action-card.card-info {
+  border-left: 4px solid #00897B;
+}
+
+.student-action-card.card-success {
+  border-left: 4px solid #10b981;
+}
+
+.student-action-card.is-unread {
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.08);
+}
+
+.student-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.student-cat-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.student-cat-meeting {
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
+}
+
+.student-cat-task {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.student-cat-module, .student-cat-sprint {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.student-cat-work-log, .student-cat-worklog {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.student-cat-github {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.student-cat-security, .student-cat-password {
+  background: #fce7f3;
+  color: #be185d;
+  border: 1px solid #fbcfe8;
+}
+
+.student-cat-general {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.student-countdown-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.student-countdown-tag.tag-red {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.student-countdown-tag.tag-amber {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.student-countdown-tag.tag-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.student-countdown-tag.tag-slate {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.student-card-msg {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.student-card-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed #f1f5f9;
+}
+
+.student-project-name {
+  font-weight: 600;
+  color: #00796B;
+}
+
+/* ==========================================================================
+   RLABZ ERP — STUDENT CALENDAR HIGHLIGHTS & ACTIVITY VIEWER STYLES
+   ========================================================================== */
+
+/* 1. Header & KPIs */
+.student-meetings-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.student-meet-header-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.student-meet-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.student-meet-brand-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
+  flex-shrink: 0;
+}
+
+.student-meet-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.student-meet-subtitle {
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+}
+
+/* 2. 4-Card KPI Overview Grid */
+.student-meet-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1024px) {
+  .student-meet-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .student-meet-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-meet-kpi-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.student-meet-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+}
+
+.student-meet-kpi-card.kpi-blue {
+  border-left: 4px solid #00897B;
+}
+
+.student-meet-kpi-card.kpi-indigo {
+  border-left: 4px solid #00897B;
+}
+
+.student-meet-kpi-card.kpi-emerald {
+  border-left: 4px solid #059669;
+}
+
+.student-meet-kpi-card.kpi-rose {
+  border-left: 4px solid #dc2626;
+}
+
+.student-meet-kpi-card.kpi-amber {
+  border-left: 4px solid #d97706;
+}
+
+.student-meet-kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-meet-kpi-icon.blue {
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
+}
+
+.student-meet-kpi-icon.indigo {
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
+}
+
+.student-meet-kpi-icon.emerald {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.student-meet-kpi-icon.rose {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.student-meet-kpi-icon.amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.student-meet-kpi-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.student-meet-kpi-val {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.student-meet-kpi-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* 3. Category Filter Scroll Bar */
+.student-cal-category-bar {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 14px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.student-cal-category-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.student-cal-category-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.student-cal-category-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.student-cal-cat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--bg-canvas-light, #f8fafc);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.student-cal-cat-btn:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+  color: var(--text-primary);
+}
+
+.student-cal-cat-btn.active {
+  background: #00796B;
+  color: #ffffff;
+  border-color: #00796B;
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.25);
+}
+
+.student-cal-cat-btn.active .student-cal-dot {
+  border-color: #ffffff;
+}
+
+.student-cal-cat-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+}
+
+.student-cal-cat-btn.active .student-cal-cat-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* 4. Controls & Filter Bar */
+.student-meet-filter-bar {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 14px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.student-meet-search-box {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.student-meet-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.student-meet-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--bg-canvas-light, #f8fafc);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.student-meet-search-input:focus {
+  border-color: #00897B;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
+}
+
+.student-meet-select {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--bg-canvas-light, #f8fafc);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.student-meet-select:focus {
+  border-color: #00897B;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12);
+}
+
+.student-meet-btn-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.student-meet-btn-reset:hover {
+  background: #fee2e2;
+}
+
+/* 5. 2-Column Responsive Layout */
+.student-meet-grid-layout {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .student-meet-grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-meet-sidebar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* 6. Interactive Monthly Calendar Card */
+.student-cal-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 18px;
+  padding: 16px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.student-cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+}
+
+.student-cal-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+
+.student-cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.student-cal-btn-nav {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--bg-canvas-light, #f8fafc);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.student-cal-btn-nav:hover {
+  background: #e2e8f0;
+  color: #00796B;
+}
+
+.student-cal-btn-today {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #B2DFDB;
+  background: #E0F2F1;
+  color: #00796B;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.student-cal-btn-today:hover {
+  background: #B2DFDB;
+}
+
+/* Calendar Grid */
+.student-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.student-cal-day-header {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 4px 0;
+  letter-spacing: 0.02em;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.student-cal-day-cell {
+  height: 48px;
+  min-height: 48px;
+  width: 100%;
+  min-width: 0;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 3px 1px 2px 1px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.student-cal-day-cell.empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.student-cal-day-cell:hover:not(.empty) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.student-cal-day-cell.has-events {
+  background: var(--bg-canvas-light, #f8fafc);
+  border-color: #e2e8f0;
+}
+
+.student-cal-day-cell.has-events:hover {
+  background: #F0FAF9;
+  border-color: #80CBC4;
+}
+
+.student-cal-day-cell.has-overdue {
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+
+.student-cal-day-cell.has-overdue:hover {
+  border-color: #ef4444;
+}
+
+.student-cal-day-cell.today {
+  border: 1.5px solid #00796B;
+  background: #E0F2F1;
+}
+
+.student-cal-day-cell.today .student-cal-day-number {
+  color: #00796B;
+  font-weight: 800;
+}
+
+.student-cal-day-cell.active-selected {
+  border: 2px solid #00796B !important;
+  background: #E0F2F1 !important;
+  box-shadow: 0 0 0 2px rgba(0, 150, 136, 0.25);
+}
+
+.student-cal-day-cell.active-selected .student-cal-day-number {
+  color: #004D40;
+  font-weight: 900;
+}
+
+.student-cal-day-number {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+/* Multi-colored Category Indicator Dots */
+.student-cal-dots-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+  max-width: 32px;
+}
+
+.student-cal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.student-cal-dot.dot-meeting {
+  background: #00796B;
+}
+
+.student-cal-dot.dot-task {
+  background: #d97706;
+}
+
+.student-cal-dot.dot-sprint {
+  background: #7c3aed;
+}
+
+.student-cal-dot.dot-report {
+  background: #059669;
+}
+
+.student-cal-dot.dot-project {
+  background: #00796B;
+}
+
+.student-cal-dot.dot-announcement {
+  background: #0891b2;
+}
+
+.student-cal-dot.dot-overdue {
+  background: #ef4444;
+  box-shadow: 0 0 0 1px #fee2e2;
+  animation: student-dot-pulse 1.5s infinite;
+}
+
+@keyframes student-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+/* Calendar Category Legend */
+.student-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-subtle, #e2e8f0);
+}
+
+.student-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* 7. Activities Queue List Card */
+.student-meet-list-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.student-meet-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.student-meet-list-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-meet-active-tag {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  color: #00796B;
+}
+
+.student-meet-list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.student-meet-list-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.student-meet-list-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Activity Item Card in Queue */
+.student-event-item {
+  background: var(--bg-canvas-light, #f8fafc);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.student-event-item:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.student-event-item.active-selected {
+  background: #ffffff;
+  border-color: #00897B;
+  border-left: 4px solid #00897B;
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.15);
+}
+
+.student-event-item.is-overdue {
+  border-left: 4px solid #ef4444;
+}
+
+.student-event-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.student-event-item-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-event-cat-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.student-event-cat-tag.cat-meeting {
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
+}
+
+.student-event-cat-tag.cat-task {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.student-event-cat-tag.cat-sprint {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.student-event-cat-tag.cat-report {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.student-event-cat-tag.cat-project {
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
+}
+
+.student-event-cat-tag.cat-announcement {
+  background: #cffafe;
+  color: #0e7490;
+  border: 1px solid #a5f3fc;
+}
+
+.student-event-proj-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.student-event-item-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.student-event-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.student-event-item-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Status Badges */
+.student-event-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.student-event-status-badge.overdue {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.student-event-status-badge.upcoming {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.student-event-status-badge.completed {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.student-status-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.student-status-pulse.red {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+  animation: student-dot-pulse 1.5s infinite;
+}
+
+.student-status-pulse.amber {
+  background: #f59e0b;
+}
+
+.student-status-pulse.green {
+  background: #10b981;
+}
+
+/* 8. Right Panel: Activity Hub Workspace */
+.student-meet-detail-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 20px;
+  padding: 26px 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 6px 16px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.student-meet-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.student-meet-detail-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.student-meet-detail-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin: 0;
+}
+
+/* Alert State Banner inside Detail */
+.student-cal-alert-banner {
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.84rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1.45;
+}
+
+.student-cal-alert-banner.alert-overdue {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+}
+
+.student-cal-alert-banner.alert-upcoming {
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  color: #00796B;
+}
+
+.student-cal-alert-banner.alert-completed {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+/* 3-Column Meta Info Grid */
+.student-meet-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .student-meet-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-meet-meta-box {
+  background: var(--bg-canvas-light, #f8fafc);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-meet-meta-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  color: #00796B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-meet-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.student-meet-meta-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.student-meet-meta-val {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Video Conference Call Banner */
+.student-meet-call-banner {
+  background: linear-gradient(135deg, #00897B 0%, #004D40 100%);
+  border-radius: 16px;
+  padding: 18px 22px;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 4px 16px rgba(0, 150, 136, 0.3);
+}
+
+.student-meet-call-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.student-meet-call-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-meet-call-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.student-meet-call-sub {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 2px;
+  word-break: break-all;
+}
+
+.student-meet-call-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.student-meet-btn-copy {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.student-meet-btn-copy:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.student-meet-btn-join {
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: none;
+  background: #ffffff;
+  color: #00796B;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.student-meet-btn-join:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* In Person Venue Card */
+.student-meet-venue-card {
+  background: var(--bg-canvas-light, #f8fafc);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.student-meet-venue-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #E0F2F1;
+  color: #00796B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-meet-venue-title {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.student-meet-venue-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Notes & Instructions Section */
+.student-meet-notes-section {
+  background: var(--bg-canvas-light, #f8fafc);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 16px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.student-meet-notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+}
+
+.student-meet-notes-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-meet-notes-body {
+  font-size: 0.88rem;
+  color: #334155;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.student-meet-notes-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Empty Detail State */
+.student-meet-empty-detail {
+  background: var(--surface-card, #ffffff);
+  border: 1px dashed var(--border-subtle, #cbd5e1);
+  border-radius: 20px;
+  padding: 60px 30px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-meet-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: #E0F2F1;
+  color: #00796B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.student-meet-empty-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.student-meet-empty-desc {
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   STUDENT DASHBOARD ONLY — PROFILE PICTURE & WELCOME HEADER
+   ========================================================================== */
+
+
+.student-dash-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.student-dash-avatar-wrapper {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.student-dash-avatar-wrapper:hover {
+  transform: scale(1.04);
+}
+
+.student-dash-profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  display: block;
+}
+
+.student-dash-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00897B 0%, #004D40 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 150, 136, 0.25);
+  letter-spacing: -0.02em;
+}
+
+.student-dash-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.65);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 0.68rem;
+  font-weight: 700;
+  gap: 2px;
+  backdrop-filter: blur(1.5px);
+  z-index: 2;
+  border: 3px solid transparent;
+}
+
+.student-dash-avatar-wrapper:hover .student-dash-avatar-overlay {
+  opacity: 1;
+}
+
+.student-dash-avatar-status-dot {
+  position: absolute;
+  bottom: 0px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  z-index: 3;
+}
+
+.student-dash-avatar-upload-btn {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #00897B;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  z-index: 3;
+}
+
+.student-dash-avatar-upload-btn:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  background: #00695C;
+}
+
+.student-dash-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.student-dash-welcome-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.student-dash-welcome-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.student-dash-track-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #E0F2F1;
+  color: #00796B;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid #B2DFDB;
+}
+
+.student-dash-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.student-dash-meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.student-dash-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Student Profile Page - Avatar & Photo Upload */
+.student-profile-avatar-wrapper {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.student-profile-avatar-wrapper:hover {
+  transform: scale(1.04);
+}
+
+.student-profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+  display: block;
+}
+
+.student-profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.65);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 0.68rem;
+  font-weight: 700;
+  gap: 2px;
+  backdrop-filter: blur(1.5px);
+  z-index: 2;
+  border: 3px solid transparent;
+}
+
+.student-profile-avatar-wrapper:hover .student-profile-avatar-overlay {
+  opacity: 1;
+}
+
+.student-profile-avatar-btn {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #059669;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  z-index: 3;
+}
+
+.student-profile-avatar-btn:hover {
+  background: #047857 !important;
+  transform: scale(1.15);
+}
+
+/* Student Chat File Attachment & Preview Styles */
+.student-comm-attach-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.student-comm-attach-btn:hover {
+  background: #f1f5f9;
+  color: #00796B;
+  border-color: #80CBC4;
+}
+
+.student-comm-attachment-preview-bar {
+  padding: 8px 14px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.student-comm-attachment-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #00796B;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease;
+}
+
+.student-comm-chip-remove {
+  background: transparent;
+  border: none;
+  color: #00796B;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.student-comm-chip-remove:hover {
+  color: #dc2626;
+}
+
+.student-comm-file-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-top: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.student-comm-msg-wrap.sent .student-comm-file-card {
+  background: #ffffff;
+  border-color: #B2DFDB;
+}
+
+.student-comm-file-card:hover {
+  border-color: #00897B;
+  box-shadow: 0 2px 8px rgba(0, 150, 136, 0.18);
+  transform: translateY(-1px);
+}
+
+.student-comm-file-icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.student-comm-file-details {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.student-comm-file-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.student-comm-file-size {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.student-comm-file-download-btn {
+  background: #E0F2F1;
+  border: 1px solid #B2DFDB;
+  color: #00796B;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.student-comm-file-download-btn:hover {
+  background: #00796B;
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   STUDENT PROJECT HISTORY & VIEW SWITCHER STYLES
+   ========================================================================== */
+.student-proj-view-switcher {
+  display: inline-flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.student-proj-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.student-proj-switcher-btn:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.student-proj-switcher-btn.active {
+  background: #ffffff;
+  color: #00796B;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Project History Timeline & Ledger Cards */
+.student-history-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.student-history-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.student-history-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.student-history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.student-history-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.student-history-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.student-history-role-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
+}
+
+.student-history-role-chip.is-lead {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.student-history-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.student-history-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.student-history-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-history-metric-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.student-history-metric-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.student-history-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.student-proj-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .student-proj-history-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
+/* Professional Project History Dossier & Ledger */
+.student-history-dossier-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.student-history-dossier-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+.student-history-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.student-history-ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.student-history-ledger-row {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.student-history-ledger-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.student-history-ledger-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: 4px;
+}
+
+.student-history-ledger-label svg {
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.student-history-ledger-val {
+  min-width: 0;
+}
+
+/* 1. Name */
+.student-history-name-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.student-history-avatar-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
+}
+
+.student-history-name-text {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.student-history-user-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+/* 2. Project */
+.student-history-project-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.student-history-project-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.student-history-track-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* 3. Role */
+.student-history-role-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 4. Module */
+.student-history-modules-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.student-history-module-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.student-history-module-status {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.student-history-module-status.done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.student-history-module-status.active {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+/* 5. Worked Under - Task */
+.student-history-worked-under-box {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.student-history-supervisor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.student-history-supervisor-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-history-supervisor-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-history-tasks-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.student-history-task-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  gap: 10px;
+}
+
+.student-history-task-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.student-history-task-bullet {
+  color: #0284c7;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.student-history-task-title {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.student-history-task-module-tag {
+  font-size: 0.72rem;
+  color: #64748b;
+  background: #ffffff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.student-history-task-status {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.student-history-task-status.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.student-history-task-status.progress {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+@media (max-width: 768px) {
+  .student-history-ledger-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* ==========================================================================
+   MEETING PARTICIPANTS & MEETING NOTES (OFFICIAL DB ROSTER & MINUTES)
+   ========================================================================== */
+.student-meet-section-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-top: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.student-meet-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.student-meet-section-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Participants Roster Grid */
+.student-meet-participants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.student-meet-participant-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-canvas-light, #f8fafc);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.student-meet-participant-card:hover {
+  border-color: #00796B;
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 121, 107, 0.08);
+}
+
+.student-meet-participant-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #E0F2F1;
+  color: #00796B;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-meet-participant-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-meet-participant-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.student-meet-participant-role {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.student-meet-att-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.student-meet-att-badge.attended {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.student-meet-att-badge.invited {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.student-meet-att-badge.absent {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* Meeting Notes & Decisions Box */
+.student-meet-notes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.student-meet-minutes-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.student-meet-decisions-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.student-meet-box-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.student-meet-minutes-box .student-meet-box-title {
+  color: #00796B;
+}
+
+.student-meet-decisions-box .student-meet-box-title {
+  color: #166534;
+}
+
+.student-meet-box-content {
+  font-size: 0.86rem;
+  color: #334155;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.student-meet-notes-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   ENHANCED CALENDAR MEETING HIGHLIGHTS & BADGES
+   ========================================================================== */
+.student-cal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.student-cal-month-badge {
+  background: #E0F2F1;
+  color: #00796B;
+  border: 1px solid #B2DFDB;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
+.student-cal-day-cell:hover:not(.empty) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+/* Day cell highlights by meeting status */
+.student-cal-day-cell.has-upcoming-meeting {
+  background: #E0F2F1 !important;
+  border: 1.5px solid #00796B !important;
+  box-shadow: 0 2px 6px rgba(0, 121, 107, 0.2);
+}
+
+.student-cal-day-cell.has-upcoming-meeting .student-cal-day-number {
+  color: #004D40 !important;
+  font-weight: 900;
+}
+
+.student-cal-day-cell.has-completed-meeting {
+  background: #DCFCE7 !important;
+  border: 1.5px solid #16A34A !important;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.2);
+}
+
+.student-cal-day-cell.has-completed-meeting .student-cal-day-number {
+  color: #14532D !important;
+  font-weight: 900;
+}
+
+.student-cal-day-cell.has-cancelled-meeting,
+.student-cal-day-cell.has-past-meeting {
+  background: #FEE2E2 !important;
+  border: 1.5px solid #DC2626 !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);
+}
+
+.student-cal-day-cell.has-cancelled-meeting .student-cal-day-number,
+.student-cal-day-cell.has-past-meeting .student-cal-day-number {
+  color: #991B1B !important;
+  font-weight: 900;
+}
+
+.student-cal-day-cell.today:not(.has-upcoming-meeting):not(.has-completed-meeting):not(.has-cancelled-meeting):not(.has-past-meeting) {
+  border: 1.5px dashed #00796B !important;
+  background: transparent !important;
+}
+
+.student-cal-day-cell.today:not(.has-upcoming-meeting):not(.has-completed-meeting):not(.has-cancelled-meeting):not(.has-past-meeting) .student-cal-day-number {
+  color: #00796B !important;
+  font-weight: 800;
+}
+
+.student-cal-day-cell.active-selected {
+  box-shadow: 0 0 0 2.5px #004D40, 0 4px 12px rgba(0, 77, 64, 0.45) !important;
+  transform: translateY(-1px);
+  z-index: 2;
+}
+
+.student-cal-day-cell.active-selected:not(.has-completed-meeting):not(.has-upcoming-meeting):not(.has-cancelled-meeting) {
+  background: #004D40 !important;
+  border: 2px solid #00251A !important;
+}
+
+.student-cal-day-cell.active-selected:not(.has-completed-meeting):not(.has-upcoming-meeting):not(.has-cancelled-meeting) .student-cal-day-number {
+  color: #ffffff !important;
+  font-weight: 900;
+}
+
+.student-cal-day-cell.active-selected:not(.has-completed-meeting):not(.has-upcoming-meeting):not(.has-cancelled-meeting) .student-cal-badge-pill {
+  background: #ffffff !important;
+  color: #004D40 !important;
+  border-color: transparent !important;
+  font-weight: 900;
+}
+
+.student-cal-day-cell.has-completed-meeting.active-selected {
+  background: #DCFCE7 !important;
+  border: 2px solid #16A34A !important;
+  box-shadow: 0 0 0 2.5px #15803D, 0 4px 12px rgba(22, 163, 74, 0.35) !important;
+}
+
+.student-cal-day-cell.has-completed-meeting.active-selected .student-cal-day-number {
+  color: #14532D !important;
+  font-weight: 900;
+}
+
+.student-cal-day-cell.has-upcoming-meeting.active-selected {
+  background: #E0F2F1 !important;
+  border: 2px solid #00796B !important;
+  box-shadow: 0 0 0 2.5px #004D40, 0 4px 12px rgba(0, 121, 107, 0.35) !important;
+}
+
+.student-cal-day-cell.has-upcoming-meeting.active-selected .student-cal-day-number {
+  color: #004D40 !important;
+  font-weight: 900;
+}
+
+.student-cal-day-cell.has-cancelled-meeting.active-selected {
+  background: #FEE2E2 !important;
+  border: 2px solid #DC2626 !important;
+  box-shadow: 0 0 0 2.5px #991B1B, 0 4px 12px rgba(220, 38, 38, 0.35) !important;
+}
+
+.student-cal-day-cell.has-cancelled-meeting.active-selected .student-cal-day-number {
+  color: #991B1B !important;
+  font-weight: 900;
+}
+
+/* Meeting Pill Badge inside Day Cell */
+.student-cal-meeting-indicator {
+  margin-top: 1px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.student-cal-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1.1;
+  white-space: nowrap;
+  max-width: 95%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+.student-cal-badge-pill.pill-upcoming {
+  background: #00796B;
+  color: #ffffff;
+  border: 1px solid #004D40;
+}
+
+.student-cal-badge-pill.pill-completed {
+  background: #16A34A;
+  color: #ffffff;
+  border: 1px solid #15803D;
+}
+
+.student-cal-badge-pill.pill-cancelled,
+.student-cal-badge-pill.pill-past {
+  background: #DC2626;
+  color: #ffffff;
+  border: 1px solid #B91C1C;
+}
+
+.student-cal-glow-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: calGlowPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes calGlowPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* Legend Swatches */
+.student-cal-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.student-cal-legend-swatch.swatch-completed {
+  background: #DCFCE7;
+  border: 1.5px solid #16A34A;
+}
+
+.student-cal-legend-swatch.swatch-upcoming {
+  background: #E0F2F1;
+  border: 1.5px solid #00796B;
+}
+
+.student-cal-legend-swatch.swatch-cancelled,
+.student-cal-legend-swatch.swatch-past {
+  background: #FEE2E2;
+  border: 1.5px solid #EF4444;
+}
+
+
+

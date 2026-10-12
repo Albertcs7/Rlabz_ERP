@@ -16,7 +16,11 @@ class ProjectAssignmentController extends Controller
         $user = $request->input('auth_user');
         $role = $user['role'] ?? '';
 
-        if (in_array($permission, ['project.assign_faculty', 'project.assign_students']) && in_array($role, ['director', 'coordinator'])) {
+        if ($role === 'director' && in_array($permission, ['project.assign_faculty', 'project.assign_students'])) {
+            abort(403, 'Forbidden: Director has read-only access to assignments');
+        }
+
+        if (in_array($permission, ['project.assign_faculty', 'project.assign_students']) && in_array($role, ['developer', 'coordinator'])) {
             return;
         }
 

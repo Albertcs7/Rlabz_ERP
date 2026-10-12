@@ -1,6 +1,8 @@
 import { renderStudentSidebar } from './StudentSidebar.js';
-import { getProjects, getWorkLogs, saveWorkLog, getProjectTasks, ensureDataLoaded } from './studentStore.js';
+import { getProjects, getWorkLogs, saveWorkLog, getProjectTasks, saveChatMessage, ensureDataLoaded } from './studentStore.js';
 import { StudentSwal, showStudentSuccess, showStudentError, showStudentWarning } from '../studentAlerts.js';
+import { useAuthStore } from '@/core/stores/auth.js';
+import html2pdf from 'html2pdf.js';
 import '../student.css';
 
 export async function StudentWorkLogs(route, router) {
@@ -24,6 +26,569 @@ export async function StudentWorkLogs(route, router) {
   let logSearch = '';
   let logProjectFilter = 'all'; // 'all' or project title
   let logStatusFilter = 'all';  // 'all' | 'approved' | 'pending' | 'rejected'
+
+  function exportLogsToCSV(logsToExport, projectTitle) {
+    const headers = ['Date', 'Project', 'Task Code', 'Task Title', 'Hours', 'Description', 'Status'];
+    const rows = logsToExport.map(l => [
+      `"${l.date || ''}"`,
+      `"${(l.project || '').replace(/"/g, '""')}"`,
+      `"${(l.taskCode || '').replace(/"/g, '""')}"`,
+      `"${(l.taskTitle || '').replace(/"/g, '""')}"`,
+      `"${parseFloat(l.hours || 0).toFixed(1)}"`,
+      `"${(l.description || '').replace(/"/g, '""')}"`,
+      `"${(l.status || 'pending').toUpperCase()}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = projectTitle && projectTitle !== 'all' && projectTitle !== 'All Assigned Projects'
+      ? `WorkLogs_${projectTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${todayStr}.csv`
+      : `WorkLogs_AllProjects_${todayStr}.csv`;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  async function exportLogsToPDF(logsToExport, scopeTitle) {
+    const authStore = useAuthStore();
+    const user = authStore.user || {};
+    const studentName = user.name || user.username || 'Student';
+    const designation = user.designation || 'Nova';
+    const totalHours = logsToExport.reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+    const approvedHours = logsToExport.filter(l => (l.status || '').toLowerCase() === 'approved').reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+
+    const reportContainer = document.createElement('div');
+    reportContainer.style.padding = '24px 30px';
+    reportContainer.style.background = '#ffffff';
+    reportContainer.style.color = '#0f172a';
+    reportContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+    const rowsHtml = logsToExport.map((l, idx) => `
+      <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 8px 10px; font-size: 11px; font-weight: 600;">${l.date || '—'}</td>
+        <td style="padding: 8px 10px; font-size: 11px; font-weight: 700; color: #00796B;">${l.project || '—'}</td>
+        <td style="padding: 8px 10px; font-size: 11px;">
+          <span style="font-weight: 700; color: #1e293b;">${l.taskCode || '—'}</span>
+          ${l.taskTitle ? `<div style="font-size: 10px; color: #64748b;">${l.taskTitle}</div>` : ''}
+        </td>
+        <td style="padding: 8px 10px; font-size: 11px; font-weight: 700; text-align: center;">${parseFloat(l.hours || 0).toFixed(1)} hrs</td>
+        <td style="padding: 8px 10px; font-size: 10.5px; color: #334155; line-height: 1.35;">${l.description || '—'}</td>
+        <td style="padding: 8px 10px; font-size: 10px; text-align: center;">
+          <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; ${
+            (l.status || '').toLowerCase() === 'approved' ? 'background: #dcfce7; color: #166534;' :
+            (l.status || '').toLowerCase() === 'rejected' ? 'background: #fee2e2; color: #991b1b;' :
+            'background: #fef3c7; color: #92400e;'
+          }">
+            ${(l.status || 'PENDING').toUpperCase()}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+
+    reportContainer.innerHTML = `
+      <div style="border-bottom: 2px solid #00796B; padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">RLABZ ACADEMIC ERP</h1>
+          <div style="font-size: 13px; font-weight: 700; color: #00796B; margin-top: 2px;">Student Daily Work Log &amp; Timesheet Report</div>
+        </div>
+        <div style="text-align: right; font-size: 11px; color: #64748b;">
+          <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString()}</div>
+          <div><strong>Scope:</strong> ${scopeTitle}</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; font-size: 11.5px;">
+        <div>
+          <span style="color: #64748b;">Student:</span>
+          <strong style="color: #0f172a; margin-left: 4px;">${studentName}</strong>
+        </div>
+        <div>
+          <span style="color: #64748b;">Designation / Track:</span>
+          <strong style="color: #00796B; margin-left: 4px;">${designation}</strong>
+        </div>
+        <div>
+          <span style="color: #64748b;">Total Logged Hours:</span>
+          <strong style="color: #059669; margin-left: 4px;">${totalHours.toFixed(1)} hrs</strong> (${approvedHours.toFixed(1)} approved)
+        </div>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="background: #0f172a; color: #ffffff; text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em;">
+            <th style="padding: 8px 10px; width: 14%;">Date</th>
+            <th style="padding: 8px 10px; width: 18%;">Project</th>
+            <th style="padding: 8px 10px; width: 20%;">Task</th>
+            <th style="padding: 8px 10px; width: 10%; text-align: center;">Hours</th>
+            <th style="padding: 8px 10px; width: 28%;">Description</th>
+            <th style="padding: 8px 10px; width: 10%; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml || '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No work logs recorded in this scope.</td></tr>'}
+        </tbody>
+      </table>
+
+      <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+        <span>Generated by RLabZ ERP — Student Timesheet Verification</span>
+        <span>Official Student Portal Export</span>
+      </div>
+    `;
+
+    const filename = scopeTitle && scopeTitle !== 'all' && scopeTitle !== 'All Assigned Projects'
+      ? `WorkLogs_${scopeTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${todayStr}.pdf`
+      : `WorkLogs_AllProjects_${todayStr}.pdf`;
+
+    StudentSwal.fire({
+      title: 'Generating PDF...',
+      text: 'Please wait while your timesheet report is being generated.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        StudentSwal.showLoading();
+      }
+    });
+
+    try {
+      const blob = await html2pdf().set({
+        margin: [0.35, 0.35, 0.35, 0.35],
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      }).from(reportContainer).output('blob');
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+
+      StudentSwal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'PDF Downloaded!',
+        text: filename,
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true
+      });
+    } catch (err) {
+      console.error('Work log PDF generation error:', err);
+      showStudentError('PDF Generation Failed', 'Could not generate timesheet PDF. You can also export as CSV.');
+    }
+  }
+
+  async function shareLogsToFacultyChat(logsToShare, scopeProject) {
+    const projects = getProjects() || [];
+    if (!projects.length) {
+      showStudentWarning('No Projects', 'You are not currently assigned to any projects.');
+      return;
+    }
+
+    // Determine target project
+    let targetProject = null;
+    if (scopeProject && scopeProject !== 'all') {
+      targetProject = projects.find(p => p.title === scopeProject);
+    } else if (projects.length === 1) {
+      targetProject = projects[0];
+    }
+
+    // If scope is 'all' and there are multiple projects, ask which supervisor chat to send to
+    if (!targetProject) {
+      const projectSelectOptions = projects.map(p => `
+        <option value="${p.title}">📁 ${p.title} (Supervisor: ${p.faculty})</option>
+      `).join('');
+
+      const { value: selectedProjTitle } = await StudentSwal.fire({
+        title: '<span style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">💬 Select Faculty Supervisor Chat</span>',
+        html: `
+          <div style="text-align: left; margin: 12px 0;">
+            <p style="font-size: 0.86rem; color: var(--text-secondary); margin-bottom: 10px;">
+              Choose which project supervisor you would like to send your work log timesheet to:
+            </p>
+            <select id="swal-select-project-chat" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; background: #ffffff;">
+              ${projectSelectOptions}
+            </select>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Continue →',
+        confirmButtonColor: '#00796B',
+        cancelButtonText: 'Cancel',
+        cancelButtonColor: '#64748b',
+        preConfirm: () => {
+          const el = document.getElementById('swal-select-project-chat');
+          return el ? el.value : null;
+        }
+      });
+
+      if (!selectedProjTitle) return;
+      targetProject = projects.find(p => p.title === selectedProjTitle);
+    }
+
+    if (!targetProject) {
+      showStudentError('Error', 'Could not locate project information.');
+      return;
+    }
+
+    // Filter logs for this specific project
+    const projectLogs = logsToShare.filter(l => l.project === targetProject.title);
+    if (!projectLogs.length) {
+      showStudentWarning('No Logs Found', `You do not have any logged entries recorded for project "${targetProject.title}".`);
+      return;
+    }
+
+    const totalHours = projectLogs.reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+    const approvedHours = projectLogs.filter(l => (l.status || '').toLowerCase() === 'approved').reduce((sum, l) => sum + parseFloat(l.hours || 0), 0);
+
+    // Format top 5 latest entries for preview and message
+    const recentLogs = [...projectLogs].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 5);
+    const logSummaryLines = recentLogs.map(l => {
+      const taskPart = l.taskCode ? `[${l.taskCode}] ` : '';
+      const descPart = l.description ? ` - ${l.description.length > 50 ? l.description.substring(0, 50) + '...' : l.description}` : '';
+      return `• ${l.date}: ${taskPart}${parseFloat(l.hours || 0).toFixed(1)} hrs${descPart} (${(l.status || 'pending').toUpperCase()})`;
+    }).join('\n');
+
+    const defaultFilename = `WorkLogs_${targetProject.title.replace(/[^a-zA-Z0-9]/g, '_')}_${todayStr}`;
+    const formattedMessage = `📋 Daily Work Log & Timesheet Submission:\n` +
+      `• Project: ${targetProject.title}\n` +
+      `• Total Effort: ${totalHours.toFixed(1)} hrs (${approvedHours.toFixed(1)} hrs approved across ${projectLogs.length} entries)\n\n` +
+      `Recent Logged Entries:\n${logSummaryLines}\n\n` +
+      `Please find my attached timesheet file and verify my logged hours on the portal.`;
+
+    // Confirmation modal with attachment option and preview
+    const result = await StudentSwal.fire({
+      title: '<span style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">💬 Send Work Log to Supervisor</span>',
+      html: `
+        <div style="text-align: left; margin: 12px 0; font-size: 0.88rem;">
+          <div style="background: #F0FAF9; border: 1px solid #B2DFDB; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;">
+            <div style="font-size: 0.8rem; color: #00796B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Recipient Supervisor</div>
+            <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">${targetProject.faculty}</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Project: <strong>${targetProject.title}</strong> (${totalHours.toFixed(1)} hrs logged)</div>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 6px;">File Attachment in Chat:</label>
+            <select id="swal-chat-attach-type" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; background: #ffffff;">
+              <option value="pdf" selected>📄 Attach Official PDF Timesheet Report (${defaultFilename}.pdf)</option>
+              <option value="csv">📊 Attach CSV / Excel Timesheet (${defaultFilename}.csv)</option>
+              <option value="none">💬 Message Only (No File Attached)</option>
+            </select>
+          </div>
+
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 6px;">Message Body:</label>
+          <textarea id="swal-chat-msg-preview" style="width: 100%; height: 125px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.82rem; font-family: monospace; background: #ffffff; color: var(--text-primary); resize: vertical;">${formattedMessage}</textarea>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '🚀 Send Message &amp; Attach File',
+      confirmButtonColor: '#00796B',
+      cancelButtonText: 'Cancel',
+      cancelButtonColor: '#64748b',
+      preConfirm: () => {
+        const textEl = document.getElementById('swal-chat-msg-preview');
+        const attachTypeEl = document.getElementById('swal-chat-attach-type');
+        return {
+          message: textEl ? textEl.value.trim() : formattedMessage,
+          attachType: attachTypeEl ? attachTypeEl.value : 'pdf'
+        };
+      }
+    });
+
+    if (!result.isConfirmed || !result.value) return;
+
+    try {
+      StudentSwal.fire({
+        title: 'Generating & Sending to Chat...',
+        text: 'Preparing timesheet attachment and delivering to supervisor channel.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          StudentSwal.showLoading();
+        }
+      });
+
+      let attachment = null;
+      const { message, attachType } = result.value;
+
+      if (attachType === 'pdf') {
+        const authStore = useAuthStore();
+        const user = authStore.user || {};
+        const studentName = user.name || user.username || 'Student';
+        const designation = user.designation || 'Nova';
+
+        const reportContainer = document.createElement('div');
+        reportContainer.style.padding = '24px 30px';
+        reportContainer.style.background = '#ffffff';
+        reportContainer.style.color = '#0f172a';
+        reportContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+        const rowsHtml = projectLogs.map((l, idx) => `
+          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 10px; font-size: 11px; font-weight: 600;">${l.date || '—'}</td>
+            <td style="padding: 8px 10px; font-size: 11px; font-weight: 700; color: #00796B;">${l.project || '—'}</td>
+            <td style="padding: 8px 10px; font-size: 11px;">
+              <span style="font-weight: 700; color: #1e293b;">${l.taskCode || '—'}</span>
+              ${l.taskTitle ? `<div style="font-size: 10px; color: #64748b;">${l.taskTitle}</div>` : ''}
+            </td>
+            <td style="padding: 8px 10px; font-size: 11px; font-weight: 700; text-align: center;">${parseFloat(l.hours || 0).toFixed(1)} hrs</td>
+            <td style="padding: 8px 10px; font-size: 10.5px; color: #334155; line-height: 1.35;">${l.description || '—'}</td>
+            <td style="padding: 8px 10px; font-size: 10px; text-align: center;">
+              <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; ${
+                (l.status || '').toLowerCase() === 'approved' ? 'background: #dcfce7; color: #166534;' :
+                (l.status || '').toLowerCase() === 'rejected' ? 'background: #fee2e2; color: #991b1b;' :
+                'background: #fef3c7; color: #92400e;'
+              }">
+                ${(l.status || 'PENDING').toUpperCase()}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+
+        reportContainer.innerHTML = `
+          <div style="border-bottom: 2px solid #00796B; padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">RLABZ ACADEMIC ERP</h1>
+              <div style="font-size: 13px; font-weight: 700; color: #00796B; margin-top: 2px;">Student Daily Work Log &amp; Timesheet Report</div>
+            </div>
+            <div style="text-align: right; font-size: 11px; color: #64748b;">
+              <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString()}</div>
+              <div><strong>Scope:</strong> ${targetProject.title}</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; font-size: 11.5px;">
+            <div>
+              <span style="color: #64748b;">Student:</span>
+              <strong style="color: #0f172a; margin-left: 4px;">${studentName}</strong>
+            </div>
+            <div>
+              <span style="color: #64748b;">Designation / Track:</span>
+              <strong style="color: #00796B; margin-left: 4px;">${designation}</strong>
+            </div>
+            <div>
+              <span style="color: #64748b;">Total Logged Hours:</span>
+              <strong style="color: #059669; margin-left: 4px;">${totalHours.toFixed(1)} hrs</strong> (${approvedHours.toFixed(1)} approved)
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr style="background: #0f172a; color: #ffffff; text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em;">
+                <th style="padding: 8px 10px; width: 14%;">Date</th>
+                <th style="padding: 8px 10px; width: 18%;">Project</th>
+                <th style="padding: 8px 10px; width: 20%;">Task</th>
+                <th style="padding: 8px 10px; width: 10%; text-align: center;">Hours</th>
+                <th style="padding: 8px 10px; width: 28%;">Description</th>
+                <th style="padding: 8px 10px; width: 10%; text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml || '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No work logs recorded in this scope.</td></tr>'}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+            <span>Generated by RLabZ ERP — Student Timesheet Verification</span>
+            <span>Official Student Portal Export</span>
+          </div>
+        `;
+
+        const pdfBlob = await html2pdf().set({
+          margin: [0.35, 0.35, 0.35, 0.35],
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        }).from(reportContainer).output('blob');
+
+        const pdfDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(pdfBlob);
+        });
+
+        attachment = {
+          name: `${defaultFilename}.pdf`,
+          size: pdfBlob.size,
+          type: 'application/pdf',
+          dataUrl: pdfDataUrl
+        };
+      } else if (attachType === 'csv') {
+        const headers = ['Date', 'Project', 'Task Code', 'Task Title', 'Hours', 'Description', 'Status'];
+        const rows = projectLogs.map(l => [
+          `"${l.date || ''}"`,
+          `"${(l.project || '').replace(/"/g, '""')}"`,
+          `"${(l.taskCode || '').replace(/"/g, '""')}"`,
+          `"${(l.taskTitle || '').replace(/"/g, '""')}"`,
+          `"${parseFloat(l.hours || 0).toFixed(1)}"`,
+          `"${(l.description || '').replace(/"/g, '""')}"`,
+          `"${(l.status || 'pending').toUpperCase()}"`
+        ]);
+        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const csvDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(csvBlob);
+        });
+
+        attachment = {
+          name: `${defaultFilename}.csv`,
+          size: csvBlob.size,
+          type: 'text/csv',
+          dataUrl: csvDataUrl
+        };
+      }
+
+      await saveChatMessage(targetProject.title, message, attachment);
+
+      const navResult = await StudentSwal.fire({
+        icon: 'success',
+        title: 'Work Log & Attachment Sent!',
+        html: `Your timesheet summary ${attachment ? `and <strong>${attachment.name}</strong>` : ''} have been posted to <strong>${targetProject.faculty}</strong> in the <em>${targetProject.title}</em> chat channel.`,
+        showCancelButton: true,
+        confirmButtonText: 'Go to Faculty Chat →',
+        confirmButtonColor: '#00796B',
+        cancelButtonText: 'Stay on Work Logs',
+        cancelButtonColor: '#64748b'
+      });
+
+      if (navResult.isConfirmed && router) {
+        router.push('/student/chat');
+      }
+    } catch (err) {
+      console.error('Error sending work log to chat:', err);
+      showStudentError('Message Failed', err.message || 'Could not send work log message to supervisor.');
+    }
+  }
+
+  function openDownloadModal() {
+    const projects = getProjects() || [];
+    const logs = getWorkLogs() || [];
+
+    const projectOptionsModal = projects.map(p => `
+      <option value="${p.title}" ${logProjectFilter === p.title ? 'selected' : ''}>📁 ${p.title}</option>
+    `).join('');
+
+    StudentSwal.fire({
+      title: '<span style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">📥 Export &amp; Share Daily Work Logs</span>',
+      html: `
+        <div style="display: flex; flex-direction: column; gap: 14px; text-align: left; margin: 12px 0;">
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 5px;">
+              1. Select Scope (Project-wise or All Projects):
+            </label>
+            <select id="modal-dl-project" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; background: #ffffff; color: var(--text-primary);">
+              <option value="all" ${logProjectFilter === 'all' ? 'selected' : ''}>🌐 All Projects Together (Full Timesheet)</option>
+              ${projectOptionsModal}
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 5px;">
+              2. Status Filter:
+            </label>
+            <select id="modal-dl-status" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; background: #ffffff; color: var(--text-primary);">
+              <option value="all">All Entries (Approved, Pending &amp; Rejected)</option>
+              <option value="approved">Approved Hours Only</option>
+              <option value="pending">Pending Review Only</option>
+            </select>
+          </div>
+
+          <div style="margin-top: 4px;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 8px;">
+              3. Choose Export or Share Option:
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <button type="button" id="modal-btn-dl-pdf" class="btn" style="background: linear-gradient(135deg, #00897B, #00695C); color: #ffffff; border: none; padding: 11px 14px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 8px rgba(0, 150, 136, 0.25); transition: background 0.2s;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                <span>PDF Timesheet</span>
+              </button>
+              <button type="button" id="modal-btn-dl-csv" class="btn" style="background: #059669; color: #ffffff; border: none; padding: 11px 14px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25); transition: background 0.2s;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>CSV / Excel</span>
+              </button>
+            </div>
+            <button type="button" id="modal-btn-send-chat" class="btn" style="width: 100%; background: linear-gradient(135deg, #00897B, #00695C); color: #ffffff; border: none; padding: 11px 14px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 8px rgba(0, 150, 136, 0.25); transition: opacity 0.2s;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>💬 Send to Faculty Supervisor via Chat</span>
+            </button>
+          </div>
+        </div>
+      `,
+      showConfirmButton: false,
+      showCancelButton: true,
+      cancelButtonText: 'Cancel',
+      cancelButtonColor: '#64748b',
+      didOpen: () => {
+        const modalEl = StudentSwal.getPopup();
+        const selProject = modalEl.querySelector('#modal-dl-project');
+        const selStatus = modalEl.querySelector('#modal-dl-status');
+        const btnPdf = modalEl.querySelector('#modal-btn-dl-pdf');
+        const btnCsv = modalEl.querySelector('#modal-btn-dl-csv');
+        const btnChat = modalEl.querySelector('#modal-btn-send-chat');
+
+        const getSelectedLogs = () => {
+          const proj = selProject?.value || 'all';
+          const status = selStatus?.value || 'all';
+          return {
+            selectedProject: proj,
+            selectedStatus: status,
+            logs: logs.filter(l => {
+              if (proj !== 'all' && l.project !== proj) return false;
+              if (status !== 'all' && (l.status || 'pending').toLowerCase() !== status) return false;
+              return true;
+            })
+          };
+        };
+
+        btnPdf?.addEventListener('click', async () => {
+          const { selectedProject, logs: exportList } = getSelectedLogs();
+          if (!exportList.length) {
+            showStudentWarning('No Logs Found', 'There are no work log entries for the selected project and filters.');
+            return;
+          }
+          StudentSwal.close();
+          await exportLogsToPDF(exportList, selectedProject === 'all' ? 'All Assigned Projects' : selectedProject);
+        });
+
+        btnCsv?.addEventListener('click', () => {
+          const { selectedProject, logs: exportList } = getSelectedLogs();
+          if (!exportList.length) {
+            showStudentWarning('No Logs Found', 'There are no work log entries for the selected project and filters.');
+            return;
+          }
+          StudentSwal.close();
+          exportLogsToCSV(exportList, selectedProject === 'all' ? 'All Assigned Projects' : selectedProject);
+          StudentSwal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'CSV Downloaded!',
+            showConfirmButton: false,
+            timer: 2500,
+            timerProgressBar: true
+          });
+        });
+
+        btnChat?.addEventListener('click', async () => {
+          const { selectedProject, logs: exportList } = getSelectedLogs();
+          if (!exportList.length) {
+            showStudentWarning('No Logs Found', 'There are no work log entries for the selected project and filters.');
+            return;
+          }
+          StudentSwal.close();
+          await shareLogsToFacultyChat(exportList, selectedProject);
+        });
+      }
+    });
+  }
 
   async function handleProjectSelection(projectId) {
     formProjectId = projectId;
@@ -155,17 +720,27 @@ export async function StudentWorkLogs(route, router) {
           </div>
           <div>
             <h1 class="student-wl-title">Daily Work Logs</h1>
-            <p class="student-wl-subtitle">Log your daily working hours and track completed project effort across sprints.</p>
+            <p class="student-wl-subtitle"></p>
           </div>
         </div>
 
-        <!-- Scope Project Switcher -->
-        <div class="student-wl-project-selector">
-          <span class="student-wl-select-label">Project Scope:</span>
-          <select id="header-scope-select" class="student-wl-header-select">
-            <option value="all" ${logProjectFilter === 'all' ? 'selected' : ''}>All Assigned Projects</option>
-            ${logProjectFilterOptions}
-          </select>
+        <!-- Scope Project Switcher & Action Buttons -->
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div class="student-wl-project-selector">
+            <span class="student-wl-select-label">Project Scope:</span>
+            <select id="header-scope-select" class="student-wl-header-select">
+              <option value="all" ${logProjectFilter === 'all' ? 'selected' : ''}>All Assigned Projects</option>
+              ${logProjectFilterOptions}
+            </select>
+          </div>
+          <button type="button" id="btn-header-send-chat" class="student-btn student-btn-outline" style="font-size: 0.82rem; font-weight: 700; padding: 7px 13px; display: inline-flex; align-items: center; gap: 6px; border-color: #00897B; color: #00796B; background: #E0F2F1;" title="Send work log summary directly to Faculty Supervisor via Chat">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>💬 Send to Faculty Chat</span>
+          </button>
+          <button type="button" id="btn-open-download-modal" class="student-btn student-btn-primary" style="font-size: 0.82rem; font-weight: 700; padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0, 150, 136, 0.25);" title="Download Daily Work Logs (Project-wise or All Projects Combined)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download Work Logs</span>
+          </button>
         </div>
       </div>
 
@@ -217,7 +792,7 @@ export async function StudentWorkLogs(route, router) {
         <!-- Work Log Submission Form Card -->
         <div class="student-wl-form-card">
           <h3 class="student-wl-form-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             Log Working Hours
           </h3>
 
@@ -298,10 +873,22 @@ export async function StudentWorkLogs(route, router) {
         <div class="student-wl-history-card">
           <div class="student-wl-history-header">
             <h3 class="student-wl-history-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
               Daily Log History
             </h3>
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="btn-table-send-chat" class="student-btn student-btn-outline student-btn-sm" style="font-size: 0.75rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px; border-color: #00897B; color: #00796B; background: #E0F2F1;" title="Send currently filtered work logs to Faculty Supervisor via Chat">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <span>💬 Chat</span>
+              </button>
+              <button type="button" id="btn-table-download-csv" class="student-btn student-btn-outline student-btn-sm" style="font-size: 0.75rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;" title="Export currently filtered table view as CSV">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>CSV</span>
+              </button>
+              <button type="button" id="btn-table-download-pdf" class="student-btn student-btn-outline student-btn-sm" style="font-size: 0.75rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;" title="Export currently filtered table view as PDF Timesheet">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                <span>PDF</span>
+              </button>
               <span class="student-badge student-badge-success" style="font-size: 0.78rem; font-weight: 800;">
                 Filtered: ${filteredHours.toFixed(1)} hrs
               </span>
@@ -380,6 +967,54 @@ export async function StudentWorkLogs(route, router) {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
       }
+    });
+
+    // Download Work Logs Modal & Quick Export / Chat Buttons
+    container.querySelector('#btn-open-download-modal')?.addEventListener('click', () => {
+      openDownloadModal();
+    });
+
+    // Top Header Send to Faculty Chat button
+    container.querySelector('#btn-header-send-chat')?.addEventListener('click', async () => {
+      if (!scopeLogs.length) {
+        showStudentWarning('No Logs to Share', 'There are no work log entries in the current project scope.');
+        return;
+      }
+      await shareLogsToFacultyChat(scopeLogs, logProjectFilter);
+    });
+
+    // Table Header Send to Faculty Chat button
+    container.querySelector('#btn-table-send-chat')?.addEventListener('click', async () => {
+      if (!filteredLogs.length) {
+        showStudentWarning('No Logs to Share', 'There are no work log entries in the current filtered view.');
+        return;
+      }
+      await shareLogsToFacultyChat(filteredLogs, logProjectFilter);
+    });
+
+    container.querySelector('#btn-table-download-csv')?.addEventListener('click', () => {
+      if (!filteredLogs.length) {
+        showStudentWarning('No Logs to Export', 'There are no work log entries in the current filtered view.');
+        return;
+      }
+      exportLogsToCSV(filteredLogs, scopeBadgeLabel);
+      StudentSwal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Filtered CSV Downloaded!',
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true
+      });
+    });
+
+    container.querySelector('#btn-table-download-pdf')?.addEventListener('click', async () => {
+      if (!filteredLogs.length) {
+        showStudentWarning('No Logs to Export', 'There are no work log entries in the current filtered view.');
+        return;
+      }
+      await exportLogsToPDF(filteredLogs, scopeBadgeLabel);
     });
 
     // Top Header Project Scope Switcher
@@ -466,7 +1101,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'warning',
           title: 'Project Required',
           text: 'Please select a project.',
-          confirmButtonColor: '#0284c7'
+          confirmButtonColor: '#00796B'
         });
         return;
       }
@@ -476,7 +1111,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'warning',
           title: 'Task Required',
           text: 'Please select an assigned task.',
-          confirmButtonColor: '#0284c7'
+          confirmButtonColor: '#00796B'
         });
         return;
       }
@@ -496,7 +1131,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'success',
           title: 'Logged Successfully',
           text: `Logged ${hours} hours for task.`,
-          confirmButtonColor: '#0284c7'
+          confirmButtonColor: '#00796B'
         });
       } catch (err) {
         formSubmitting = false;
@@ -505,7 +1140,7 @@ export async function StudentWorkLogs(route, router) {
           icon: 'error',
           title: 'Error Logging Hours',
           text: err.message || 'Failed to submit work log.',
-          confirmButtonColor: '#0284c7'
+          confirmButtonColor: '#00796B'
         });
       }
     });

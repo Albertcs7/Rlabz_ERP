@@ -54,6 +54,13 @@ export async function FinanceLayout(contentChild, route, router) {
     </li>
   `).join('');
 
+  let topbarTitle = route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'FINANCE & PAYROLL';
+  if (authStore?.role === 'developer') {
+    topbarTitle = 'DEVELOPER DASHBOARD';
+  } else if (authStore?.role === 'director') {
+    topbarTitle = 'DIRECTOR DASHBOARD';
+  }
+
   wrapper.innerHTML = `
     <aside class="sidebar finance-sidebar">
       <div class="sidebar-header">
@@ -71,7 +78,7 @@ export async function FinanceLayout(contentChild, route, router) {
 
     <div class="main-wrapper finance-main-wrapper">
       <header class="topbar">
-        <div class="topbar-title">${route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'FINANCE & PAYROLL'}</div>
+        <div class="topbar-title">${topbarTitle}</div>
         <div style="display:flex; align-items:center;">
           <div class="user-profile">
             <div class="avatar">${initial}</div>

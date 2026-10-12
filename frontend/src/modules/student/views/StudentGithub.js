@@ -320,8 +320,8 @@ export async function StudentGithub(route, router) {
             </div>
             <div>
               <h1 class="student-git-title">GitHub & Version Control Manager</h1>
-              <p class="student-git-subtitle">
-                Manage project repositories, register your personal feature branches, and link pull requests to assigned sprint tasks.
+              <p class="student-git-subtitle"> 
+                
               </p>
             </div>
           </div>
@@ -362,7 +362,7 @@ export async function StudentGithub(route, router) {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
             </div>
             <div class="student-git-kpi-meta">
-              <span class="student-git-kpi-val" style="color: #4f46e5;">${myBranches.length}</span>
+              <span class="student-git-kpi-val" style="color: #00796B;">${myBranches.length}</span>
               <span class="student-git-kpi-lbl">My Active Branches</span>
             </div>
           </div>
@@ -602,7 +602,7 @@ export async function StudentGithub(route, router) {
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Save & Submit URL',
-        confirmButtonColor: 'var(--primary, #3b82f6)',
+        confirmButtonColor: '#00796B',
         preConfirm: () => {
           const urlInput = document.getElementById('swal-main-repo-url').value.trim();
           if (!urlInput) {
@@ -687,7 +687,7 @@ export async function StudentGithub(route, router) {
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: isEditing ? 'Save Changes' : 'Register Branch',
-        confirmButtonColor: 'var(--primary, #4f46e5)',
+        confirmButtonColor: '#00796B',
         preConfirm: () => {
           const bName = document.getElementById('swal-branch-name').value.trim();
           let bUrl = document.getElementById('swal-branch-url').value.trim();
@@ -819,7 +819,7 @@ export async function StudentGithub(route, router) {
           focusConfirm: false,
           showCancelButton: true,
           confirmButtonText: 'Save Linkage',
-          confirmButtonColor: 'var(--primary, #3b82f6)',
+          confirmButtonColor: '#00796B',
           preConfirm: () => {
             const selectedBranchId = document.getElementById('swal-task-branch-select').value;
             const inputPrUrl = document.getElementById('swal-task-pr-url').value.trim();

@@ -4,7 +4,7 @@ import { modules } from '../../module-manifest.js';
 export function authGuard(to, from, next) {
   const authStore = useAuthStore();
   const isAuthenticated = authStore.isAuthenticated;
-  const defaultRoute = authStore.user?.defaultRoute || '/dashboard';
+  const defaultRoute = authStore.user?.defaultRoute || (authStore.role === 'developer' ? '/developer' : (authStore.role === 'director' ? '/director' : '/dashboard'));
 
   // 1. Unauthenticated users accessing protected routes -> redirect to /login
   if (to.meta?.requiresAuth && !isAuthenticated) {

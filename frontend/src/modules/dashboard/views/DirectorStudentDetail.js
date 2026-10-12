@@ -1,8 +1,11 @@
 import { DirectorService } from '../services/DirectorService.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 
 export function DirectorStudentDetail(route, router) {
   const container = document.createElement('div');
   container.className = 'director-dashboard student-detail-page';
+  const authStore = useAuthStore();
+  const dashboardTitle = authStore.role === 'developer' ? 'Developer Dashboard' : 'Director Dashboard';
 
   // Resolve Student ID from route params, path, or fallback
   const rawId = (route && route.params && route.params.id) 
@@ -73,7 +76,7 @@ export function DirectorStudentDetail(route, router) {
           Back to Student Track Roster
         </button>
         <div class="student-breadcrumb">
-          <span>Director Dashboard</span>
+          <span>${dashboardTitle}</span>
           <span class="sep">/</span>
           <a href="/dashboard/students" id="breadcrumb-roster">Student Roster</a>
           <span class="sep">/</span>
@@ -192,7 +195,7 @@ export function DirectorStudentDetail(route, router) {
 
         <div class="student-projects-grid">
           ${student.detailedProjects.map((p, idx) => `
-            <div class="student-project-card">
+            <div class="student-project-card student-project-card-clickable" data-project-title="${p.title || ''}" style="cursor:pointer;" title="Click to view ${p.title || 'project'} in Project Oversight">
               <div class="student-project-card-header">
                 <div>
                   <span class="student-project-code">${p.id}</span>
@@ -388,6 +391,17 @@ export function DirectorStudentDetail(route, router) {
     container.querySelector('#clear-search')?.addEventListener('click', () => {
       searchQuery = '';
       render();
+    });
+
+    container.querySelectorAll('.student-project-card-clickable').forEach(card => {
+      card.addEventListener('click', () => {
+        const title = card.getAttribute('data-project-title');
+        const targetUrl = title 
+          ? `/dashboard/projects?tab=all&search=${encodeURIComponent(title)}` 
+          : '/dashboard/projects?tab=all';
+        if (router) router.push(targetUrl);
+        else window.location.href = targetUrl;
+      });
     });
   }
 
