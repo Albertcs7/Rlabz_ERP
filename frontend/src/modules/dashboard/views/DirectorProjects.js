@@ -1,4 +1,5 @@
 import { DirectorService } from '../services/DirectorService.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 
 function formatMoney(amount) {
   if (amount === undefined || amount === null || isNaN(Number(amount))) return '0';
@@ -6,6 +7,8 @@ function formatMoney(amount) {
 }
 
 export function DirectorProjects(route, router) {
+  const authStore = useAuthStore();
+  const isDirector = authStore.role === 'director';
   const container = document.createElement('div');
   container.className = 'director-dashboard';
 
@@ -80,7 +83,7 @@ export function DirectorProjects(route, router) {
       <div class="director-panel">
         <div class="director-panel-header">
           <h2>Pending Project Proposals</h2>
-          <span style="font-size:0.85rem; color:#6b7280;">Only Director can Accept or Reject proposals</span>
+          <span style="font-size:0.85rem; color:#6b7280;">${isDirector ? 'Proposals overview (Read-only for Director)' : 'Review and decide on project proposals'}</span>
         </div>
 
         ${pendingProposals.length === 0 ? `
@@ -124,7 +127,7 @@ export function DirectorProjects(route, router) {
                     </td>
                     <td>
                       <button class="btn-director btn-director-primary btn-open-review" data-id="${p.id}">
-                        Review & Decide
+                        ${isDirector ? 'View Details' : 'Review & Decide'}
                       </button>
                     </td>
                   </tr>
@@ -187,9 +190,15 @@ export function DirectorProjects(route, router) {
                     ₹${formatMoney(p.spent)} / ₹${formatMoney(p.budget)}
                   </td>
                   <td>
-                    <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
-                      Reassign Faculty
-                    </button>
+                    ${isDirector ? `
+                      <button class="btn-director btn-director-outline" disabled style="opacity:0.5; cursor:not-allowed;" title="Director has read-only access to faculty assignment">
+                        Reassign Faculty
+                      </button>
+                    ` : `
+                      <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
+                        Reassign Faculty
+                      </button>
+                    `}
                   </td>
                 </tr>
               `).join('')}
@@ -325,7 +334,7 @@ export function DirectorProjects(route, router) {
                 return `
                   <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
-                      <input type="radio" name="proposal_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} />
+                      <input type="radio" name="proposal_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
                         <div style="font-weight:600; color:#111827; font-size:0.85rem;">${f.name}</div>
                         <div style="font-size:0.75rem; color:#6b7280;">${f.department || 'Computer Applications'}</div>
@@ -340,11 +349,16 @@ export function DirectorProjects(route, router) {
             </div>
 
             <label style="font-weight:600; font-size:0.875rem; margin-top:0.5rem; display:block;">Director Review Notes / Remarks:</label>
-            <textarea id="modal-review-notes" rows="2" placeholder="Enter optional notes for the client and team..." style="padding:0.5rem; border-radius:6px; border:1px solid #d1d5db; font-family:inherit;"></textarea>
+            <textarea id="modal-review-notes" rows="2" placeholder="${isDirector ? 'Read-only mode' : 'Enter optional notes for the client and team...'}" ${isDirector ? 'disabled' : ''} style="padding:0.5rem; border-radius:6px; border:1px solid #d1d5db; font-family:inherit; ${isDirector ? 'background:#f3f4f6; cursor:not-allowed;' : ''}"></textarea>
           </div>
           <div class="director-modal-footer">
-            <button class="btn-director btn-director-danger btn-reject-prop">Reject Proposal</button>
-            <button class="btn-director btn-director-success btn-accept-prop">Accept & Approve</button>
+            ${isDirector ? `
+              <span style="font-size: 0.85rem; color: #6b7280; margin-right: auto;">Read-only view</span>
+              <button class="btn-director btn-director-outline btn-close-modal">Close</button>
+            ` : `
+              <button class="btn-director btn-director-danger btn-reject-prop">Reject Proposal</button>
+              <button class="btn-director btn-director-success btn-accept-prop">Accept & Approve</button>
+            `}
           </div>
         </div>
       </div>
@@ -361,7 +375,7 @@ export function DirectorProjects(route, router) {
       });
     });
 
-    modalHost.querySelector('.btn-accept-prop').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-accept-prop')?.addEventListener('click', async () => {
       const selectedRadio = modalHost.querySelector('input[name="proposal_faculty_choice"]:checked');
       const facId = selectedRadio ? selectedRadio.value : (faculties[0] ? faculties[0].id : null);
       const notes = modalHost.querySelector('#modal-review-notes').value;
@@ -374,7 +388,7 @@ export function DirectorProjects(route, router) {
       }
     });
 
-    modalHost.querySelector('.btn-reject-prop').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-reject-prop')?.addEventListener('click', async () => {
       const notes = modalHost.querySelector('#modal-review-notes').value;
       try {
         await DirectorService.updateProposalStatusAsync(proposal.raw_id, 'rejected', notes);
@@ -408,7 +422,7 @@ export function DirectorProjects(route, router) {
                 return `
                   <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
-                      <input type="radio" name="project_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} />
+                      <input type="radio" name="project_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
                         <div style="font-weight:600; color:#111827; font-size:0.85rem;">${f.name}</div>
                         <div style="font-size:0.75rem; color:#6b7280;">${f.department || 'Computer Applications'}</div>
@@ -423,8 +437,13 @@ export function DirectorProjects(route, router) {
             </div>
           </div>
           <div class="director-modal-footer">
-            <button class="btn-director btn-director-outline btn-close-modal">Cancel</button>
-            <button class="btn-director btn-director-primary btn-save-faculty">Save Assignment</button>
+            ${isDirector ? `
+              <span style="font-size: 0.85rem; color: #6b7280; margin-right: auto;">Read-only view</span>
+              <button class="btn-director btn-director-outline btn-close-modal">Close</button>
+            ` : `
+              <button class="btn-director btn-director-outline btn-close-modal">Cancel</button>
+              <button class="btn-director btn-director-primary btn-save-faculty">Save Assignment</button>
+            `}
           </div>
         </div>
       </div>
@@ -441,7 +460,7 @@ export function DirectorProjects(route, router) {
       });
     });
 
-    modalHost.querySelector('.btn-save-faculty').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-save-faculty')?.addEventListener('click', async () => {
       const selectedRadio = modalHost.querySelector('input[name="project_faculty_choice"]:checked');
       const facId = selectedRadio ? selectedRadio.value : (faculties[0] ? faculties[0].id : null);
       try {

@@ -15,7 +15,14 @@ class ClientRequirementController extends Controller
         $role = $user['role'] ?? '';
         $permissions = $user['permissions'] ?? [];
 
-        if (in_array($role, ['director', 'coordinator', 'admin'])) {
+        if ($role === 'director') {
+            if ($permission === 'project.client_requirements.view') {
+                return;
+            }
+            abort(403, 'Forbidden: Director has read-only access to client requirements');
+        }
+
+        if (in_array($role, ['developer', 'coordinator', 'admin'])) {
             return;
         }
 

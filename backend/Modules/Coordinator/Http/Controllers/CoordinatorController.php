@@ -659,7 +659,7 @@ class CoordinatorController extends Controller
         }
 
         $users = DB::table('users')
-            ->whereIn('role', ['faculty', 'director', 'coordinator'])
+            ->whereIn('role', ['faculty', 'director', 'coordinator', 'developer'])
             ->orderBy('name')
             ->get();
 

@@ -31,7 +31,7 @@ export async function ProjectDashboard(route, router) {
           />
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: var(--text-secondary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
-        ${permissions.includes('project.create') ? '<button class="btn btn-primary shadow-hover" id="btn-create-project" style="width: auto; padding: 0 1.25rem; height: 40px; font-size: 0.88rem; font-family: var(--font-family); display: inline-flex; align-items: center; gap: 0.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>Create Project</span></button>' : ''}
+        ${(permissions.includes('project.create') || role === 'developer') && role !== 'director' ? '<button class="btn btn-primary shadow-hover" id="btn-create-project" style="width: auto; padding: 0 1.25rem; height: 40px; font-size: 0.88rem; font-family: var(--font-family); display: inline-flex; align-items: center; gap: 0.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>Create Project</span></button>' : ''}
       </div>
     </div>
     <div class="dashboard-content" id="project-list-container">

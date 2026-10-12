@@ -1,4 +1,5 @@
 import { DashboardLayout } from '@/core/layouts/DashboardLayout.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 import './dashboard.css';
 
 export async function DirectorLayout(contentChild, route, router) {
@@ -31,8 +32,9 @@ export async function DirectorLayout(contentChild, route, router) {
     const iconFinance = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`;
     const iconAudit = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
 
+    const authStore = useAuthStore();
     const navItems = [
-      { title: 'Director Overview', path: '/dashboard', icon: iconOverview },
+      { title: authStore.role === 'developer' ? 'Developer Overview' : 'Director Overview', path: '/dashboard', icon: iconOverview },
       { title: 'Projects & Proposals', path: '/dashboard/projects', icon: iconProjects },
       { title: 'Student Track Roster', path: '/dashboard/students', icon: iconStudents },
       { title: 'Client Requirements', path: '/dashboard/clients', icon: iconClients },

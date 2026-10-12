@@ -1,7 +1,10 @@
 import { DirectorService } from '../services/DirectorService.js';
 import { getChart } from '@/core/utils/chartLoader.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 
 export function DirectorHome(route, router) {
+  const authStore = useAuthStore();
+  const isDirector = authStore.role === 'director';
   const container = document.createElement('div');
   container.className = 'director-dashboard';
 
@@ -417,7 +420,7 @@ export function DirectorHome(route, router) {
         <!-- Proposals Needing Action -->
         <div class="director-panel">
           <div class="director-panel-header">
-            <h2>⚡ Proposals Requiring Director Decision (${pendingProposals.length})</h2>
+            <h2>⚡ Proposals Requiring ${isDirector ? 'Review' : 'Director Decision'} (${pendingProposals.length})</h2>
             <button class="btn-director btn-director-outline btn-goto-projects">Manage All</button>
           </div>
           ${pendingProposals.length === 0 ? `
@@ -437,7 +440,7 @@ export function DirectorHome(route, router) {
                     </div>
                   </div>
                   <button class="btn-director btn-director-primary btn-open-proposal-modal" data-id="${p.id}" style="padding:0.4rem 0.9rem; font-size:0.825rem;">
-                    Review & Assign
+                    ${isDirector ? 'View Details' : 'Review & Assign'}
                   </button>
                 </div>
               `).join('')}
@@ -1011,7 +1014,7 @@ export function DirectorHome(route, router) {
                 return `
                   <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:#ffffff; border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
-                      <input type="radio" name="proposal_home_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} />
+                      <input type="radio" name="proposal_home_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
                         <div style="font-weight:600; color:#111827; font-size:0.85rem;">${f.name}</div>
                         <div style="font-size:0.75rem; color:#6b7280;">${f.department || 'Computer Applications'}</div>
@@ -1026,11 +1029,16 @@ export function DirectorHome(route, router) {
             </div>
 
             <label style="font-weight:600; font-size:0.875rem; margin-top:0.5rem; display:block;">Director Remarks:</label>
-            <textarea id="modal-review-notes" rows="2" placeholder="Optional review remarks and acceptance instructions..." style="padding:0.5rem; border-radius:6px; border:1px solid #d1d5db; font-family:inherit;"></textarea>
+            <textarea id="modal-review-notes" rows="2" placeholder="${isDirector ? 'Read-only mode' : 'Optional review remarks and acceptance instructions...'}" ${isDirector ? 'disabled' : ''} style="padding:0.5rem; border-radius:6px; border:1px solid #d1d5db; font-family:inherit; ${isDirector ? 'background:#f3f4f6; cursor:not-allowed;' : ''}"></textarea>
           </div>
           <div class="director-modal-footer">
-            <button class="btn-director btn-director-danger btn-reject-prop">Reject Proposal</button>
-            <button class="btn-director btn-director-success btn-accept-prop">Accept & Assign</button>
+            ${isDirector ? `
+              <span style="font-size: 0.85rem; color: #6b7280; margin-right: auto;">Read-only view</span>
+              <button class="btn-director btn-director-outline btn-close-modal">Close</button>
+            ` : `
+              <button class="btn-director btn-director-danger btn-reject-prop">Reject Proposal</button>
+              <button class="btn-director btn-director-success btn-accept-prop">Accept & Assign</button>
+            `}
           </div>
         </div>
       </div>
@@ -1047,7 +1055,7 @@ export function DirectorHome(route, router) {
       });
     });
 
-    modalHost.querySelector('.btn-accept-prop').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-accept-prop')?.addEventListener('click', async () => {
       const selectedRadio = modalHost.querySelector('input[name="proposal_home_faculty_choice"]:checked');
       const facId = selectedRadio ? selectedRadio.value : (faculties[0] ? faculties[0].id : null);
       const notes = modalHost.querySelector('#modal-review-notes').value;
@@ -1055,7 +1063,7 @@ export function DirectorHome(route, router) {
       modalHost.innerHTML = '';
       await render();
     });
-    modalHost.querySelector('.btn-reject-prop').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-reject-prop')?.addEventListener('click', async () => {
       const notes = modalHost.querySelector('#modal-review-notes').value;
       await DirectorService.updateProposalStatusAsync(proposal.id, 'rejected', notes);
       modalHost.innerHTML = '';

@@ -20,6 +20,13 @@ class FullDatabaseDemoSeeder extends Seeder
                 'permissions' => json_encode(['view-dashboard', 'view-finance-readonly', 'view-projects', 'view-github', 'view-audit-notifications']),
             ],
             [
+                'name' => 'Developer',
+                'email' => 'developer@rajagiri.edu',
+                'password' => Hash::make('developer123'),
+                'role' => 'developer',
+                'permissions' => json_encode(['view-dashboard', 'view-finance-readonly', 'view-projects', 'view-github', 'view-audit-notifications', 'project.assign_faculty', 'project.view_global', 'project.client_requirements.view']),
+            ],
+            [
                 'name' => 'Test Coordinator',
                 'email' => 'coordinator@rajagiri.edu',
                 'password' => Hash::make('password123'),

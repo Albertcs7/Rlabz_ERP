@@ -12,9 +12,9 @@ export async function ProjectDetails(route, router) {
   const role = authStore.role || 'student'; // default safely
 
   // Helper to determine if permissions allow actions
-  const canViewAssignments = role === 'director' || role === 'coordinator';
-  const canCreateTask = permissions.includes('project.task.create') || role === 'faculty' || role === 'coordinator' || role === 'director';
-  const canCreateModule = permissions.includes('project.module.create') || role === 'faculty' || role === 'coordinator' || role === 'director';
+  const canViewAssignments = role === 'director' || role === 'coordinator' || role === 'developer';
+  const canCreateTask = (permissions.includes('project.task.create') || role === 'faculty' || role === 'coordinator' || role === 'developer') && role !== 'director';
+  const canCreateModule = (permissions.includes('project.module.create') || role === 'faculty' || role === 'coordinator' || role === 'developer') && role !== 'director';
   
   container.innerHTML = `
     <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -23,7 +23,7 @@ export async function ProjectDetails(route, router) {
         <p style="color: var(--text-muted);">View detailed project information and manage assignments.</p>
       </div>
       <div style="display: flex; align-items: center; gap: 0.75rem;">
-        ${permissions.includes('project.close') ? '<button class="btn btn-warning shadow-hover" id="btn-close-project" style="display:none;"><i class="fa fa-times-circle" style="margin-right: 0.5rem;"></i>Close Project</button>' : ''}
+        ${permissions.includes('project.close') && role !== 'director' ? '<button class="btn btn-warning shadow-hover" id="btn-close-project" style="display:none;"><i class="fa fa-times-circle" style="margin-right: 0.5rem;"></i>Close Project</button>' : ''}
         <button id="btn-back" class="btn-back-nav" title="Return to Projects">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -305,7 +305,7 @@ export async function ProjectDetails(route, router) {
                   <th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); min-width: 250px;">TASK & MODULE</th>
                   <th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">ASSIGNEE</th>
                   <th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted);">STATUS</th>
-                  ${canViewAssignments || role === 'faculty' || role === 'coordinator' || role === 'director' ? `<th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); text-align: right;">ACTIONS</th>` : ''}
+                  ${role === 'faculty' || role === 'coordinator' || role === 'developer' ? `<th style="padding: 1rem 1.25rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); text-align: right;">ACTIONS</th>` : ''}
                 </tr>
               </thead>
               <tbody id="all-tasks-table-body">
@@ -319,7 +319,7 @@ export async function ProjectDetails(route, router) {
       <!-- ASSIGNMENTS TAB -->
       <div id="tab-assignments" class="tab-content" style="display: none;">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-          ${permissions.includes('project.assign_faculty') ? `
+          ${permissions.includes('project.assign_faculty') && role !== 'director' ? `
           <div class="card-panel">
             <h3 style="margin-bottom: 1.25rem; font-size: 1.2rem;">Assign Faculty</h3>
             <form id="form-assign-faculty" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -963,7 +963,7 @@ export async function ProjectDetails(route, router) {
         // -------------------------------------------------------------
         const modContainer = container.querySelector('#modules-list');
         const tasksPaneContainer = container.querySelector('#module-tasks-pane-container');
-        const canBlock = (role === 'faculty' || role === 'coordinator' || role === 'director');
+        const canBlock = (role === 'faculty' || role === 'coordinator' || role === 'developer');
 
         if (p.modules && p.modules.length > 0) {
           if (!selectedModuleId || !p.modules.some(m => m.id === selectedModuleId)) {
@@ -1340,7 +1340,7 @@ export async function ProjectDetails(route, router) {
     const submittedDate = repo.submitted_date ? new Date(repo.submitted_date).toLocaleDateString() : (repo.created_at ? new Date(repo.created_at).toLocaleDateString() : 'N/A');
 
     const isVerified = Boolean(repo.is_verified);
-    const canVerify = (role === 'faculty' || role === 'coordinator' || role === 'director');
+    const canVerify = (role === 'faculty' || role === 'coordinator' || role === 'developer');
 
     ghContainer.innerHTML = `
       <div style="padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 1.25rem;">

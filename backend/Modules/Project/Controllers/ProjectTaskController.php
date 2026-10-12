@@ -182,8 +182,8 @@ class ProjectTaskController extends Controller
         $user = $request->input('auth_user');
         $role = $user['role'] ?? '';
 
-        // Only allow faculty, coordinator, and director
-        if (!in_array($role, ['faculty', 'coordinator', 'director'])) {
+        // Only allow faculty, coordinator, and developer
+        if (!in_array($role, ['faculty', 'coordinator', 'developer'])) {
             return response()->json(['error' => 'Forbidden: Only faculty or coordinators can update module status.'], 403);
         }
 

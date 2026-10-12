@@ -162,7 +162,7 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           <li>
             <a href="${mod.path}" class="${isActive ? 'active' : ''}">
               ${iconSvg}
-              <span>${mod.title}</span>
+              <span>${(mod.name === 'dashboard' && authStore.role === 'developer') ? 'Developer Dashboard' : mod.title}</span>
             </a>
           </li>
         `;
