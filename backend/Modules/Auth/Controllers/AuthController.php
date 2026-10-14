@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class AuthController extends Controller
@@ -44,29 +45,20 @@ class AuthController extends Controller
         $email = $request->input('email');
         $password = $request->input('password');
 
-        if (!$email || !str_contains($email, '@rajagiri.edu')) {
-            if (\Illuminate\Support\Facades\Schema::hasTable('audit_logs')) {
-                DB::table('audit_logs')->insert([
-                    'user_id' => 1,
-                    'action' => 'Login Failed - Invalid Domain',
-                    'description' => "Failed login attempt for '{$email}'. Email must contain @rajagiri.edu.",
-                    'created_at' => now()
-                ]);
-            }
+        if (!is_string($email) || $email === '' || !str_contains($email, '@rajagiri.edu')) {
+            $this->recordFailedLogin(
+                $request,
+                is_string($email) ? $email : '',
+                'Login Failed - Invalid Domain',
+                'Email must contain @rajagiri.edu.'
+            );
             return response()->json(['error' => 'Email must contain @rajagiri.edu'], 401);
         }
 
         $user = DB::table('users')->where('email', $email)->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
-            if (\Illuminate\Support\Facades\Schema::hasTable('audit_logs')) {
-                DB::table('audit_logs')->insert([
-                    'user_id' => $user->id ?? 1,
-                    'action' => 'Login Failed - Invalid Credentials',
-                    'description' => "Failed login attempt for '{$email}'. Invalid credentials.",
-                    'created_at' => now()
-                ]);
-            }
+        if (!$user || !is_string($password) || !Hash::check($password, $user->password)) {
+            $this->recordFailedLogin($request, $email, 'Login Failed - Invalid Credentials', 'Invalid credentials.', $user->id ?? null);
             return response()->json(['error' => 'Invalid email or password.'], 401);
         }
 
@@ -83,6 +75,38 @@ class AuthController extends Controller
         }
 
         return $this->respondWithToken($token, $user);
+    }
+
+    /**
+     * Audit a failed login without ever failing the login request itself.
+     *
+     * audit_logs.user_id is NOT NULL with a foreign key to users, so a row can
+     * only be written when the attempt matches a real user (e.g. wrong
+     * password). Attempts with no matching user (unknown or non-@rajagiri.edu
+     * email) go to the application log instead — never a made-up user id.
+     * The password is never logged.
+     */
+    private function recordFailedLogin(Request $request, string $email, string $action, string $reason, ?int $userId = null): void
+    {
+        $description = "Failed login attempt for '{$email}'. {$reason}";
+
+        if ($userId === null) {
+            Log::notice($action, ['email' => $email, 'ip' => $request->ip()]);
+            return;
+        }
+
+        try {
+            if (Schema::hasTable('audit_logs')) {
+                DB::table('audit_logs')->insert([
+                    'user_id' => $userId,
+                    'action' => $action,
+                    'description' => $description,
+                    'created_at' => now(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Could not write failed-login audit row', ['email' => $email, 'error' => $e->getMessage()]);
+        }
     }
 
     /**
