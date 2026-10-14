@@ -14,6 +14,11 @@ class DashboardController extends Controller
         return ($request->input('auth_user')['role'] ?? null) === 'director';
     }
 
+    private function canWriteProjects(Request $request): bool
+    {
+        return ($request->input('auth_user')['role'] ?? null) === 'developer';
+    }
+
     private function currentUserId(Request $request): ?int
     {
         return $request->input('auth_user')['sub'] ?? null;
@@ -698,8 +703,8 @@ class DashboardController extends Controller
      */
     public function updateProposalStatus(Request $request, $proposalId)
     {
-        if (!$this->isDirector($request)) {
-            return response()->json(['error' => 'Forbidden: only a Director can accept or reject a proposal'], 403);
+        if (!$this->canWriteProjects($request)) {
+            return response()->json(['error' => 'Forbidden: only Developer can accept or reject a proposal'], 403);
         }
 
         $request->validate([
@@ -767,8 +772,8 @@ class DashboardController extends Controller
      */
     public function startProject(Request $request, $projectId)
     {
-        if (!$this->isDirector($request)) {
-            return response()->json(['error' => 'Forbidden: only a Director can start a project'], 403);
+        if (!$this->canWriteProjects($request)) {
+            return response()->json(['error' => 'Forbidden: only Developer can start a project'], 403);
         }
 
         $project = DB::table('projects')->where('id', $projectId)->first();
@@ -948,8 +953,8 @@ class DashboardController extends Controller
      */
     public function assignFaculty(Request $request, $projectId)
     {
-        if (!$this->isDirector($request)) {
-            return response()->json(['error' => 'Forbidden: only a Director can assign faculty'], 403);
+        if (!$this->canWriteProjects($request)) {
+            return response()->json(['error' => 'Forbidden: only Developer can assign faculty'], 403);
         }
 
         $request->validate([

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('email', 255)->unique();
             $table->string('password', 255);
             $table->string('phone', 20)->nullable();
-            $table->enum('role', ['director', 'coordinator', 'finance', 'faculty', 'student']);
+            $table->enum('role', ['director', 'coordinator', 'finance', 'faculty', 'student', 'developer']);
             $table->json('permissions')->nullable();
             $table->timestamps();
         });

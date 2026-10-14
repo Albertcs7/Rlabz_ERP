@@ -1276,11 +1276,42 @@
   overflow: hidden;
   text-overflow: ellipsis;
   transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .student-project-chip:hover {
-  background: var(--border-subtle);
-  border-color: var(--text-secondary);
+  background: var(--primary-light, #e0f2fe);
+  border-color: var(--primary, #0284c7);
+  color: var(--primary, #0284c7);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.director-search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0.45rem 2rem 0.45rem 2.25rem;
+  font-size: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.director-search-input:focus {
+  border-color: var(--primary, #0284c7);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.director-project-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.director-project-row:hover {
+  background: #f8fafc;
 }
 
 .student-project-more-btn {

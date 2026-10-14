@@ -23,6 +23,13 @@ class DevUserSeeder extends Seeder
                 'email' => 'director@rajagiri.edu',
                 'password' => Hash::make('director123'),
                 'role' => 'director',
+                'permissions' => ['view-dashboard', 'view-finance-readonly', 'view-projects', 'view-github', 'view-audit-notifications', 'project.view_global', 'project.client_requirements.view'],
+            ],
+            [
+                'name' => 'Developer',
+                'email' => 'developer@rajagiri.edu',
+                'password' => Hash::make('developer123'),
+                'role' => 'developer',
                 'permissions' => ['view-dashboard', 'view-finance-readonly', 'view-projects', 'view-github', 'view-audit-notifications', 'project.assign_faculty', 'project.view_global', 'project.client_requirements.view'],
             ],
             [

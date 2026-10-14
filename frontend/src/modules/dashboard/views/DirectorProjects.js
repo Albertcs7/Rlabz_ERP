@@ -1,4 +1,5 @@
 import { DirectorService } from '../services/DirectorService.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 
 function formatMoney(amount) {
   if (amount === undefined || amount === null || isNaN(Number(amount))) return '0';
@@ -6,12 +7,15 @@ function formatMoney(amount) {
 }
 
 export function DirectorProjects(route, router) {
+  const authStore = useAuthStore();
+  const isDirector = authStore.role === 'director';
   const container = document.createElement('div');
   container.className = 'director-dashboard';
 
   const urlParams = new URLSearchParams(window.location.search);
-  const initialTab = (route && route.query && route.query.tab) || urlParams.get('tab') || 'proposals';
-  let currentTab = ['proposals', 'active', 'all'].includes(initialTab.toLowerCase()) ? initialTab.toLowerCase() : 'proposals';
+  const initialTab = (route && route.query && route.query.tab) || urlParams.get('tab') || 'all';
+  let currentTab = ['proposals', 'active', 'all'].includes(initialTab.toLowerCase()) ? initialTab.toLowerCase() : 'all';
+  let searchQuery = (route && route.query && route.query.search) || urlParams.get('search') || '';
   let selectedProposal = null;
 
   // proposals/projects can be passed in directly (fresh from a just-completed API fetch)
@@ -26,13 +30,42 @@ export function DirectorProjects(route, router) {
     // workflow step (not yet started) rather than jumping straight to in_progress.
     const activeProjects = projects.filter(p => p.status === 'in_progress' || p.status === 'accepted');
 
+    const q = searchQuery.trim().toLowerCase();
+    const filterList = (list) => {
+      if (!q) return list;
+      return list.filter(item => {
+        const title = (item.title || '').toLowerCase();
+        const id = (item.id || '').toLowerCase();
+        const client = (item.clientName || item.client_name || '').toLowerCase();
+        const faculty = (item.facultyName || item.faculty_name || '').toLowerCase();
+        const type = (item.type || item.project_type || '').toLowerCase();
+        const status = (item.status || '').toLowerCase();
+        return title.includes(q) || id.includes(q) || client.includes(q) || faculty.includes(q) || type.includes(q) || status.includes(q);
+      });
+    };
+
+    const filteredPendingProposals = filterList(pendingProposals);
+    const filteredActiveProjects = filterList(activeProjects);
+    const filteredProjects = filterList(projects);
+
     container.innerHTML = `
-      <div class="director-header">
+      <div class="director-header" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1rem;">
         <div>
           <h1>Project Oversight & Proposal Reviews</h1>
           <p>Review project proposals, accept/reject submissions, monitor project progress, and assign faculty leads.</p>
         </div>
-        <div style="display:flex; gap:0.5rem;">
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <div style="position:relative; width:260px;">
+            <input 
+              type="text" 
+              id="input-search-director-projects" 
+              class="director-search-input" 
+              placeholder="Search projects..." 
+              value="${searchQuery}" 
+            />
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:11px; top:11px; color:#9ca3af; pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            ${searchQuery ? `<button id="btn-clear-search-projects" style="position:absolute; right:8px; top:9px; background:none; border:none; cursor:pointer; color:#9ca3af; font-size:13px;" title="Clear search">✕</button>` : ''}
+          </div>
           <button class="btn-director ${currentTab === 'proposals' ? 'btn-director-primary' : 'btn-director-outline'}" id="tab-proposals">
             Pending Proposals (${pendingProposals.length})
           </button>
@@ -45,10 +78,12 @@ export function DirectorProjects(route, router) {
         </div>
       </div>
 
-      ${currentTab === 'proposals' ? renderProposalsTab(pendingProposals, proposals) : ''}
-      ${currentTab === 'active' ? renderActiveProjectsTab(activeProjects, faculties) : ''}
-      ${currentTab === 'all' ? renderAllProjectsTab(projects, faculties) : ''}
+      ${currentTab === 'proposals' ? renderProposalsTab(filteredPendingProposals, proposals) : ''}
+      ${currentTab === 'active' ? renderActiveProjectsTab(filteredActiveProjects, faculties) : ''}
+      ${currentTab === 'all' ? renderAllProjectsTab(filteredProjects, faculties) : ''}
 
+      <!-- Project Details Modal -->
+      <div id="project-modal-container"></div>
       <!-- Proposal Review Modal -->
       <div id="proposal-modal-container"></div>
       <!-- Assign Faculty Modal -->
@@ -56,19 +91,27 @@ export function DirectorProjects(route, router) {
     `;
 
     // Attach Tab Events
+    const syncUrl = () => {
+      const url = new URL(window.location);
+      url.searchParams.set('tab', currentTab);
+      if (searchQuery) url.searchParams.set('search', searchQuery);
+      else url.searchParams.delete('search');
+      window.history.replaceState({}, '', url.toString());
+    };
+
     container.querySelector('#tab-proposals')?.addEventListener('click', async () => { 
       currentTab = 'proposals'; 
-      window.history.replaceState({}, '', '/dashboard/projects?tab=proposals');
+      syncUrl();
       await render(); 
     });
     container.querySelector('#tab-active')?.addEventListener('click', async () => { 
       currentTab = 'active'; 
-      window.history.replaceState({}, '', '/dashboard/projects?tab=active');
+      syncUrl();
       await render(); 
     });
     container.querySelector('#tab-all')?.addEventListener('click', async () => { 
       currentTab = 'all'; 
-      window.history.replaceState({}, '', '/dashboard/projects?tab=all');
+      syncUrl();
       await render(); 
     });
 
@@ -80,7 +123,7 @@ export function DirectorProjects(route, router) {
       <div class="director-panel">
         <div class="director-panel-header">
           <h2>Pending Project Proposals</h2>
-          <span style="font-size:0.85rem; color:#6b7280;">Only Director can Accept or Reject proposals</span>
+          <span style="font-size:0.85rem; color:#6b7280;">${isDirector ? 'Proposals overview (Read-only for Director)' : 'Review and decide on project proposals'}</span>
         </div>
 
         ${pendingProposals.length === 0 ? `
@@ -124,7 +167,7 @@ export function DirectorProjects(route, router) {
                     </td>
                     <td>
                       <button class="btn-director btn-director-primary btn-open-review" data-id="${p.id}">
-                        Review & Decide
+                        ${isDirector ? 'View Details' : 'Review & Decide'}
                       </button>
                     </td>
                   </tr>
@@ -161,7 +204,7 @@ export function DirectorProjects(route, router) {
             </thead>
             <tbody>
               ${activeProjects.map(p => `
-                <tr>
+                <tr class="director-project-row" data-project-id="${p.id}" title="Click to view details for ${p.title}">
                   <td>
                     <strong>${p.title || 'Untitled Project'}</strong><br>
                     <small style="color:#6b7280">${p.id} • ${p.type || 'Web'}</small>
@@ -187,9 +230,15 @@ export function DirectorProjects(route, router) {
                     ₹${formatMoney(p.spent)} / ₹${formatMoney(p.budget)}
                   </td>
                   <td>
-                    <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
-                      Reassign Faculty
-                    </button>
+                    ${isDirector ? `
+                      <button class="btn-director btn-director-outline" disabled style="opacity:0.5; cursor:not-allowed;" title="Director has read-only access to faculty assignment">
+                        Reassign Faculty
+                      </button>
+                    ` : `
+                      <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
+                        Reassign Faculty
+                      </button>
+                    `}
                   </td>
                 </tr>
               `).join('')}
@@ -206,37 +255,162 @@ export function DirectorProjects(route, router) {
         <div class="director-panel-header">
           <h2>All System Projects (${projects.length})</h2>
         </div>
-        <div class="director-table-responsive">
-          <table class="director-table">
-            <thead>
-              <tr>
-                <th>ID & Title</th>
-                <th>Status</th>
-                <th>Client</th>
-                <th>Faculty Lead</th>
-                <th>Progress</th>
-                <th>Budget</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${projects.map(p => `
+        ${projects.length === 0 ? `
+          <div style="text-align:center; padding:2.5rem; color:#6b7280;">
+            <p style="margin:0; font-weight:600;">No projects found.</p>
+            ${searchQuery ? `<small>No projects match "${searchQuery}". Clear search to view all.</small>` : ''}
+          </div>
+        ` : `
+          <div class="director-table-responsive">
+            <table class="director-table">
+              <thead>
                 <tr>
-                  <td><strong>${p.title || 'Untitled'}</strong><br><small style="color:#6b7280">${p.id}</small></td>
-                  <td><span class="status-badge ${p.status || 'pending'}">${(p.status || 'pending').replace('_', ' ')}</span></td>
-                  <td>${p.clientName || 'N/A'}</td>
-                  <td>${p.facultyName || 'Unassigned'}</td>
-                  <td>${p.progress ?? 0}%</td>
-                  <td>₹${formatMoney(p.budget)}</td>
+                  <th>ID & Title</th>
+                  <th>Status</th>
+                  <th>Client</th>
+                  <th>Faculty Lead</th>
+                  <th>Progress</th>
+                  <th>Budget</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                ${projects.map(p => `
+                  <tr class="director-project-row" data-project-id="${p.id}" title="Click to view details for ${p.title}">
+                    <td><strong>${p.title || 'Untitled'}</strong><br><small style="color:#6b7280">${p.id}</small></td>
+                    <td><span class="status-badge ${p.status || 'pending'}">${(p.status || 'pending').replace('_', ' ')}</span></td>
+                    <td>${p.clientName || 'N/A'}</td>
+                    <td>${p.facultyName || 'Unassigned'}</td>
+                    <td>${p.progress ?? 0}%</td>
+                    <td>₹${formatMoney(p.budget)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
       </div>
     `;
   }
 
+  function showProjectDetailsModal(project, faculties) {
+    const modalHost = container.querySelector('#project-modal-container') || container.querySelector('#proposal-modal-container');
+    if (!modalHost) return;
+
+    modalHost.innerHTML = `
+      <div class="director-modal-overlay">
+        <div class="director-modal" style="max-width:580px;">
+          <div class="director-modal-header">
+            <div>
+              <span style="font-size:0.75rem; color:#6b7280; font-weight:700;">${project.id}</span>
+              <h3 style="margin:0.25rem 0 0;">${project.title || 'Untitled Project'}</h3>
+            </div>
+            <button class="btn-director btn-director-outline btn-close-modal">✕</button>
+          </div>
+          <div class="director-modal-body" style="display:flex; flex-direction:column; gap:1rem;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; background:#f9fafb; padding:0.85rem; border-radius:8px; border:1px solid #e5e7eb;">
+              <div>
+                <small style="color:#6b7280; display:block;">Status</small>
+                <span class="status-badge ${project.status || 'in_progress'}" style="margin-top:4px;">${(project.status || 'in_progress').replace('_', ' ').toUpperCase()}</span>
+              </div>
+              <div>
+                <small style="color:#6b7280; display:block;">Project Type</small>
+                <strong style="color:#111827;">${project.type || 'Web Application'}</strong>
+              </div>
+              <div>
+                <small style="color:#6b7280; display:block;">Client / Sponsor</small>
+                <strong style="color:#111827;">${project.clientName || 'N/A'}</strong>
+              </div>
+              <div>
+                <small style="color:#6b7280; display:block;">Faculty Lead</small>
+                <strong style="color:#111827;">${project.facultyName || 'Unassigned'}</strong>
+              </div>
+              <div>
+                <small style="color:#6b7280; display:block;">Sanctioned Budget</small>
+                <strong style="color:#111827;">₹${formatMoney(project.budget)}</strong>
+              </div>
+              <div>
+                <small style="color:#6b7280; display:block;">Expenditure Spent</small>
+                <strong style="color:#111827;">₹${formatMoney(project.spent || 0)}</strong>
+              </div>
+            </div>
+
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                <span style="font-size:0.85rem; font-weight:600; color:#374151;">Overall Progress</span>
+                <strong style="color:var(--primary); font-size:0.9rem;">${project.progress ?? 0}%</strong>
+              </div>
+              <div class="director-progress-bar-bg" style="height:8px;">
+                <div class="director-progress-bar-fill" style="width: ${project.progress ?? 0}%"></div>
+              </div>
+            </div>
+
+            ${project.description ? `
+              <div>
+                <span style="font-size:0.85rem; font-weight:600; color:#374151; display:block; margin-bottom:0.25rem;">Description</span>
+                <p style="margin:0; font-size:0.85rem; color:#4b5563; line-height:1.5; background:#ffffff; padding:0.6rem; border:1px solid #e5e7eb; border-radius:6px;">${project.description}</p>
+              </div>
+            ` : ''}
+
+            <div>
+              <span style="font-size:0.85rem; font-weight:600; color:#374151; display:block; margin-bottom:0.35rem;">Assigned Students</span>
+              <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+                ${(!project.assignedStudents || project.assignedStudents.length === 0) 
+                  ? '<span style="color:#9ca3af; font-size:0.85rem;">No students assigned to this project yet.</span>'
+                  : project.assignedStudents.map(s => `
+                    <span class="track-badge ${(s.track || 'nova').toLowerCase()}" style="padding:0.25rem 0.6rem; font-size:0.75rem;">
+                      ${s.name} (${s.track || 'Nova'})
+                    </span>
+                  `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="director-modal-footer">
+            <button class="btn-director btn-director-primary btn-close-modal">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    modalHost.querySelectorAll('.btn-close-modal').forEach(b => b.addEventListener('click', () => { modalHost.innerHTML = ''; }));
+  }
+
   function attachActionEvents(faculties) {
+    // Project row click -> details modal
+    container.querySelectorAll('.director-project-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+        const id = row.getAttribute('data-project-id');
+        const allProjs = DirectorService.getProjects() || [];
+        const project = allProjs.find(p => String(p.id) === String(id));
+        if (project) showProjectDetailsModal(project, faculties);
+      });
+    });
+
+    // Search events
+    const searchInput = container.querySelector('#input-search-director-projects');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        const url = new URL(window.location);
+        if (searchQuery) url.searchParams.set('search', searchQuery);
+        else url.searchParams.delete('search');
+        window.history.replaceState({}, '', url.toString());
+        render();
+        const reInput = container.querySelector('#input-search-director-projects');
+        if (reInput) {
+          reInput.focus();
+          reInput.setSelectionRange(reInput.value.length, reInput.value.length);
+        }
+      });
+    }
+
+    container.querySelector('#btn-clear-search-projects')?.addEventListener('click', () => {
+      searchQuery = '';
+      const url = new URL(window.location);
+      url.searchParams.delete('search');
+      window.history.replaceState({}, '', url.toString());
+      render();
+    });
     // Open Proposal Review Modal
     container.querySelectorAll('.btn-open-review').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -325,7 +499,7 @@ export function DirectorProjects(route, router) {
                 return `
                   <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
-                      <input type="radio" name="proposal_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} />
+                      <input type="radio" name="proposal_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
                         <div style="font-weight:600; color:#111827; font-size:0.85rem;">${f.name}</div>
                         <div style="font-size:0.75rem; color:#6b7280;">${f.department || 'Computer Applications'}</div>
@@ -340,11 +514,16 @@ export function DirectorProjects(route, router) {
             </div>
 
             <label style="font-weight:600; font-size:0.875rem; margin-top:0.5rem; display:block;">Director Review Notes / Remarks:</label>
-            <textarea id="modal-review-notes" rows="2" placeholder="Enter optional notes for the client and team..." style="padding:0.5rem; border-radius:6px; border:1px solid #d1d5db; font-family:inherit;"></textarea>
+            <textarea id="modal-review-notes" rows="2" placeholder="${isDirector ? 'Read-only mode' : 'Enter optional notes for the client and team...'}" ${isDirector ? 'disabled' : ''} style="padding:0.5rem; border-radius:6px; border:1px solid #d1d5db; font-family:inherit; ${isDirector ? 'background:#f3f4f6; cursor:not-allowed;' : ''}"></textarea>
           </div>
           <div class="director-modal-footer">
-            <button class="btn-director btn-director-danger btn-reject-prop">Reject Proposal</button>
-            <button class="btn-director btn-director-success btn-accept-prop">Accept & Approve</button>
+            ${isDirector ? `
+              <span style="font-size: 0.85rem; color: #6b7280; margin-right: auto;">Read-only view</span>
+              <button class="btn-director btn-director-outline btn-close-modal">Close</button>
+            ` : `
+              <button class="btn-director btn-director-danger btn-reject-prop">Reject Proposal</button>
+              <button class="btn-director btn-director-success btn-accept-prop">Accept & Approve</button>
+            `}
           </div>
         </div>
       </div>
@@ -361,7 +540,7 @@ export function DirectorProjects(route, router) {
       });
     });
 
-    modalHost.querySelector('.btn-accept-prop').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-accept-prop')?.addEventListener('click', async () => {
       const selectedRadio = modalHost.querySelector('input[name="proposal_faculty_choice"]:checked');
       const facId = selectedRadio ? selectedRadio.value : (faculties[0] ? faculties[0].id : null);
       const notes = modalHost.querySelector('#modal-review-notes').value;
@@ -374,7 +553,7 @@ export function DirectorProjects(route, router) {
       }
     });
 
-    modalHost.querySelector('.btn-reject-prop').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-reject-prop')?.addEventListener('click', async () => {
       const notes = modalHost.querySelector('#modal-review-notes').value;
       try {
         await DirectorService.updateProposalStatusAsync(proposal.raw_id, 'rejected', notes);
@@ -408,7 +587,7 @@ export function DirectorProjects(route, router) {
                 return `
                   <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
-                      <input type="radio" name="project_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} />
+                      <input type="radio" name="project_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
                         <div style="font-weight:600; color:#111827; font-size:0.85rem;">${f.name}</div>
                         <div style="font-size:0.75rem; color:#6b7280;">${f.department || 'Computer Applications'}</div>
@@ -423,8 +602,13 @@ export function DirectorProjects(route, router) {
             </div>
           </div>
           <div class="director-modal-footer">
-            <button class="btn-director btn-director-outline btn-close-modal">Cancel</button>
-            <button class="btn-director btn-director-primary btn-save-faculty">Save Assignment</button>
+            ${isDirector ? `
+              <span style="font-size: 0.85rem; color: #6b7280; margin-right: auto;">Read-only view</span>
+              <button class="btn-director btn-director-outline btn-close-modal">Close</button>
+            ` : `
+              <button class="btn-director btn-director-outline btn-close-modal">Cancel</button>
+              <button class="btn-director btn-director-primary btn-save-faculty">Save Assignment</button>
+            `}
           </div>
         </div>
       </div>
@@ -441,7 +625,7 @@ export function DirectorProjects(route, router) {
       });
     });
 
-    modalHost.querySelector('.btn-save-faculty').addEventListener('click', async () => {
+    modalHost.querySelector('.btn-save-faculty')?.addEventListener('click', async () => {
       const selectedRadio = modalHost.querySelector('input[name="project_faculty_choice"]:checked');
       const facId = selectedRadio ? selectedRadio.value : (faculties[0] ? faculties[0].id : null);
       try {

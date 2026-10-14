@@ -1,4 +1,5 @@
 import { API_BASE } from '@/core/config/api.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 
 export async function ProjectCreate(route, router) {
   const container = document.createElement('div');
@@ -92,9 +93,23 @@ export async function ProjectCreate(route, router) {
   const form = container.querySelector('#form-create-project');
   const errorSpan = container.querySelector('#form-error');
   const btnSubmit = container.querySelector('#btn-submit');
+  const authStore = useAuthStore();
+  const isDirector = authStore.role === 'director';
+
+  if (isDirector) {
+    btnSubmit.disabled = true;
+    btnSubmit.style.opacity = '0.5';
+    btnSubmit.style.cursor = 'not-allowed';
+    btnSubmit.textContent = 'Read-Only (Director)';
+    errorSpan.textContent = 'Director has read-only access to projects.';
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (isDirector) {
+      errorSpan.textContent = 'Director has read-only access to projects.';
+      return;
+    }
     errorSpan.textContent = '';
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Creating...';
