@@ -16,8 +16,18 @@ class StudentController extends Controller
 {
     private function getStudentId(Request $request)
     {
-        $authUser = $request->get('auth_user');
-        return $authUser['sub'] ?? null;
+        $authUser = $request->get('auth_user') ?: $request->auth_user;
+        if (is_array($authUser)) {
+            return $authUser['sub'] ?? $authUser['id'] ?? null;
+        }
+        if (is_object($authUser)) {
+            return $authUser->sub ?? $authUser->id ?? null;
+        }
+        $user = $request->user();
+        if ($user) {
+            return $user->id ?? null;
+        }
+        return null;
     }
 
     public function getProjects(Request $request)
@@ -125,7 +135,10 @@ class StudentController extends Controller
 
             // Fetch team lead
             $lead = collect($membersList)->firstWhere('isTeamLead', true);
-            $teamLead = $lead ? $lead['name'] : null;
+            $teamLead = null;
+            if ($lead) {
+                $teamLead = is_array($lead) ? ($lead['name'] ?? null) : ($lead->name ?? null);
+            }
 
 
             // Calculate progress and fetch modules + tasks

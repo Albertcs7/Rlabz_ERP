@@ -1005,10 +1005,10 @@ export async function StudentProjects(route, router) {
 
         ${viewMode === 'active' ? `
           <!-- ACTIVE PROJECTS VIEW -->
-          <!-- KPI Grid -->
+          <!-- KPI Grid (Executive Color Palette Matching Dashboard) -->
           <div class="student-proj-kpi-grid">
-            <div class="student-proj-kpi-card kpi-blue">
-              <div class="student-proj-kpi-icon blue">
+            <div class="student-proj-kpi-card kpi-crimson">
+              <div class="student-proj-kpi-icon crimson">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
               </div>
               <div class="student-proj-kpi-info">
@@ -1017,8 +1017,8 @@ export async function StudentProjects(route, router) {
               </div>
             </div>
 
-            <div class="student-proj-kpi-card kpi-amber">
-              <div class="student-proj-kpi-icon amber">
+            <div class="student-proj-kpi-card kpi-purple">
+              <div class="student-proj-kpi-icon purple">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               </div>
               <div class="student-proj-kpi-info">
@@ -1027,8 +1027,8 @@ export async function StudentProjects(route, router) {
               </div>
             </div>
 
-            <div class="student-proj-kpi-card kpi-emerald">
-              <div class="student-proj-kpi-icon emerald">
+            <div class="student-proj-kpi-card kpi-amber">
+              <div class="student-proj-kpi-icon amber">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
               </div>
               <div class="student-proj-kpi-info">
@@ -1090,10 +1090,10 @@ export async function StudentProjects(route, router) {
           `}
         ` : `
           <!-- STUDENT PROJECT HISTORY VIEW -->
-          <!-- Lifetime History KPIs -->
+          <!-- Lifetime History KPIs (Executive Color Palette Matching Dashboard) -->
           <div class="student-proj-kpi-grid">
-            <div class="student-proj-kpi-card kpi-blue">
-              <div class="student-proj-kpi-icon blue">
+            <div class="student-proj-kpi-card kpi-crimson">
+              <div class="student-proj-kpi-icon crimson">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               </div>
               <div class="student-proj-kpi-info">
@@ -1102,8 +1102,8 @@ export async function StudentProjects(route, router) {
               </div>
             </div>
 
-            <div class="student-proj-kpi-card kpi-emerald">
-              <div class="student-proj-kpi-icon emerald">
+            <div class="student-proj-kpi-card kpi-purple">
+              <div class="student-proj-kpi-icon purple">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
               </div>
               <div class="student-proj-kpi-info">

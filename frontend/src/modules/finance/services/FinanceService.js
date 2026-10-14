@@ -71,8 +71,19 @@ class FinanceService {
     return await this._fetch('/finance/invoices') || [];
   }
 
-  async getTransactions() {
-    return await this._fetch('/finance/transactions') || [];
+  async getTransactions(params = {}) {
+    let query = '';
+    if (typeof params === 'object' && params !== null) {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          sp.append(k, v);
+        }
+      });
+      const qs = sp.toString();
+      if (qs) query = `?${qs}`;
+    }
+    return await this._fetch(`/finance/transactions${query}`) || [];
   }
   
   async addProjectFinance(data) {
@@ -99,6 +110,10 @@ class FinanceService {
     return this._fetch('/finance/maintenance-charges', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  async addMarketingExpense(data) {
+    return this._fetch('/finance/marketing-expenses', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   async createInvoice(data) {
     return this._fetch('/finance/invoices', { method: 'POST', body: JSON.stringify(data) });
   }
@@ -108,6 +123,11 @@ class FinanceService {
       total_development_amount: 0,
       remaining_dev_billable: 0,
       total_project_budget: 0,
+      overhead_budget: 0,
+      consumed_overhead: 0,
+      remaining_overhead: 0,
+      marketing_budget: 0,
+      marketing_expenses: [],
       hosting_charges: [],
       maintenance_charges: []
     };

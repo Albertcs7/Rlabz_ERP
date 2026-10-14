@@ -91,9 +91,18 @@ export async function StudentMeetings(route, router) {
     };
   });
 
-  // Default focus on August 2026 meeting so Aug 5 and Aug 11 are directly visible and highlighted on load
-  const defaultMeet = allEvents.find(e => e.date && e.date.startsWith('2026-08')) || allEvents[0] || null;
-  const nextActivityDate = defaultMeet ? `${defaultMeet.date}` : 'None';
+  // Calendar tracking - initialize to current date
+  let currentYear = now.getFullYear();
+  let currentMonth = now.getMonth(); // 0=Jan .. 11=Dec
+
+  // Next activity date - look for nearest future upcoming meeting or fallback to next upcoming
+  const upcomingMeetings = allEvents
+    .filter(e => e.is_upcoming && e.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const futureUpcoming = upcomingMeetings.filter(e => e.date >= todayStr);
+
+  const defaultMeet = futureUpcoming[0] || upcomingMeetings[0] || allEvents[0] || null;
+  const nextActivityDate = futureUpcoming[0]?.date || upcomingMeetings[0]?.date || (defaultMeet ? defaultMeet.date : 'None');
 
   // State
   let searchQuery = '';
@@ -101,18 +110,6 @@ export async function StudentMeetings(route, router) {
   let projectFilter = 'all';
   let dateFilter = null;
   let selectedEventId = defaultMeet ? defaultMeet.id : null;
-
-  // Calendar tracking
-  let currentYear = now.getFullYear();
-  let currentMonth = now.getMonth(); // 0=Jan .. 11=Dec
-
-  if (defaultMeet && defaultMeet.date) {
-    const parts = defaultMeet.date.split('-').map(Number);
-    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-      currentYear = parts[0];
-      currentMonth = parts[1] - 1; // 0-indexed: 7 = August
-    }
-  }
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -651,8 +648,8 @@ export async function StudentMeetings(route, router) {
 
       <!-- KPI Metrics Overview Grid -->
       <div class="student-meet-kpi-grid">
-        <div class="student-meet-kpi-card kpi-blue" title="Total project review meetings">
-          <div class="student-meet-kpi-icon blue">
+        <div class="student-meet-kpi-card kpi-sidebar-primary" title="Total project review meetings">
+          <div class="student-meet-kpi-icon primary">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           </div>
           <div class="student-meet-kpi-info">
@@ -661,8 +658,8 @@ export async function StudentMeetings(route, router) {
           </div>
         </div>
 
-        <div class="student-meet-kpi-card kpi-indigo" title="Upcoming scheduled review meetings">
-          <div class="student-meet-kpi-icon indigo">
+        <div class="student-meet-kpi-card kpi-purple" title="Upcoming scheduled review meetings">
+          <div class="student-meet-kpi-icon purple">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           </div>
           <div class="student-meet-kpi-info">
@@ -671,8 +668,8 @@ export async function StudentMeetings(route, router) {
           </div>
         </div>
 
-        <div class="student-meet-kpi-card kpi-emerald" title="Completed meetings with recorded minutes">
-          <div class="student-meet-kpi-icon emerald">
+        <div class="student-meet-kpi-card kpi-indigo" title="Completed meetings with recorded minutes">
+          <div class="student-meet-kpi-icon indigo">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           </div>
           <div class="student-meet-kpi-info">
@@ -686,7 +683,7 @@ export async function StudentMeetings(route, router) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
           </div>
           <div class="student-meet-kpi-info">
-            <div class="student-meet-kpi-val" style="font-size: 1.05rem;">${nextActivityDate}</div>
+            <div class="student-meet-kpi-val student-meet-kpi-date-val" style="font-size: 1.1rem !important;">${nextActivityDate}</div>
             <div class="student-meet-kpi-lbl">Next Scheduled</div>
           </div>
         </div>
@@ -885,7 +882,7 @@ export async function StudentMeetings(route, router) {
     container.querySelector('#btn-today-month')?.addEventListener('click', () => {
       currentYear = now.getFullYear();
       currentMonth = now.getMonth();
-      dateFilter = todayStr;
+      dateFilter = null;
       render();
     });
 

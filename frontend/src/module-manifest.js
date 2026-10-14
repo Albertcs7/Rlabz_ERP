@@ -14,6 +14,22 @@ export const modules = [
     sidebar: false,
   },
   {
+    name: 'profile',
+    path: '/profile',
+    loadRoutes: () => import('@/modules/auth/profileRoutes.js'),
+    sidebar: false,
+    title: 'My Profile & Security',
+  },
+  {
+    name: 'design',
+    path: '/design',
+    loadRoutes: () => import('@/modules/design/routes.js'),
+    sidebar: true,
+    title: 'Design Studio & UI/UX',
+    icon: 'IconDesign',
+    allowedRoles: ['design_head', 'director', 'developer', 'coordinator', 'faculty'],
+  },
+  {
     name: 'director',
     path: '/director',
     loadRoutes: () => import('@/modules/director/routes.js'),

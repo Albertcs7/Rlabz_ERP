@@ -18,7 +18,7 @@ export async function StudentGithub(route, router) {
   renderStudentSidebar();
 
   const container = document.createElement('div');
-  container.className = 'student-portal-container animate-fade-in';
+  container.className = 'student-portal-container animate-fade-in student-github-view';
 
   // Active state
   let selectedProjectId = null;
@@ -337,8 +337,8 @@ export async function StudentGithub(route, router) {
 
         <!-- Quick KPI Row -->
         <div class="student-git-kpi-grid">
-          <div class="student-git-kpi-card kpi-blue">
-            <div class="student-git-kpi-icon kpi-blue">
+          <div class="student-git-kpi-card kpi-sidebar-primary" title="Assigned Projects">
+            <div class="student-git-kpi-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             </div>
             <div class="student-git-kpi-meta">
@@ -347,32 +347,32 @@ export async function StudentGithub(route, router) {
             </div>
           </div>
 
-          <div class="student-git-kpi-card kpi-emerald">
-            <div class="student-git-kpi-icon kpi-emerald">
+          <div class="student-git-kpi-card kpi-purple" title="Verified Repositories">
+            <div class="student-git-kpi-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             </div>
             <div class="student-git-kpi-meta">
-              <span class="student-git-kpi-val" style="color: #059669;">${verifiedRepos} / ${totalProjects}</span>
+              <span class="student-git-kpi-val">${verifiedRepos} / ${totalProjects}</span>
               <span class="student-git-kpi-lbl">Verified Repos</span>
             </div>
           </div>
 
-          <div class="student-git-kpi-card kpi-indigo">
-            <div class="student-git-kpi-icon kpi-indigo">
+          <div class="student-git-kpi-card kpi-indigo" title="My Active Branches">
+            <div class="student-git-kpi-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
             </div>
             <div class="student-git-kpi-meta">
-              <span class="student-git-kpi-val" style="color: #00796B;">${myBranches.length}</span>
+              <span class="student-git-kpi-val">${myBranches.length}</span>
               <span class="student-git-kpi-lbl">My Active Branches</span>
             </div>
           </div>
 
-          <div class="student-git-kpi-card kpi-amber">
-            <div class="student-git-kpi-icon kpi-amber">
+          <div class="student-git-kpi-card kpi-amber" title="Team Branches">
+            <div class="student-git-kpi-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </div>
             <div class="student-git-kpi-meta">
-              <span class="student-git-kpi-val" style="color: #d97706;">${teamBranches.length}</span>
+              <span class="student-git-kpi-val">${teamBranches.length}</span>
               <span class="student-git-kpi-lbl">Team Branches</span>
             </div>
           </div>

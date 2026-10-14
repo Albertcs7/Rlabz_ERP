@@ -49,18 +49,20 @@ function renderNotificationList(notifications) {
 function populateSidebarNav(sidebarNav, currentPath, authStore) {
   if (!sidebarNav) return;
 
-  const isStudent = authStore.role === 'student';
-  const isStudentPortal = currentPath.startsWith('/student');
+  const isStudent = authStore.role === 'student' || currentPath.startsWith('/student');
   const isDeveloper = authStore.role === 'developer' || currentPath.startsWith('/developer');
   const isDirector = authStore.role === 'director' || currentPath.startsWith('/director');
+  const isDesignHead = authStore.role === 'design_head' || currentPath.startsWith('/design');
 
   let targetPortal = 'default';
-  if (isStudent && isStudentPortal) {
+  if (isStudent) {
     targetPortal = 'student';
   } else if (isDeveloper) {
     targetPortal = 'developer';
   } else if (isDirector) {
     targetPortal = 'director';
+  } else if (isDesignHead) {
+    targetPortal = 'design';
   }
 
   if (sidebarNav.dataset.portal !== targetPortal || (targetPortal === 'student' && !sidebarNav.querySelector('a[href="/student/work-logs"]'))) {
@@ -208,6 +210,34 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           `).join('')}
         </ul>
       `;
+    } else if (targetPortal === 'design') {
+      const iconStudio = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`;
+      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+      const iconProfile = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+      const iconCommunication = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+
+      const navItems = [
+        { title: 'Design Studio & Figma', path: '/design', icon: iconStudio },
+        { title: 'Projects & Prototypes', path: '/projects', icon: iconProjects },
+        { title: 'Team Communication', path: '/communication', icon: iconCommunication },
+        { title: 'My Profile & Security', path: '/profile', icon: iconProfile }
+      ];
+
+      sidebarNav.innerHTML = `
+        <div class="sidebar-section-title" style="padding: 0.75rem 1.25rem 0.25rem; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">
+          Design Department
+        </div>
+        <ul>
+          ${navItems.map(item => `
+            <li>
+              <a href="${item.path}">
+                ${item.icon}
+                <span>${item.title}</span>
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      `;
     } else {
       const iconsMap = {
         IconDashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`,
@@ -219,7 +249,8 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
         IconCommunication: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`,
         IconGithub: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>`,
         IconCertificates: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>`,
-        IconAudit: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`
+        IconAudit: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`,
+        IconDesign: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`
       };
 
       const userAllowedModules = authStore.modules || [];
@@ -275,16 +306,47 @@ export function updateSidebar(currentPath) {
   populateSidebarNav(sidebarNav, currentPath, authStore);
 }
 
+export function updateTopBarAvatar(photoUrl, name) {
+  const authStore = useAuthStore();
+  const displayName = name || authStore.user?.name || authStore.user?.username || 'User';
+  const initial = displayName.charAt(0).toUpperCase() || 'U';
+
+  const avatarTargets = document.querySelectorAll('#user-profile-header .avatar, #finance-user-profile-header .avatar, .topbar .avatar, .user-profile .avatar');
+  avatarTargets.forEach(avatarEl => {
+    if (photoUrl) {
+      avatarEl.style.padding = '0';
+      avatarEl.style.overflow = 'hidden';
+      avatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+    } else {
+      avatarEl.style.padding = '';
+      avatarEl.style.overflow = '';
+      avatarEl.textContent = initial;
+    }
+  });
+
+  const popoverAvatarTargets = document.querySelectorAll('#popover-avatar, #finance-popover-avatar, .profile-popover-avatar');
+  popoverAvatarTargets.forEach(popAvatarEl => {
+    if (photoUrl) {
+      popAvatarEl.style.padding = '0';
+      popAvatarEl.style.overflow = 'hidden';
+      popAvatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+    } else {
+      popAvatarEl.style.padding = '';
+      popAvatarEl.style.overflow = '';
+      popAvatarEl.textContent = initial;
+    }
+  });
+}
+
 export async function DashboardLayout(contentChild, route, router) {
   const authStore = useAuthStore();
   const currentPath = window.location.pathname;
 
-  const wrapper = document.createElement('div');
-  const isStudentPortal = currentPath.startsWith('/student');
-  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
-
   const user = authStore.user;
   const isStudent = authStore.role === 'student';
+  const isStudentPortal = isStudent || currentPath.startsWith('/student');
+  const wrapper = document.createElement('div');
+  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
   const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
   const studentPhoto = (isStudent && studentIdentifier)
     ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
@@ -299,17 +361,23 @@ export async function DashboardLayout(contentChild, route, router) {
   const designation = user?.designation || (isStudent ? 'Nova' : roleName);
   const email = user?.email || 'student@rajagiri.edu';
   const department = user?.department || 'Computer Applications';
-  const course = user?.course || 'MCA';
-  const semester = user?.semester_text || (user?.semester ? `${user.semester}th Semester` : '2nd Year / 3rd Semester');
+  const course = user?.course || (isStudent ? 'MCA' : null);
+  const semester = user?.semester_text || (user?.semester ? `${user.semester}th Semester` : (isStudent ? '2nd Year / 3rd Semester' : null));
 
   const isDeveloperUser = authStore.role === 'developer' || currentPath.startsWith('/developer') || (route.name && route.name.includes('developer'));
   const isDirectorUser = authStore.role === 'director' || currentPath.startsWith('/director') || (route.name && route.name.includes('director'));
+  const isDesignUser = authStore.role === 'design_head' || currentPath.startsWith('/design') || (route.name && route.name.includes('design'));
+  const isProfilePage = currentPath.startsWith('/profile') || route.name === 'user-profile';
 
   let topbarTitle = 'RLABZ ERP';
   if (isDeveloperUser) {
     topbarTitle = 'DEVELOPER DASHBOARD';
   } else if (isDirectorUser) {
     topbarTitle = 'DIRECTOR DASHBOARD';
+  } else if (isDesignUser && !isProfilePage) {
+    topbarTitle = 'DESIGN STUDIO & ASSETS';
+  } else if (isProfilePage) {
+    topbarTitle = 'MY PROFILE & SECURITY';
   } else {
     topbarTitle = route.title || (route.name === 'faculty-sprints' ? 'PROJECT MODULES & TASKS' : (route.name ? route.name.toUpperCase().replace(/-/g, ' ') : 'RLABZ ERP'));
   }
@@ -378,17 +446,19 @@ export async function DashboardLayout(contentChild, route, router) {
                 <span class="profile-popover-label">Department:</span>
                 <span class="profile-popover-value" id="popover-department">${department}</span>
               </div>
+              ${course ? `
               <div class="profile-popover-row">
                 <span class="profile-popover-label">Course:</span>
                 <span class="profile-popover-value" id="popover-course">${course}</span>
-              </div>
+              </div>` : ''}
+              ${semester ? `
               <div class="profile-popover-row">
                 <span class="profile-popover-label">Semester:</span>
                 <span class="profile-popover-value" id="popover-semester">${semester}</span>
-              </div>
+              </div>` : ''}
             </div>
             <div class="profile-popover-footer" style="padding: 10px 14px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end;">
-              <a href="/student/profile" id="popover-student-profile-link" style="font-size: 0.8rem; font-weight: 600; color: #059669; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+              <a href="/profile" id="popover-profile-link" style="font-size: 0.8rem; font-weight: 600; color: #059669; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                 Profile Settings & Change Password &rarr;
               </a>
             </div>
@@ -545,91 +615,77 @@ export async function DashboardLayout(contentChild, route, router) {
   // Bind User Profile Header Click
   const userProfileHeader = wrapper.querySelector('#user-profile-header');
   const profilePopover = wrapper.querySelector('#profile-popover');
-  if (userProfileHeader) {
-    if (authStore.role === 'student' && profilePopover) {
-      userProfileHeader.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isVisible = window.getComputedStyle(profilePopover).display === 'block';
-        profilePopover.style.display = isVisible ? 'none' : 'block';
-      });
+  if (userProfileHeader && profilePopover) {
+    userProfileHeader.style.cursor = 'pointer';
+    userProfileHeader.title = 'View Profile & Settings';
 
-      // Close popover when clicking anywhere else
-      document.addEventListener('click', () => {
+    userProfileHeader.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = window.getComputedStyle(profilePopover).display === 'block';
+      profilePopover.style.display = isVisible ? 'none' : 'block';
+    });
+
+    // Close popover when clicking anywhere else
+    document.addEventListener('click', () => {
+      profilePopover.style.display = 'none';
+    });
+
+    // Prevent popover inside click from closing it
+    profilePopover.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    const popoverProfileLink = profilePopover.querySelector('#popover-profile-link');
+    if (popoverProfileLink) {
+      popoverProfileLink.addEventListener('click', (e) => {
+        e.preventDefault();
         profilePopover.style.display = 'none';
-      });
-
-      // Prevent popover inside click from closing it
-      profilePopover.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-
-      const profileLink = profilePopover.querySelector('#popover-student-profile-link');
-      if (profileLink) {
-        profileLink.addEventListener('click', (e) => {
-          e.preventDefault();
-          profilePopover.style.display = 'none';
-          if (router && typeof router.push === 'function') {
-            router.push('/student/profile');
-          } else {
-            window.location.href = '/student/profile';
-          }
-        });
-      }
-
-      // Sync live profile from database
-      const token = localStorage.getItem('token');
-      if (token) {
-        fetch(`${API_BASE}/student/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-        .then(r => r.ok ? r.json() : null)
-        .then(p => {
-          if (!p) return;
-          const desEl = wrapper.querySelector('#popover-designation');
-          const emailEl = wrapper.querySelector('#popover-email');
-          const deptEl = wrapper.querySelector('#popover-department');
-          const courseEl = wrapper.querySelector('#popover-course');
-          const semEl = wrapper.querySelector('#popover-semester');
-          const nameEl = wrapper.querySelector('#popover-name');
-          
-          if (desEl && p.designation) desEl.textContent = p.designation;
-          if (emailEl && p.email) emailEl.textContent = p.email;
-          if (deptEl && p.department) deptEl.textContent = p.department;
-          if (courseEl && p.course) courseEl.textContent = p.course;
-          if (semEl && (p.semester_text || p.semester)) {
-            semEl.textContent = p.semester_text || `${p.semester}th Semester`;
-          }
-          if (nameEl && p.name) nameEl.textContent = p.name;
-
-          if (user) {
-            user.name = p.name || user.name;
-            user.designation = p.designation || user.designation;
-            user.course = p.course || user.course;
-            user.semester = p.semester || user.semester;
-            user.semester_text = p.semester_text || user.semester_text;
-            user.department = p.department || user.department;
-            localStorage.setItem('user', JSON.stringify(user));
-          }
-        })
-        .catch(() => {});
-      }
-    } else {
-      userProfileHeader.style.cursor = 'pointer';
-      userProfileHeader.title = 'View Profile';
-      userProfileHeader.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const profileRoute = (currentPath.startsWith('/faculty') || authStore.role === 'faculty')
-          ? '/faculty/profile'
-          : `/${authStore.role || 'faculty'}/profile`;
         if (router && typeof router.push === 'function') {
-          router.push(profileRoute);
+          router.push('/profile');
         } else {
-          window.location.href = profileRoute;
+          window.location.href = '/profile';
         }
       });
+    }
+
+    // Sync live profile from database
+    const token = localStorage.getItem('token');
+    if (token) {
+      const endpoint = authStore.role === 'student' ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
+      fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(r => r.ok ? r.json() : null)
+      .then(res => {
+        if (!res) return;
+        const p = res.user || res;
+        const desEl = wrapper.querySelector('#popover-designation');
+        const emailEl = wrapper.querySelector('#popover-email');
+        const deptEl = wrapper.querySelector('#popover-department');
+        const courseEl = wrapper.querySelector('#popover-course');
+        const semEl = wrapper.querySelector('#popover-semester');
+        const nameEl = wrapper.querySelector('#popover-name');
+        
+        if (desEl && (p.designation || p.role)) desEl.textContent = p.designation || (p.role ? p.role.replace('_', ' ').toUpperCase() : 'MEMBER');
+        if (emailEl && p.email) emailEl.textContent = p.email;
+        if (deptEl && p.department) deptEl.textContent = p.department;
+        if (courseEl && p.course) courseEl.textContent = p.course;
+        if (semEl && (p.semester_text || p.semester)) {
+          semEl.textContent = p.semester_text || `${p.semester}th Semester`;
+        }
+        if (nameEl && p.name) nameEl.textContent = p.name;
+
+        if (user) {
+          user.name = p.name || user.name;
+          user.department = p.department || user.department;
+          if (p.designation) user.designation = p.designation;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      })
+      .catch(() => {});
     }
   }
 

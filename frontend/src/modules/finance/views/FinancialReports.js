@@ -68,15 +68,25 @@ export async function FinancialReports(route, router) {
   const thStyle = 'padding:9px 12px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); border-bottom:2px solid var(--border-subtle); font-weight:700; background:var(--bg-canvas-light);';
   const tdStyle = 'padding:9px 12px; border-bottom:1px solid var(--border-subtle);';
 
-  const renderReport = () => {
+  const renderReport = async () => {
     const reportContent = container.querySelector('#report-content');
     const noResults = container.querySelector('#no-report-results');
     const previewPanel = container.querySelector('#report-preview-panel');
 
     if (!reportContent) return;
 
+    noResults.querySelector('p').textContent = 'No data available for the selected filters.';
+
     const type = container.querySelector('#report-type').value;
     const projectFilter = container.querySelector('#report-project').value;
+
+    if (type === 'Transactions') {
+      const sort = container.querySelector('#report-transaction-sort').value;
+      data.transactions = await financeService.getTransactions({
+        sort,
+        project_id: projectFilter === 'All' ? '' : projectFilter
+      });
+    }
 
     let html = '';
     let hasData = true;
@@ -152,7 +162,7 @@ export async function FinancialReports(route, router) {
       }
     }
     else if (type === 'Transactions') {
-      const filtered = projectFilter === 'All' ? data.transactions : data.transactions.filter(t => t.projectId.toString() === projectFilter);
+      const filtered = data.transactions;
       if (!filtered.length) { hasData = false; } else {
         html = `
           <h3 style="margin:0 0 12px 0;font-size:15px;">Transaction Report</h3>
@@ -290,7 +300,6 @@ export async function FinancialReports(route, router) {
       data.projects = await financeService.getProjectFinances();
       data.invoices = await financeService.getInvoices();
       data.payroll = await financeService.getStudentPayroll();
-      data.transactions = await financeService.getTransactions();
 
       const configBar = container.querySelector('#report-config-bar');
       configBar.style = "margin-bottom:0; box-shadow:none; border:none; padding:0; background:transparent;";
@@ -314,6 +323,16 @@ export async function FinancialReports(route, router) {
               </select>
             </div>
           </div>
+          <div class="fin-filter-group" id="report-transaction-sort-group" style="min-width:180px; max-width:240px; display:none;">
+            <label for="report-transaction-sort">Transaction Order</label>
+            <div class="fin-select-wrap">
+              <select id="report-transaction-sort" class="fin-input">
+                <option value="newest">Newest First</option>
+                <option value="income_first">Income First</option>
+                <option value="expense_first">Expense First</option>
+              </select>
+            </div>
+          </div>
           <div style="align-self:flex-end;">
             <button class="fin-btn primary" id="generate-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -323,7 +342,21 @@ export async function FinancialReports(route, router) {
         </div>
       `;
 
-      container.querySelector('#generate-btn').addEventListener('click', renderReport);
+      container.querySelector('#report-type').addEventListener('change', (event) => {
+        container.querySelector('#report-transaction-sort-group').style.display =
+          event.target.value === 'Transactions' ? '' : 'none';
+      });
+      container.querySelector('#generate-btn').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+          await renderReport();
+        } catch (e) {
+          alert(`Failed to generate report: ${e.message}`);
+        } finally {
+          button.disabled = false;
+        }
+      });
       container.querySelector('#download-pdf-btn').addEventListener('click', generatePDF);
 
     } catch (e) {

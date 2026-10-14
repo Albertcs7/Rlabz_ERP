@@ -12,6 +12,25 @@ export function DirectorFinance(route, router) {
   const authStore = useAuthStore();
   const roleName = authStore.role === 'developer' ? 'Developer' : 'Director';
 
+  const getDirectorPath = (targetSubpath) => {
+    let sub = targetSubpath.startsWith('/') ? targetSubpath : '/' + targetSubpath;
+    if (sub.startsWith('/director') || sub.startsWith('/dashboard')) {
+      return sub;
+    }
+    const isDirectorPrefix = window.location.pathname.startsWith('/director');
+    const base = isDirectorPrefix ? '/director' : '/dashboard';
+    return `${base}${sub}`;
+  };
+
+  const navigateTo = (targetSubpath) => {
+    const fullPath = getDirectorPath(targetSubpath);
+    if (router && typeof router.push === 'function') {
+      router.push(fullPath);
+    } else {
+      window.location.href = fullPath;
+    }
+  };
+
   function render(fin = DirectorService.getFinanceSummary(), projects = DirectorService.getProjects()) {
     const totalBudget = fin.totalBudget || 0;
     const totalSpent = fin.totalSpent || 0;
@@ -33,37 +52,45 @@ export function DirectorFinance(route, router) {
 
       <!-- Financial KPI Summary Cards -->
       <div class="director-kpi-grid">
-        <div class="director-kpi-card">
+        <div class="director-kpi-card kpi-sidebar-primary" id="finance-card-budgets" style="cursor: pointer;" title="Click to view all projects">
           <div class="director-kpi-top">
             <span class="director-kpi-title">Total Project Budgets</span>
-            <div class="director-kpi-icon emerald">₹</div>
+            <div class="director-kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
           </div>
           <div class="director-kpi-value">₹${formatMoney(totalBudget)}</div>
           <div class="director-kpi-subtext">Across all active & completed projects</div>
         </div>
 
-        <div class="director-kpi-card">
+        <div class="director-kpi-card kpi-blue" id="finance-card-expenditures" style="cursor: pointer;" title="Click to view active projects">
           <div class="director-kpi-top">
             <span class="director-kpi-title">Disbursed Expenditures</span>
-            <div class="director-kpi-icon blue">₹</div>
+            <div class="director-kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </div>
           </div>
           <div class="director-kpi-value">₹${formatMoney(totalSpent)}</div>
-          <div class="director-kpi-subtext">Spent on project execution</div>
+          <div class="director-kpi-subtext">Spent on live project execution</div>
         </div>
 
-        <div class="director-kpi-card">
+        <div class="director-kpi-card kpi-indigo" id="finance-card-payroll" style="cursor: pointer;" title="Click to view student roster">
           <div class="director-kpi-top">
             <span class="director-kpi-title">Student Payroll Disbursed</span>
-            <div class="director-kpi-icon purple">₹</div>
+            <div class="director-kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
           </div>
           <div class="director-kpi-value">₹${formatMoney(stipendsDisbursed)}</div>
-          <div class="director-kpi-subtext">Monthly stipends based on track tier</div>
+          <div class="director-kpi-subtext">Monthly stipends across Nova, Orbit, Spark</div>
         </div>
 
-        <div class="director-kpi-card">
+        <div class="director-kpi-card kpi-amber" id="finance-card-invoices" style="cursor: pointer;" title="Click to view client requirements">
           <div class="director-kpi-top">
             <span class="director-kpi-title">Pending Client Invoices</span>
-            <div class="director-kpi-icon amber">₹</div>
+            <div class="director-kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 16 14"></polyline></svg>
+            </div>
           </div>
           <div class="director-kpi-value">₹${formatMoney(pendingInvoiceAmount)}</div>
           <div class="director-kpi-subtext">${pendingInvoices} unpaid invoices pending collection</div>
@@ -76,7 +103,7 @@ export function DirectorFinance(route, router) {
           <h2>Student Payroll Breakdown by Track (Module 5 Integration)</h2>
         </div>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
-          <div style="background:#f3e8ff; padding:1.25rem; border-radius:10px; border:1px solid #d8b4fe;">
+          <div id="finance-track-nova" class="track-summary-card" style="background:#f3e8ff; padding:1.25rem; border-radius:10px; border:1px solid #d8b4fe; cursor:pointer;" title="Click to view Nova Track students">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span class="track-badge nova">Nova Lead Track</span>
               <strong style="color:#7e22ce; font-size:1.1rem;">₹${formatMoney(payrollByTrack.Nova || 0)}</strong>
@@ -84,7 +111,7 @@ export function DirectorFinance(route, router) {
             <p style="font-size:0.8rem; color:#6b7280; margin:0.5rem 0 0 0;">Highest stipend tier (₹5,000/mo) for project leads.</p>
           </div>
 
-          <div style="background:#dbeafe; padding:1.25rem; border-radius:10px; border:1px solid #93c5fd;">
+          <div id="finance-track-orbit" class="track-summary-card" style="background:#dbeafe; padding:1.25rem; border-radius:10px; border:1px solid #93c5fd; cursor:pointer;" title="Click to view Orbit Track students">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span class="track-badge orbit">Orbit Dev Track</span>
               <strong style="color:#1d4ed8; font-size:1.1rem;">₹${formatMoney(payrollByTrack.Orbit || 0)}</strong>
@@ -92,7 +119,7 @@ export function DirectorFinance(route, router) {
             <p style="font-size:0.8rem; color:#6b7280; margin:0.5rem 0 0 0;">Standard developer stipend tier (₹3,000/mo) for contributors.</p>
           </div>
 
-          <div style="background:var(--border-color); padding:1.25rem; border-radius:10px; border:1px solid #6ee7b7;">
+          <div id="finance-track-spark" class="track-summary-card" style="background:var(--border-color); padding:1.25rem; border-radius:10px; border:1px solid #6ee7b7; cursor:pointer;" title="Click to view Spark Track students">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span class="track-badge spark">Spark Learner Track</span>
               <strong style="color:var(--primary-hover); font-size:1.1rem;">₹${formatMoney(payrollByTrack.Spark || 0)}</strong>
@@ -167,6 +194,31 @@ export function DirectorFinance(route, router) {
 
   function attachRowClickEvents(projects) {
     const modalRoot = container.querySelector('#finance-modal-root');
+
+    // KPI Cards Click Navigation
+    container.querySelector('#finance-card-budgets')?.addEventListener('click', () => {
+      navigateTo('/projects?tab=all');
+    });
+    container.querySelector('#finance-card-expenditures')?.addEventListener('click', () => {
+      navigateTo('/projects?tab=active');
+    });
+    container.querySelector('#finance-card-payroll')?.addEventListener('click', () => {
+      navigateTo('/students');
+    });
+    container.querySelector('#finance-card-invoices')?.addEventListener('click', () => {
+      navigateTo('/clients');
+    });
+
+    // Payroll Track Cards Click Navigation
+    container.querySelector('#finance-track-nova')?.addEventListener('click', () => {
+      navigateTo('/students?track=Nova');
+    });
+    container.querySelector('#finance-track-orbit')?.addEventListener('click', () => {
+      navigateTo('/students?track=Orbit');
+    });
+    container.querySelector('#finance-track-spark')?.addEventListener('click', () => {
+      navigateTo('/students?track=Spark');
+    });
 
     container.querySelectorAll('.director-clickable-row, .btn-view-finance-modal').forEach(el => {
       el.addEventListener('click', (e) => {

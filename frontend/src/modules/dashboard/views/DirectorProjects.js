@@ -28,7 +28,7 @@ export function DirectorProjects(route, router) {
     const pendingProposals = proposals.filter(p => p.status === 'proposed' || p.status === 'pending');
     // Include 'accepted' alongside 'in_progress' — an accepted proposal is now its own
     // workflow step (not yet started) rather than jumping straight to in_progress.
-    const activeProjects = projects.filter(p => p.status === 'in_progress' || p.status === 'accepted');
+    const activeProjects = projects.filter(p => p.status === 'in_progress' || p.status === 'accepted' || p.status === 'active');
 
     const q = searchQuery.trim().toLowerCase();
     const filterList = (list) => {

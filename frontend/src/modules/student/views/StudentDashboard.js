@@ -329,10 +329,10 @@ export async function StudentDashboard(route, router) {
       ${drawerHtml}
 
 
-      <!-- Advanced 6-Card KPI Grid -->
+      <!-- Advanced 6-Card KPI Grid (Director Executive Color Palette) -->
       <div class="student-dash-kpi-grid">
-        <!-- 1. Active Projects -->
-        <div class="student-dash-kpi-card kpi-blue" id="kpi-projects" title="Click to view active projects">
+        <!-- 1. Active Projects (Director Sidebar Primary Green / Emerald) -->
+        <div class="student-dash-kpi-card kpi-sidebar-primary" id="kpi-projects" title="Click to view active projects">
           <div class="student-dash-kpi-top">
             <div class="student-dash-kpi-icon blue">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -349,10 +349,10 @@ export async function StudentDashboard(route, router) {
           </div>
         </div>
 
-        <!-- 2. Completed Projects -->
-        <div class="student-dash-kpi-card kpi-emerald" id="kpi-completed-projects" title="Click to view completed projects">
+        <!-- 2. Completed Projects (Director Talent Track Purple) -->
+        <div class="student-dash-kpi-card kpi-purple" id="kpi-completed-projects" title="Click to view completed projects">
           <div class="student-dash-kpi-top">
-            <div class="student-dash-kpi-icon emerald">
+            <div class="student-dash-kpi-icon purple">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -368,7 +368,7 @@ export async function StudentDashboard(route, router) {
           </div>
         </div>
 
-        <!-- 3. Pending Tasks -->
+        <!-- 3. Pending Tasks (Director Royal Indigo) -->
         <div class="student-dash-kpi-card kpi-indigo" id="kpi-tasks" title="Click to filter pending tasks">
           <div class="student-dash-kpi-top">
             <div class="student-dash-kpi-icon indigo">
@@ -387,10 +387,10 @@ export async function StudentDashboard(route, router) {
           </div>
         </div>
 
-        <!-- 4. Bug Fixes / Rework Required -->
-        <div class="student-dash-kpi-card ${bugFixesCount > 0 ? 'kpi-rose' : 'kpi-coral'}" id="kpi-bug-fixes" title="Click to view bug fixes / rework required" style="${bugFixesCount > 0 ? 'border-color: #fecdd3; background: #fff1f2;' : ''}">
+        <!-- 4. Bug Fixes / Rework Required (Director Crimson Red) -->
+        <div class="student-dash-kpi-card kpi-crimson" id="kpi-bug-fixes" title="Click to view bug fixes / rework required">
           <div class="student-dash-kpi-top">
-            <div class="student-dash-kpi-icon ${bugFixesCount > 0 ? 'rose' : 'coral'}">
+            <div class="student-dash-kpi-icon crimson">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
               </svg>
@@ -400,15 +400,15 @@ export async function StudentDashboard(route, router) {
             </div>
           </div>
           <div class="student-dash-kpi-info">
-            <span class="student-dash-kpi-val" style="${bugFixesCount > 0 ? 'color: #dc2626;' : ''}">${bugFixesCount}</span>
+            <span class="student-dash-kpi-val">${bugFixesCount}</span>
             <span class="student-dash-kpi-lbl">${bugFixesCount > 0 ? 'Rework / Fixes' : 'Zero Bug Fixes'}</span>
           </div>
         </div>
 
-        <!-- 5. Assigned Modules -->
-        <div class="student-dash-kpi-card kpi-purple" id="kpi-modules" title="Click to view assigned modules">
+        <!-- 5. Assigned Modules (Director Material Teal) -->
+        <div class="student-dash-kpi-card kpi-teal" id="kpi-modules" title="Click to view assigned modules">
           <div class="student-dash-kpi-top">
-            <div class="student-dash-kpi-icon purple">
+            <div class="student-dash-kpi-icon emerald">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
@@ -426,7 +426,7 @@ export async function StudentDashboard(route, router) {
           </div>
         </div>
 
-        <!-- 6. Upcoming Meetings -->
+        <!-- 6. Upcoming Meetings (Director Capital Amber / Warm Orange) -->
         <div class="student-dash-kpi-card kpi-amber" id="kpi-meetings" title="Click to view scheduled meetings">
           <div class="student-dash-kpi-top">
             <div class="student-dash-kpi-icon amber">

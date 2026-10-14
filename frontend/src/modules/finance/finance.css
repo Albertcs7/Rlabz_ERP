@@ -106,12 +106,14 @@
   margin-top: 0.35rem;
 }
 
-.fin-kpi-card.primary  { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); }
-.fin-kpi-card.teal     { background: linear-gradient(135deg, #00897B, #00796B); }
-.fin-kpi-card.indigo   { background: linear-gradient(135deg, #6366f1, #4f46e5); }
-.fin-kpi-card.purple   { background: linear-gradient(135deg, #a855f7, #9333ea); }
-.fin-kpi-card.warning  { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.fin-kpi-card.danger   { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.fin-kpi-card.primary    { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); }
+.fin-kpi-card.blue       { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25); }
+.fin-kpi-card.dark-green { background: linear-gradient(135deg, #064e3b 0%, #059669 100%); box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25); }
+.fin-kpi-card.teal       { background: linear-gradient(135deg, #00897B, #00796B); }
+.fin-kpi-card.indigo     { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+.fin-kpi-card.purple     { background: linear-gradient(135deg, #a855f7, #9333ea); }
+.fin-kpi-card.warning    { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.fin-kpi-card.danger     { background: linear-gradient(135deg, #ef4444, #dc2626); }
 
 /* ── Section Panel ─────────────────────────────────────────── */
 .fin-panel {
@@ -943,6 +945,8 @@ hr.fin-divider {
   gap: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  user-select: none;
 }
 
 .fin-action-card:hover {

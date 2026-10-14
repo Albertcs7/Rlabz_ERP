@@ -148,6 +148,10 @@ export async function Transactions(route, router) {
               <option value="Client Payment">Client Payment</option>
               <option value="Student Payroll">Student Payroll</option>
               <option value="Faculty/Resource">Faculty/Resource</option>
+              <option value="Marketing Expense">Marketing Expense</option>
+              <option value="Hosting & Domain">Hosting & Domain</option>
+              <option value="SSL Renewal">SSL Renewal</option>
+              <option value="Maintenance Support">Maintenance Support</option>
               <option value="Other Expense">Other Expense</option>
             </select>
           </div>

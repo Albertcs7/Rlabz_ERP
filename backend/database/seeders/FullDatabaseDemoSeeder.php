@@ -41,6 +41,20 @@ class FullDatabaseDemoSeeder extends Seeder
                 'permissions' => json_encode(['view-finance', 'view-student-designations', 'view-projects']),
             ],
             [
+                'name' => 'Design Head',
+                'email' => 'designhead@rajagiri.edu',
+                'password' => Hash::make('design123'),
+                'role' => 'design_head',
+                'permissions' => json_encode(['view-design', 'view-projects', 'view-dashboard', 'view-communication', 'design.create', 'design.review', 'design.approve']),
+            ],
+            [
+                'name' => 'Design Head',
+                'email' => 'design@rajagiri.edu',
+                'password' => Hash::make('design123'),
+                'role' => 'design_head',
+                'permissions' => json_encode(['view-design', 'view-projects', 'view-dashboard', 'view-communication', 'design.create', 'design.review', 'design.approve']),
+            ],
+            [
                 'name' => 'Dr. Joseph Thomas',
                 'email' => 'joseph.thomas@rajagiri.edu',
                 'password' => Hash::make('faculty123'),
@@ -269,7 +283,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-03-15',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-03-16 10:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -286,7 +299,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-03-25',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-03-26 14:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -316,7 +328,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-03-20',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-03-21 11:30:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -333,7 +344,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-03-28',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-03-29 16:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -364,7 +374,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-04-10',
                 'reviewed_by' => $faculty2Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-04-11 10:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -381,7 +390,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-04-20',
                 'reviewed_by' => $faculty2Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-04-21 15:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -411,7 +419,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-04-12',
                 'reviewed_by' => $faculty2Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-04-13 14:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -428,7 +435,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-04-25',
                 'reviewed_by' => $faculty2Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-04-26 12:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -459,7 +465,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-02-15',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-02-16 11:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -476,7 +481,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-02-28',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-03-01 16:30:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -506,7 +510,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-02-20',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-02-21 14:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -523,7 +526,6 @@ class FullDatabaseDemoSeeder extends Seeder
                 'status' => 'completed',
                 'due_date' => '2026-03-05',
                 'reviewed_by' => $faculty1Id,
-                'review_status' => 'approved',
                 'reviewed_at' => '2026-03-06 17:00:00',
                 'created_by' => $coordinatorId,
                 'created_at' => now(),
@@ -572,24 +574,35 @@ class FullDatabaseDemoSeeder extends Seeder
         // 8. Client Requirements
         $cr1 = DB::table('client_requirements')->first();
         $cr1Id = $cr1 ? $cr1->id : DB::table('client_requirements')->insertGetId([
-            'title' => 'Outdoor Sensors',
-            'description' => 'Hardware sensors must withstand outdoor temperature fluctuations up to 45°C.',
-            'status' => 'approved',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'project_id' => $p1Id,
+            'task_id' => $t1Id,
+            'description' => 'Deploy IoT sensors across campus with outdoor temperature tolerance up to 45°C.',
+            'uploaded_by' => $coordinatorId,
+            'uploaded_on' => now(),
         ]);
 
         // 9. Requirement Changes
-        DB::table('requirement_changes')->updateOrInsert(
-            ['client_requirement_id' => $cr1Id],
-            [
+        $rc1 = DB::table('requirement_changes')->where('client_requirement_id', $cr1Id)->first();
+        if (!$rc1) {
+            DB::table('requirement_changes')->insert([
+                'client_requirement_id' => $cr1Id,
+                'project_id' => $p1Id,
+                'previous_description' => 'Outdoor temperature tolerance 40°C',
+                'new_description' => 'Outdoor temperature tolerance extended to 45°C',
+                'change_description' => 'Extended outdoor operating temperature range for sensor probes',
+                'reason' => 'Client operational feedback from campus summer survey',
+                'requested_by' => $coordinatorId,
+                'status' => 'approved',
+                'approved_by' => $directorId,
+                'approved_at' => now(),
+                'changed_on' => now(),
                 'previous_value' => 'Outdoor temperature tolerance 40°C',
                 'updated_value' => 'Outdoor temperature tolerance extended to 45°C',
                 'changed_by' => $coordinatorId,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]
-        );
+            ]);
+        }
 
         // 10. Project Closure
         DB::table('project_closures')->updateOrInsert(
@@ -824,6 +837,14 @@ class FullDatabaseDemoSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
+        // Invoice Items
+        DB::table('invoice_items')->delete();
+        DB::table('invoice_items')->insert([
+            ['invoice_id' => $inv1Id, 'description' => 'IoT Sensors Architecture & Prototype Phase', 'rate' => 30000.00, 'quantity' => 1, 'amount' => 30000.00, 'created_at' => now(), 'updated_at' => now()],
+            ['invoice_id' => $inv2Id, 'description' => 'Campus ERP Mobile App Architecture & UI Milestone', 'rate' => 45000.00, 'quantity' => 1, 'amount' => 45000.00, 'created_at' => now(), 'updated_at' => now()],
+            ['invoice_id' => $inv3Id, 'description' => 'Library Kiosk System Handover & Installation', 'rate' => 45000.00, 'quantity' => 1, 'amount' => 45000.00, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         // Client Payments
         DB::table('client_payments')->insert([
             [
@@ -991,6 +1012,34 @@ class FullDatabaseDemoSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+        }
+
+        // 14b. Ensure all active projects in the system have finance allocations and records
+        $allProjects = DB::table('projects')->get();
+        foreach ($allProjects as $proj) {
+            $existingPf = DB::table('project_finances')->where('project_id', $proj->id)->first();
+            if (!$existingPf && (float) $proj->budget > 0) {
+                $budget = (float) $proj->budget;
+                $newPfId = DB::table('project_finances')->insertGetId([
+                    'project_id' => $proj->id,
+                    'total_development_amount' => $budget,
+                    'created_by' => $coordinatorId,
+                    'status' => 'approved',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // 40% student, 20% faculty, 40% rlabz
+                $studentShare = round($budget * 0.40, 2);
+                $facultyShare = round($budget * 0.20, 2);
+                $rlabzShare = round($budget - $studentShare - $facultyShare, 2);
+
+                DB::table('development_allocations')->insert([
+                    ['project_finance_id' => $newPfId, 'category' => 'student', 'amount' => $studentShare, 'created_at' => now(), 'updated_at' => now()],
+                    ['project_finance_id' => $newPfId, 'category' => 'faculty', 'amount' => $facultyShare, 'created_at' => now(), 'updated_at' => now()],
+                    ['project_finance_id' => $newPfId, 'category' => 'rlabz', 'amount' => $rlabzShare, 'created_at' => now(), 'updated_at' => now()],
+                ]);
+            }
         }
 
         // 15. GitHub Repositories

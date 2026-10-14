@@ -26,6 +26,9 @@ Route::group(['prefix' => 'auth'], function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::get('users', [AuthController::class, 'searchUsers']);
+        Route::get('profile', [AuthController::class, 'getProfile']);
+        Route::put('profile', [AuthController::class, 'updateProfile']);
+        Route::post('change-password', [AuthController::class, 'changePassword']);
 
         // The logged-in user's own profile photo (any role).
         Route::get('profile-photo', [ProfilePhotoController::class, 'show']);

@@ -1,43 +1,20 @@
 import { useAuthStore } from '@/core/stores/auth.js';
 import { getStudentProfilePhoto } from './studentStore.js';
+import { updateTopBarAvatar } from '@/core/layouts/DashboardLayout.js';
+
+export { updateTopBarAvatar };
 
 export function updateStudentNavbarAvatar() {
   const authStore = useAuthStore();
-  if (authStore.role !== 'student') return;
-  const photo = getStudentProfilePhoto(authStore.user) || authStore.user?.avatar || null;
-  const topbarAvatar = document.querySelector('#user-profile-header .avatar');
-  const popoverAvatar = document.querySelector('#popover-avatar');
+  const photo = (authStore.role === 'student' ? getStudentProfilePhoto(authStore.user) : null) || authStore.user?.avatar || null;
   const displayName = authStore.user?.name || authStore.user?.username || 'Student';
-  const initial = displayName.charAt(0).toUpperCase() || 'S';
-
-  if (topbarAvatar) {
-    if (photo) {
-      topbarAvatar.style.padding = '0';
-      topbarAvatar.style.overflow = 'hidden';
-      topbarAvatar.innerHTML = `<img src="${photo}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      topbarAvatar.style.padding = '';
-      topbarAvatar.style.overflow = '';
-      topbarAvatar.textContent = initial;
-    }
-  }
-  if (popoverAvatar) {
-    if (photo) {
-      popoverAvatar.style.padding = '0';
-      popoverAvatar.style.overflow = 'hidden';
-      popoverAvatar.innerHTML = `<img src="${photo}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      popoverAvatar.style.padding = '';
-      popoverAvatar.style.overflow = '';
-      popoverAvatar.textContent = initial;
-    }
-  }
+  updateTopBarAvatar(photo, displayName);
 }
 
 export function renderStudentSidebar() {
   const authStore = useAuthStore();
   const currentPath = window.location.pathname;
-  if (authStore.role !== 'student' || !currentPath.startsWith('/student')) {
+  if (authStore.role !== 'student' && !currentPath.startsWith('/student')) {
     return;
   }
 

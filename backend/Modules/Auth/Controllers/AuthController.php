@@ -20,7 +20,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:150',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:director,coordinator,finance,faculty,student,developer',
+            'role' => 'required|in:director,coordinator,finance,faculty,student,developer,design_head',
             'phone' => 'nullable|string|max:20',
         ]);
         $validated['password'] = Hash::make($validated['password']);
@@ -140,16 +140,18 @@ class AuthController extends Controller
             'coordinator' => '/coordinator',
             'finance' => '/finance',
             'faculty' => '/faculty',
-            'student' => '/student'
+            'student' => '/student',
+            'design_head' => '/design',
         ];
         
         $modules = [
-            'director' => ['director', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
-            'developer' => ['developer', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication'],
-            'coordinator' => ['coordinator', 'project', 'student', 'communication', 'github', 'certificates'],
-            'finance' => ['finance', 'project'],
-            'faculty' => ['faculty', 'project', 'communication', 'github'],
-            'student' => ['student', 'project', 'communication', 'github', 'certificates']
+            'director' => ['director', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication', 'design', 'profile'],
+            'developer' => ['developer', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication', 'design', 'profile'],
+            'coordinator' => ['coordinator', 'project', 'student', 'communication', 'github', 'certificates', 'design', 'profile'],
+            'finance' => ['finance', 'project', 'profile'],
+            'faculty' => ['faculty', 'project', 'communication', 'github', 'profile'],
+            'student' => ['student', 'project', 'communication', 'github', 'certificates', 'profile'],
+            'design_head' => ['design', 'project', 'communication', 'profile'],
         ];
         
         // Convert stdClass to array for mutation if using DB facade
@@ -271,6 +273,162 @@ class AuthController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => $users
+        ]);
+    }
+
+    public function getProfile(Request $request)
+    {
+        $userId = $request->auth_user['sub'] ?? null;
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        $userArray = (array) $user;
+        unset($userArray['password']);
+        $userArray['permissions'] = is_string($user->permissions) ? json_decode($user->permissions, true) : ($user->permissions ?? []);
+
+        // Retrieve teams / projects (finance head oversees finances across all projects, so no team assignment)
+        $projects = [];
+        if (Schema::hasTable('projects') && $user->role !== 'finance') {
+            $projects = DB::table('projects')
+                ->where('created_by', $userId)
+                ->orWhereIn('id', function ($q) use ($userId) {
+                    $q->select('project_id')->from('project_student')->where('student_id', $userId);
+                })
+                ->orWhereIn('id', function ($q) use ($userId) {
+                    $q->select('project_id')->from('project_faculty')->where('faculty_id', $userId);
+                })
+                ->select('id', 'title', 'project_type', 'status')
+                ->take(8)
+                ->get();
+
+            // If user is admin/director/design_head/coordinator without direct assignment, show top active projects
+            if ($projects->isEmpty()) {
+                $projects = DB::table('projects')->select('id', 'title', 'project_type', 'status')->take(4)->get();
+            }
+        }
+
+        // Student metadata if applicable
+        if ($user->role === 'student' && Schema::hasTable('student_profiles')) {
+            $studentProf = DB::table('student_profiles')->where('student_id', $userId)->first();
+            if ($studentProf) {
+                $userArray['course'] = $studentProf->course ?? 'MCA';
+                $userArray['batch'] = $studentProf->batch ?? '2025-2027';
+                $userArray['semester'] = $studentProf->semester ?? 3;
+                $userArray['designation'] = $studentProf->designation ? ucfirst($studentProf->designation) : 'Nova';
+            }
+        }
+
+        // Faculty metadata if applicable
+        if ($user->role === 'faculty' && Schema::hasTable('faculty_profiles')) {
+            $facProf = DB::table('faculty_profiles')->where('faculty_id', $userId)->first();
+            if ($facProf) {
+                $userArray['department'] = $facProf->department ?? 'Computer Applications';
+                $userArray['designation'] = $facProf->designation ?? 'Faculty Member';
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'user' => $userArray,
+            'teams' => $projects,
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $userId = $request->auth_user['sub'] ?? null;
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'phone' => 'nullable|string|max:30',
+            'bio' => 'nullable|string|max:1000',
+            'location' => 'nullable|string|max:150',
+            'department' => 'nullable|string|max:150',
+            'avatar' => 'nullable|string',
+        ]);
+
+        $updateData = [
+            'name' => $validated['name'],
+            'phone' => $validated['phone'] ?? null,
+            'updated_at' => now(),
+        ];
+
+        if (Schema::hasColumn('users', 'bio')) $updateData['bio'] = $validated['bio'] ?? null;
+        if (Schema::hasColumn('users', 'location')) $updateData['location'] = $validated['location'] ?? 'Kochi, India';
+        if (Schema::hasColumn('users', 'department')) $updateData['department'] = $validated['department'] ?? null;
+        if (Schema::hasColumn('users', 'avatar')) $updateData['avatar'] = $validated['avatar'] ?? null;
+
+        DB::table('users')->where('id', $userId)->update($updateData);
+
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $userId,
+                'action' => 'Profile Updated',
+                'description' => "User {$validated['name']} updated personal profile details.",
+                'created_at' => now(),
+            ]);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        $userArray = (array) $user;
+        unset($userArray['password']);
+        $userArray['permissions'] = is_string($user->permissions) ? json_decode($user->permissions, true) : ($user->permissions ?? []);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'user' => $userArray,
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $userId = $request->auth_user['sub'] ?? null;
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|different:current_password',
+            'confirm_password' => 'required|same:new_password',
+        ]);
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['error' => 'Current password does not match.'], 422);
+        }
+
+        DB::table('users')->where('id', $userId)->update([
+            'password' => Hash::make($request->new_password),
+            'updated_at' => now(),
+        ]);
+
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $userId,
+                'action' => 'Password Changed',
+                'description' => "User {$user->name} securely changed account password.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password changed successfully.'
         ]);
     }
 }

@@ -89,6 +89,51 @@ class FinanceService
         return $setting ? (float) $setting->student_hourly_rate : 0;
     }
 
+    public function getConsumedOverhead($projectFinanceId)
+    {
+        $pf = ProjectFinance::with(['hostingCharges', 'maintenanceSupportCharges'])->find($projectFinanceId);
+        if (!$pf) return 0.0;
+        return (float) $pf->consumed_overhead;
+    }
+
+    public function evaluateOverheadCeiling($projectFinanceId, $additionalAmount = 0)
+    {
+        $pf = ProjectFinance::with(['hostingCharges', 'maintenanceSupportCharges'])->find($projectFinanceId);
+        if (!$pf) {
+            return [
+                'valid'             => false,
+                'exceeded'          => false,
+                'overhead_budget'   => 0.0,
+                'consumed_overhead' => 0.0,
+                'new_total'         => 0.0,
+                'remaining'         => 0.0,
+                'overage'           => 0.0,
+                'warning'           => 'Project finance record not found.'
+            ];
+        }
+
+        $budget   = (float) ($pf->overhead_budget ?? 0);
+        $consumed = (float) $pf->consumed_overhead;
+        $newTotal = $consumed + (float) $additionalAmount;
+        $remaining = max(0, $budget - $consumed);
+        $exceeded  = ($budget > 0) && ($newTotal > $budget);
+        $overage   = $exceeded ? round($newTotal - $budget, 2) : 0.0;
+
+        return [
+            'valid'             => true,
+            'exceeded'          => $exceeded,
+            'is_over_budget'    => $exceeded,
+            'overhead_budget'   => round($budget, 2),
+            'consumed_overhead' => round($consumed, 2),
+            'new_total'         => round($newTotal, 2),
+            'remaining'         => round($remaining, 2),
+            'overage'           => $overage,
+            'warning'           => $exceeded
+                ? "This expense exceeds the allocated overhead budget pool (₹" . number_format($budget, 2) . ") by ₹" . number_format($overage, 2) . "."
+                : null
+        ];
+    }
+
     public function getDashboardSummary()
     {
         $totalInvoiced = Invoice::all()->sum('grand_total');
@@ -99,8 +144,9 @@ class FinanceService
         $maintenanceCharges = \Modules\Finance\Models\MaintenanceSupportCharge::sum('amount');
         $studentPayments = StudentPayment::sum('amount');
         $facultyPayments = \Modules\Finance\Models\FacultyPayment::sum('amount');
+        $marketingExpenses = \Modules\Finance\Models\MarketingExpense::sum('amount');
 
-        $totalOtherExpenses = $hostingCharges + $sslRenewals + $maintenanceCharges;
+        $totalOtherExpenses = $hostingCharges + $sslRenewals + $maintenanceCharges + $marketingExpenses;
         $totalExpenses = $studentPayments + $facultyPayments + $totalOtherExpenses;
 
         // Total Profit = Total Revenue/Billing - Total Costs.
@@ -119,6 +165,7 @@ class FinanceService
             // totalOtherExpenses = hosting + ssl renewals only (NOT maintenance, which is separate)
             'totalOtherExpenses' => round($hostingCharges + $sslRenewals, 2),
             'totalMaintenance' => round($maintenanceCharges, 2),
+            'totalMarketing' => round($marketingExpenses, 2),
             'totalExpenses' => round($totalExpenses, 2),
             'totalProfit' => round($totalProfit, 2),
             'projectProfit' => round($totalCollected - $totalExpenses, 2),
@@ -274,7 +321,7 @@ class FinanceService
         return Invoice::with(['projectFinance.project', 'clientPayments', 'items'])->get();
     }
 
-    public function getAllTransactions()
+    public function getAllTransactions($sort = null, $projectId = null)
     {
         $clientPayments = \Modules\Finance\Models\ClientPayment::with('invoice.projectFinance.project')->get();
         $studentPayments = StudentPayment::join('project_student', 'student_payments.project_student_id', '=', 'project_student.id')
@@ -304,6 +351,11 @@ class FinanceService
             ->join('project_finances', 'hosting_charges.project_finance_id', '=', 'project_finances.id')
             ->join('projects', 'project_finances.project_id', '=', 'projects.id')
             ->select('ssl_renewal_history.*', 'projects.title as project_name', 'projects.id as project_id')
+            ->get();
+
+        $marketingExpenses = \Modules\Finance\Models\MarketingExpense::join('project_finances', 'marketing_expenses.project_finance_id', '=', 'project_finances.id')
+            ->join('projects', 'project_finances.project_id', '=', 'projects.id')
+            ->select('marketing_expenses.*', 'projects.title as project_name', 'projects.id as project_id')
             ->get();
 
         $transactions = [];
@@ -383,7 +435,7 @@ class FinanceService
         foreach ($maintenanceCharges as $mc) {
             $transactions[] = [
                 'id' => 'MC-'.$mc->id,
-                'date' => $mc->start_date ?? clone $mc->created_at->toDateString(),
+                'date' => $mc->start_date ?? optional($mc->created_at)->toDateString(),
                 'projectId' => $mc->project_id,
                 'projectName' => $mc->project_name,
                 'type' => 'Maintenance Support',
@@ -394,9 +446,68 @@ class FinanceService
             ];
         }
 
-        usort($transactions, function($a, $b) {
-            return strtotime($b['date']) - strtotime($a['date']);
-        });
+        foreach ($marketingExpenses as $me) {
+            $desc = $me->title . ($me->vendor ? ' (' . $me->vendor . ')' : '');
+            $txnDate = $me->expense_date;
+            if ($txnDate instanceof \DateTimeInterface) {
+                $txnDate = $txnDate->format('Y-m-d');
+            } elseif (!$txnDate && $me->created_at) {
+                $txnDate = $me->created_at instanceof \DateTimeInterface ? $me->created_at->format('Y-m-d') : (string)$me->created_at;
+            }
+
+            $transactions[] = [
+                'id' => 'ME-'.$me->id,
+                'date' => $txnDate ?: date('Y-m-d'),
+                'projectId' => $me->project_id,
+                'projectName' => $me->project_name,
+                'type' => 'Marketing Expense',
+                'desc' => $desc,
+                'amount' => (float) $me->amount,
+                'incomeExpense' => 'Expense',
+                'status' => 'Completed'
+            ];
+        }
+
+        // Optional project filtering
+        if ($projectId && $projectId !== 'All') {
+            $transactions = array_values(array_filter($transactions, function($t) use ($projectId) {
+                return (string)($t['projectId'] ?? '') === (string)$projectId;
+            }));
+        }
+
+        // Ordering / grouping logic
+        if ($sort === 'income_first' || $sort === 'grouped') {
+            usort($transactions, function($a, $b) {
+                if ($a['incomeExpense'] !== $b['incomeExpense']) {
+                    return $a['incomeExpense'] === 'Income' ? -1 : 1;
+                }
+                $timeDiff = strtotime($b['date'] ?? 'now') - strtotime($a['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($b['id'] ?? '', $a['id'] ?? '');
+            });
+        } elseif ($sort === 'expense_first') {
+            usort($transactions, function($a, $b) {
+                if ($a['incomeExpense'] !== $b['incomeExpense']) {
+                    return $a['incomeExpense'] === 'Expense' ? -1 : 1;
+                }
+                $timeDiff = strtotime($b['date'] ?? 'now') - strtotime($a['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($b['id'] ?? '', $a['id'] ?? '');
+            });
+        } elseif ($sort === 'oldest') {
+            usort($transactions, function($a, $b) {
+                $timeDiff = strtotime($a['date'] ?? 'now') - strtotime($b['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($a['id'] ?? '', $b['id'] ?? '');
+            });
+        } else {
+            // Default chronological (newest first)
+            usort($transactions, function($a, $b) {
+                $timeDiff = strtotime($b['date'] ?? 'now') - strtotime($a['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($b['id'] ?? '', $a['id'] ?? '');
+            });
+        }
 
         return $transactions;
     }
@@ -407,12 +518,12 @@ class FinanceService
         // and MUST NOT be viewed or listed in Finance until accepted / in_progress.
         // Closed, cancelled, and zero-budget projects remain visible in tables and dropdowns with status tags.
         $projects = Project::whereNotIn('status', ['proposed', 'rejected'])->get();
-        $finances = ProjectFinance::with(['developmentAllocations', 'invoices.clientPayments', 'hostingCharges', 'maintenanceSupportCharges'])->get()->keyBy('project_id');
+        $finances = ProjectFinance::with(['developmentAllocations', 'invoices.clientPayments', 'hostingCharges', 'maintenanceSupportCharges', 'marketingExpenses'])->get()->keyBy('project_id');
         
         $projects->each(function($project) use ($finances) {
             $pf = $finances->get($project->id);
             if ($pf) {
-                $pf->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses']);
+                $pf->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses', 'consumed_overhead', 'remaining_overhead']);
             }
             $project->project_finance = $pf;
 
@@ -426,12 +537,12 @@ class FinanceService
 
     public function getProjectFinanceDetails($id)
     {
-        $projectFinance = ProjectFinance::with(['project', 'invoices.clientPayments', 'developmentAllocations', 'hostingCharges', 'maintenanceSupportCharges'])->where('project_id', $id)->first();
+        $projectFinance = ProjectFinance::with(['project', 'invoices.clientPayments', 'developmentAllocations', 'hostingCharges', 'maintenanceSupportCharges', 'marketingExpenses'])->where('project_id', $id)->first();
         if (!$projectFinance || ($projectFinance->project && in_array(strtolower($projectFinance->project->status ?? ''), ['proposed', 'rejected']))) {
             return null;
         }
 
-        $projectFinance->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses']);
+        $projectFinance->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses', 'consumed_overhead', 'remaining_overhead']);
 
         // Fetch students via pivot, since we can't edit Project model
         $students = DB::table('project_student')
