@@ -36,13 +36,24 @@ class FinanceController extends Controller
 
     public function getProjectDetails($id)
     {
-        $project = $this->financeService->getProjectFinanceDetails($id);
+        $projectFinance = $this->financeService->getProjectFinanceDetails($id);
 
-        if (!$project) {
-            return response()->json(['error' => 'Project not found'], 404);
+        if ($projectFinance) {
+            return response()->json($projectFinance);
         }
 
-        return response()->json($project);
+        // Check if the project exists in projects table (excluding proposed and rejected)
+        $project = Project::find($id);
+        if ($project && !in_array(strtolower($project->status ?? ''), ['proposed', 'rejected'])) {
+            $project->finance_lock = $this->financeService->buildFinanceLock($project);
+            return response()->json([
+                'initialized' => false,
+                'project'     => $project,
+                'message'     => 'Financial breakdown has not been initialized for this project yet.'
+            ], 200);
+        }
+
+        return response()->json(['error' => 'Project not found'], 404);
     }
 
     public function getStudentPayments(Request $request)
@@ -64,9 +75,11 @@ class FinanceController extends Controller
         return response()->json($invoices);
     }
 
-    public function getTransactions()
+    public function getTransactions(Request $request)
     {
-        $transactions = $this->financeService->getAllTransactions();
+        $sort = $request->query('sort');
+        $projectId = $request->query('project_id') ?: $request->query('projectId');
+        $transactions = $this->financeService->getAllTransactions($sort, $projectId);
         return response()->json($transactions);
     }
 

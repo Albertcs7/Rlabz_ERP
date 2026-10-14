@@ -42,10 +42,79 @@ export async function ProjectFinance(route, router) {
       </div>
     `;
 
+    const renderUninitializedView = (project) => {
+      const projectLock = getFinanceLock(project);
+      const estCost = parseFloat(project.budget || project.estimated_cost || 0);
+
+      container.innerHTML = `
+      <div class="fin-page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <h1 style="margin:0;">${project.title || 'Untitled Project'}</h1>
+            <span class="fin-badge ${statusBadgeClass(project.status)}">${(project.status || 'active').replace('_', ' ')}</span>
+            <span class="fin-badge warning">Finance Not Initialized</span>
+          </div>
+          <p style="margin-top:0.35rem; color:var(--text-muted);">
+            Client: <strong>${project.client_name || 'N/A'}</strong>&nbsp;&nbsp;|&nbsp;&nbsp;Approved Budget: <strong>${fmt(estCost)}</strong>
+            ${projectLock.locked ? `&nbsp;&nbsp;|&nbsp;&nbsp;<span style="font-size:0.75rem;font-weight:600;color:${projectLock.reason === 'status' ? '#b91c1c' : '#92400e'}">🔒 ${projectLock.reason === 'status' ? 'Locked (' + projectLock.label + ')' : 'No Approved Budget'}</span>` : ''}
+          </p>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <button class="btn-back-nav" id="uninit-back-btn" title="Return to Projects">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span>Back to Projects</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="fin-panel" style="padding:3.5rem 2rem; text-align:center; max-width:760px; margin:2rem auto; border:1px dashed var(--border-color, #cbd5e1); border-radius:12px; background:var(--card-bg, #ffffff);">
+        <div style="width:72px; height:72px; border-radius:50%; background:#f1f5f9; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1.25rem; color:var(--primary, #3b82f6);">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+        </div>
+        
+        <h2 style="font-size:1.35rem; font-weight:700; margin:0 0 0.5rem; color:var(--text-color, #1e293b);">
+          Financial Breakdown Not Initialized
+        </h2>
+        <p style="color:var(--text-muted, #64748b); font-size:0.925rem; line-height:1.6; max-width:540px; margin:0 auto 1.75rem;">
+          Financial tracking has not been configured for this project yet. Please go back to the main Project Finance page and use the 'Add Project Finance' option to set up this project.
+        </p>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:1rem; max-width:520px; margin:0 auto; background:var(--bg-light, #f8fafc); padding:1rem; border-radius:8px; text-align:left;">
+          <div>
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Client</div>
+            <div style="font-size:0.875rem; font-weight:600; margin-top:2px;">${project.client_name || '—'}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Est. Cost / Budget</div>
+            <div style="font-size:0.875rem; font-weight:700; color:var(--primary); margin-top:2px;">${fmt(estCost)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Project Status</div>
+            <div style="font-size:0.875rem; font-weight:600; margin-top:2px; text-transform:capitalize;">${(project.status || 'active').replace('_', ' ')}</div>
+          </div>
+        </div>
+      </div>
+      `;
+
+      container.querySelector('#uninit-back-btn')?.addEventListener('click', () => router.push('/finance/projects'));
+    };
+
     const loadProjectDetails = async () => {
       try {
         const projectData = await financeService.getProjectDetails(route.params.id);
         if (!projectData) throw new Error('Project finance details not found');
+
+        if (projectData.initialized === false) {
+          renderUninitializedView(projectData.project || {});
+          return;
+        }
 
         const project = projectData.project || {};
         const projectLock = getFinanceLock(project);
@@ -267,64 +336,6 @@ export async function ProjectFinance(route, router) {
         <!-- SSL Information (Dynamically loaded) -->
         <div id="project-ssl-info-container"></div>
 
-        <!-- Dedicated Operational & Infrastructure Costs (Overhead Pool) Card -->
-        <div class="fin-panel" style="margin-bottom: 1.5rem;">
-          <div class="fin-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-            <div>
-              <div class="fin-panel-title">Operational & Infrastructure Expenses (Overhead Pool)</div>
-              <div class="fin-panel-subtitle" style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-top:2px;">
-                <span>Budget Pool: <strong style="color:#059669;">${fmt(overheadBudget)}</strong></span>
-                <span>•</span>
-                <span>Consumed: <strong style="color:${isOverheadExceeded ? '#ef4444' : 'var(--text-color)'};">${fmt(consumedOverhead)}</strong></span>
-                <span>•</span>
-                <span>Remaining: <strong style="color:${remainingOverhead < 0 ? '#ef4444' : remainingOverhead > 0 ? '#10b981' : 'var(--text-muted)'};">${fmt(remainingOverhead)}</strong></span>
-                ${isOverheadExceeded ? `<span class="fin-badge danger" style="font-size:0.7rem; padding:1px 6px;">⚠ Over Budget by ${fmt(consumedOverhead - overheadBudget)}</span>` : ''}
-              </div>
-            </div>
-            ${projectLock.locked ? '' : `
-              <div style="display:flex; gap:0.5rem; align-items:center;">
-                <button class="fin-btn outline sm" id="card-add-resource-btn" style="display:inline-flex; align-items:center; gap:4px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  + Add Infrastructure
-                </button>
-                <button class="fin-btn outline sm" id="card-add-maintenance-btn" style="display:inline-flex; align-items:center; gap:4px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  + Add Maintenance
-                </button>
-              </div>
-            `}
-          </div>
-          <div class="fin-table-wrap">
-            <table class="fin-table">
-              <thead>
-                <tr>
-                  <th>Ref ID</th>
-                  <th>Date</th>
-                  <th>Category</th>
-                  <th>Details / Provider</th>
-                  <th>Validity / Expiry</th>
-                  <th>Amount</th>
-                  <th>Pool Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${overheadTransactions.map(tx => `
-                  <tr>
-                    <td style="font-family:monospace; font-size:0.8rem; font-weight:600; color:var(--primary);">${tx.id}</td>
-                    <td style="white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${fmtDate(tx.date)}</td>
-                    <td><span class="fin-badge ${tx.badge}" style="font-size:0.72rem; text-transform:uppercase;">${tx.category}</span></td>
-                    <td style="font-size:0.875rem;">${tx.details}</td>
-                    <td style="white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${tx.expiry ? fmtDate(tx.expiry) : '—'}</td>
-                    <td style="font-weight:700; color:#ef4444;">${fmt(tx.amount)}</td>
-                    <td><span class="fin-badge neutral" style="font-size:0.7rem; color:var(--text-muted);">- ${fmt(tx.amount)} from pool</span></td>
-                  </tr>
-                `).join('')}
-                ${overheadTransactions.length === 0 ? '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.75rem;">No operational or infrastructure expenses recorded against this project yet. Overhead budget pool is fully available.</td></tr>' : ''}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         <!-- Resource Expenses -->
         <div class="fin-panel">
           <div class="fin-panel-header">
@@ -406,6 +417,52 @@ export async function ProjectFinance(route, router) {
                   </tr>
                 `).join('')}
                 ${marketingExpenses.length === 0 ? '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.75rem;">No marketing expenses recorded for this project yet.</td></tr>' : ''}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Dedicated Operational & Infrastructure Costs (Overhead Pool) Card (Read-Only) -->
+        <div class="fin-panel" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+          <div class="fin-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+              <div class="fin-panel-title">Operational & Infrastructure Expenses (Overhead Pool)</div>
+              <div class="fin-panel-subtitle" style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-top:2px;">
+                <span>Budget Pool: <strong style="color:#059669;">${fmt(overheadBudget)}</strong></span>
+                <span>•</span>
+                <span>Consumed: <strong style="color:${isOverheadExceeded ? '#ef4444' : 'var(--text-color)'};">${fmt(consumedOverhead)}</strong></span>
+                <span>•</span>
+                <span>Remaining: <strong style="color:${remainingOverhead < 0 ? '#ef4444' : remainingOverhead > 0 ? '#10b981' : 'var(--text-muted)'};">${fmt(remainingOverhead)}</strong></span>
+                ${isOverheadExceeded ? `<span class="fin-badge danger" style="font-size:0.7rem; padding:1px 6px;">⚠ Over Budget by ${fmt(consumedOverhead - overheadBudget)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="fin-table-wrap">
+            <table class="fin-table">
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Details / Provider</th>
+                  <th>Validity / Expiry</th>
+                  <th>Amount</th>
+                  <th>Pool Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${overheadTransactions.map(tx => `
+                  <tr>
+                    <td style="font-family:monospace; font-size:0.8rem; font-weight:600; color:var(--primary);">${tx.id}</td>
+                    <td style="white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${fmtDate(tx.date)}</td>
+                    <td><span class="fin-badge ${tx.badge}" style="font-size:0.72rem; text-transform:uppercase;">${tx.category}</span></td>
+                    <td style="font-size:0.875rem;">${tx.details}</td>
+                    <td style="white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${tx.expiry ? fmtDate(tx.expiry) : '—'}</td>
+                    <td style="font-weight:700; color:#ef4444;">${fmt(tx.amount)}</td>
+                    <td><span class="fin-badge neutral" style="font-size:0.7rem; color:var(--text-muted);">- ${fmt(tx.amount)} from pool</span></td>
+                  </tr>
+                `).join('')}
+                ${overheadTransactions.length === 0 ? '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.75rem;">No operational or infrastructure expenses recorded against this project yet. Overhead budget pool is fully available.</td></tr>' : ''}
               </tbody>
             </table>
           </div>
@@ -536,217 +593,6 @@ export async function ProjectFinance(route, router) {
           });
         };
 
-        // Unified Infrastructure / Resource Modal
-        const openInfrastructureModal = () => {
-          const modal = document.createElement('div');
-          modal.className = 'fin-modal-overlay';
-          modal.innerHTML = `
-          <div class="fin-modal" style="max-width:480px; width:95%;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-              <h3 style="margin:0; font-size:1.15rem;">Record Infrastructure / Resource Charge</h3>
-              <button id="close-infra-x" style="background:none; border:none; cursor:pointer; font-size:1.25rem; color:var(--text-muted);">&times;</button>
-            </div>
-            <div style="font-size:0.825rem; color:var(--text-muted); margin-bottom:1rem; padding:0.5rem 0.75rem; background:var(--bg-light); border-radius:6px; line-height:1.5;">
-              Project: <strong>${project.title || 'Unknown'}</strong><br>
-              Overhead Budget Pool: <strong>${fmt(overheadBudget)}</strong> | Consumed: <span style="color:#ef4444;font-weight:600;">${fmt(consumedOverhead)}</span> | Remaining: <span style="color:#10b981;font-weight:600;">${fmt(remainingOverhead)}</span>
-            </div>
-            <div id="infra-error-msg" style="display:none; color:#ef4444; font-size:0.8rem; margin-bottom:0.75rem; padding:0.5rem; background:#fee2e2; border-radius:4px;"></div>
-            
-            <div class="fin-form-group">
-              <label style="font-weight:600;">Resource Type *</label>
-              <select class="fin-input" id="infra-type">
-                <option value="ssl">SSL Certificate</option>
-                <option value="domain">Domain Registration</option>
-                <option value="api">API Service / Cloud Addon</option>
-                <option value="hosting">Hosting / Server</option>
-              </select>
-            </div>
-
-            <div style="display:flex; gap:0.75rem;">
-              <div class="fin-form-group" style="flex:1;">
-                <label style="font-weight:600;">Amount (₹) *</label>
-                <input type="number" class="fin-input" id="infra-amount" placeholder="0.00" min="0" step="0.01" required>
-              </div>
-              <div class="fin-form-group" style="flex:1;">
-                <label style="font-weight:600;">Purchase Date *</label>
-                <input type="date" class="fin-input" id="infra-purchase" value="${new Date().toISOString().split('T')[0]}" required>
-              </div>
-            </div>
-
-            <div style="display:flex; gap:0.75rem;">
-              <div class="fin-form-group" style="flex:1;">
-                <label>Expiry Date</label>
-                <input type="date" class="fin-input" id="infra-expiry">
-              </div>
-              <div class="fin-form-group" style="flex:1;">
-                <label>Provider / Reference</label>
-                <input type="text" class="fin-input" id="infra-ref" placeholder="e.g. AWS, GoDaddy, Hostinger">
-              </div>
-            </div>
-
-            <div class="fin-form-actions" style="margin-top:1.25rem; display:flex; justify-content:flex-end; gap:0.5rem;">
-              <button class="fin-btn outline" id="cancel-infra">Cancel</button>
-              <button class="fin-btn primary" id="save-infra-btn">Save Resource</button>
-            </div>
-          </div>
-        `;
-          document.body.appendChild(modal);
-
-          const closeModal = () => modal.remove();
-          modal.querySelector('#cancel-infra').addEventListener('click', closeModal);
-          modal.querySelector('#close-infra-x').addEventListener('click', closeModal);
-          modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-          });
-
-          modal.querySelector('#save-infra-btn').addEventListener('click', async () => {
-            const chargeType = modal.querySelector('#infra-type').value;
-            const amount = parseFloat(modal.querySelector('#infra-amount').value);
-            const purchaseDate = modal.querySelector('#infra-purchase').value;
-            const expiryDate = modal.querySelector('#infra-expiry').value || null;
-            const ref = modal.querySelector('#infra-ref').value.trim();
-            const errEl = modal.querySelector('#infra-error-msg');
-            const saveBtn = modal.querySelector('#save-infra-btn');
-
-            if (isNaN(amount) || amount < 0) {
-              errEl.textContent = 'Please enter a valid amount.';
-              errEl.style.display = 'block';
-              return;
-            }
-            if (!purchaseDate) {
-              errEl.textContent = 'Please select a purchase date.';
-              errEl.style.display = 'block';
-              return;
-            }
-
-            try {
-              saveBtn.disabled = true;
-              saveBtn.textContent = 'Saving...';
-              errEl.style.display = 'none';
-
-              const res = await financeService.addResourceCost({
-                project_finance_id: projectData.id,
-                charge_type: chargeType,
-                amount,
-                purchase_date: purchaseDate,
-                expiry_date: expiryDate,
-                reference_details: ref || null
-              });
-
-              if (res?.overhead_check?.is_over_budget && res.overhead_check.warning) {
-                alert(res.overhead_check.warning);
-              }
-
-              closeModal();
-              loadProjectDetails();
-            } catch (err) {
-              saveBtn.disabled = false;
-              saveBtn.textContent = 'Save Resource';
-              errEl.textContent = err.message || 'Failed to save resource record.';
-              errEl.style.display = 'block';
-            }
-          });
-        };
-
-        // Unified Maintenance Modal
-        const openMaintenanceModal = () => {
-          const modal = document.createElement('div');
-          modal.className = 'fin-modal-overlay';
-          modal.innerHTML = `
-          <div class="fin-modal" style="max-width:480px; width:95%;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-              <h3 style="margin:0; font-size:1.15rem;">Record Maintenance & Support Charge</h3>
-              <button id="close-maint-x" style="background:none; border:none; cursor:pointer; font-size:1.25rem; color:var(--text-muted);">&times;</button>
-            </div>
-            <div style="font-size:0.825rem; color:var(--text-muted); margin-bottom:1rem; padding:0.5rem 0.75rem; background:var(--bg-light); border-radius:6px; line-height:1.5;">
-              Project: <strong>${project.title || 'Unknown'}</strong><br>
-              Overhead Budget Pool: <strong>${fmt(overheadBudget)}</strong> | Consumed: <span style="color:#ef4444;font-weight:600;">${fmt(consumedOverhead)}</span> | Remaining: <span style="color:#10b981;font-weight:600;">${fmt(remainingOverhead)}</span>
-            </div>
-            <div id="maint-error-msg" style="display:none; color:#ef4444; font-size:0.8rem; margin-bottom:0.75rem; padding:0.5rem; background:#fee2e2; border-radius:4px;"></div>
-            
-            <div class="fin-form-group">
-              <label style="font-weight:600;">Amount (₹) *</label>
-              <input type="number" class="fin-input" id="maint-amount" placeholder="0.00" min="0" step="0.01" required>
-            </div>
-
-            <div style="display:flex; gap:0.75rem;">
-              <div class="fin-form-group" style="flex:1;">
-                <label style="font-weight:600;">Start Date *</label>
-                <input type="date" class="fin-input" id="maint-start" value="${new Date().toISOString().split('T')[0]}" required>
-              </div>
-              <div class="fin-form-group" style="flex:1;">
-                <label>End Date</label>
-                <input type="date" class="fin-input" id="maint-end">
-              </div>
-            </div>
-
-            <div class="fin-form-group">
-              <label>Description / Scope of Support</label>
-              <textarea class="fin-input" id="maint-desc" rows="2" placeholder="e.g. Annual AMC, Server upkeep, Security patches"></textarea>
-            </div>
-
-            <div class="fin-form-actions" style="margin-top:1.25rem; display:flex; justify-content:flex-end; gap:0.5rem;">
-              <button class="fin-btn outline" id="cancel-maint">Cancel</button>
-              <button class="fin-btn primary" id="save-maint-btn">Save Maintenance</button>
-            </div>
-          </div>
-        `;
-          document.body.appendChild(modal);
-
-          const closeModal = () => modal.remove();
-          modal.querySelector('#cancel-maint').addEventListener('click', closeModal);
-          modal.querySelector('#close-maint-x').addEventListener('click', closeModal);
-          modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-          });
-
-          modal.querySelector('#save-maint-btn').addEventListener('click', async () => {
-            const amount = parseFloat(modal.querySelector('#maint-amount').value);
-            const startDate = modal.querySelector('#maint-start').value;
-            const endDate = modal.querySelector('#maint-end').value || null;
-            const desc = modal.querySelector('#maint-desc').value.trim();
-            const errEl = modal.querySelector('#maint-error-msg');
-            const saveBtn = modal.querySelector('#save-maint-btn');
-
-            if (isNaN(amount) || amount < 0) {
-              errEl.textContent = 'Please enter a valid amount.';
-              errEl.style.display = 'block';
-              return;
-            }
-            if (!startDate) {
-              errEl.textContent = 'Please select a start date.';
-              errEl.style.display = 'block';
-              return;
-            }
-
-            try {
-              saveBtn.disabled = true;
-              saveBtn.textContent = 'Saving...';
-              errEl.style.display = 'none';
-
-              const res = await financeService.addMaintenanceCost({
-                project_finance_id: projectData.id,
-                amount,
-                start_date: startDate,
-                end_date: endDate,
-                description: desc || null
-              });
-
-              if (res?.overhead_check?.is_over_budget && res.overhead_check.warning) {
-                alert(res.overhead_check.warning);
-              }
-
-              closeModal();
-              loadProjectDetails();
-            } catch (err) {
-              saveBtn.disabled = false;
-              saveBtn.textContent = 'Save Maintenance';
-              errEl.textContent = err.message || 'Failed to save maintenance record.';
-              errEl.style.display = 'block';
-            }
-          });
-        };
-
         const topAddMktBtn = container.querySelector('#top-add-marketing-expense-btn');
         if (topAddMktBtn) {
           topAddMktBtn.addEventListener('click', openMarketingModal);
@@ -754,14 +600,6 @@ export async function ProjectFinance(route, router) {
         const cardAddMktBtn = container.querySelector('#card-add-marketing-expense-btn');
         if (cardAddMktBtn) {
           cardAddMktBtn.addEventListener('click', openMarketingModal);
-        }
-        const cardAddResourceBtn = container.querySelector('#card-add-resource-btn');
-        if (cardAddResourceBtn) {
-          cardAddResourceBtn.addEventListener('click', openInfrastructureModal);
-        }
-        const cardAddMaintBtn = container.querySelector('#card-add-maintenance-btn');
-        if (cardAddMaintBtn) {
-          cardAddMaintBtn.addEventListener('click', openMaintenanceModal);
         }
 
         // Fetch and render SSL Information
@@ -920,7 +758,43 @@ export async function ProjectFinance(route, router) {
         }
 
       } catch (e) {
-        container.innerHTML = `<div class="alert-error" style="margin:2rem">Failed to load project details: ${e.message} <button class="fin-btn outline sm" onclick="window.location.reload()" style="margin-left:1rem">Retry</button></div>`;
+        container.innerHTML = `
+          <div class="fin-page-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <h1 style="margin:0;">Project Details</h1>
+              <p style="margin-top:0.25rem; color:var(--text-muted);">RLabZ Project Finance</p>
+            </div>
+            <button class="btn-back-nav" id="back-err-nav-btn" title="Return to Projects">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Back to Projects</span>
+            </button>
+          </div>
+          <div class="fin-panel" style="padding:3.5rem 2rem; text-align:center; max-width:640px; margin:2rem auto; border-radius:12px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#fee2e2; color:#ef4444; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1.25rem;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <h2 style="font-size:1.25rem; font-weight:700; margin:0 0 0.5rem; color:var(--text-color);">
+              ${e.message.toLowerCase().includes('not found') ? 'Project Not Found' : 'Failed to Load Project'}
+            </h2>
+            <p style="color:var(--text-muted); font-size:0.9rem; max-width:480px; margin:0 auto 1.75rem; line-height:1.5;">
+              ${e.message || 'Unable to retrieve project financial details.'}
+            </p>
+            <div style="display:flex; justify-content:center; gap:0.75rem;">
+              <button class="fin-btn outline" id="retry-load-btn">Retry</button>
+              <button class="fin-btn primary" id="back-err-list-btn">Back to Projects</button>
+            </div>
+          </div>
+        `;
+        container.querySelector('#back-err-nav-btn')?.addEventListener('click', () => router.push('/finance/projects'));
+        container.querySelector('#back-err-list-btn')?.addEventListener('click', () => router.push('/finance/projects'));
+        container.querySelector('#retry-load-btn')?.addEventListener('click', () => loadProjectDetails());
       }
     };
     loadProjectDetails();
@@ -1215,7 +1089,7 @@ export async function ProjectFinance(route, router) {
         });
 
       } catch (e) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:#ef4444">Failed to load projects: ${e.message} <button class="fin-btn outline sm" onclick="window.location.reload()" style="margin-left:10px">Retry</button></td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:2rem;color:#ef4444">Failed to load projects: ${e.message} <button class="fin-btn outline sm" onclick="window.location.reload()" style="margin-left:10px">Retry</button></td></tr>`;
       }
     };
 
@@ -1260,19 +1134,26 @@ export async function ProjectFinance(route, router) {
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving…';
 
+      const host_ssl = parseFloat(container.querySelector('#new-p-host-ssl').value) || 0;
+      const host_domain = parseFloat(container.querySelector('#new-p-host-dom').value) || 0;
+      const host_api = parseFloat(container.querySelector('#new-p-host-api').value) || 0;
+      const maintenance_support = parseFloat(container.querySelector('#new-p-maint').value) || 0;
+      const overhead_budget = host_ssl + host_domain + host_api + maintenance_support;
+
       const data = {
         project_id: projSelect.value,
         name: projSelect.options[projSelect.selectedIndex].text,
         client: container.querySelector('#new-p-client').value.trim() || 'Unknown',
         estimated_cost: parseFloat(container.querySelector('#new-p-est').value) || 0,
         marketing_budget: parseFloat(container.querySelector('#new-p-marketing')?.value) || 0,
+        overhead_budget: overhead_budget,
         dev_student: parseFloat(container.querySelector('#new-p-dev-stu').value) || 0,
         dev_faculty: parseFloat(container.querySelector('#new-p-dev-fac').value) || 0,
         dev_rlabz: parseFloat(container.querySelector('#new-p-dev-rlabz').value) || 0,
-        host_ssl: parseFloat(container.querySelector('#new-p-host-ssl').value) || 0,
-        host_domain: parseFloat(container.querySelector('#new-p-host-dom').value) || 0,
-        host_api: parseFloat(container.querySelector('#new-p-host-api').value) || 0,
-        maintenance_support: parseFloat(container.querySelector('#new-p-maint').value) || 0,
+        host_ssl,
+        host_domain,
+        host_api,
+        maintenance_support,
       };
 
       try {

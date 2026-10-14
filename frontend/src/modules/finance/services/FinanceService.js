@@ -71,8 +71,19 @@ class FinanceService {
     return await this._fetch('/finance/invoices') || [];
   }
 
-  async getTransactions() {
-    return await this._fetch('/finance/transactions') || [];
+  async getTransactions(params = {}) {
+    let query = '';
+    if (typeof params === 'object' && params !== null) {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          sp.append(k, v);
+        }
+      });
+      const qs = sp.toString();
+      if (qs) query = `?${qs}`;
+    }
+    return await this._fetch(`/finance/transactions${query}`) || [];
   }
   
   async addProjectFinance(data) {

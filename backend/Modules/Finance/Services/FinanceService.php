@@ -122,6 +122,7 @@ class FinanceService
         return [
             'valid'             => true,
             'exceeded'          => $exceeded,
+            'is_over_budget'    => $exceeded,
             'overhead_budget'   => round($budget, 2),
             'consumed_overhead' => round($consumed, 2),
             'new_total'         => round($newTotal, 2),
@@ -320,7 +321,7 @@ class FinanceService
         return Invoice::with(['projectFinance.project', 'clientPayments', 'items'])->get();
     }
 
-    public function getAllTransactions()
+    public function getAllTransactions($sort = null, $projectId = null)
     {
         $clientPayments = \Modules\Finance\Models\ClientPayment::with('invoice.projectFinance.project')->get();
         $studentPayments = StudentPayment::join('project_student', 'student_payments.project_student_id', '=', 'project_student.id')
@@ -434,7 +435,7 @@ class FinanceService
         foreach ($maintenanceCharges as $mc) {
             $transactions[] = [
                 'id' => 'MC-'.$mc->id,
-                'date' => $mc->start_date ?? clone $mc->created_at->toDateString(),
+                'date' => $mc->start_date ?? optional($mc->created_at)->toDateString(),
                 'projectId' => $mc->project_id,
                 'projectName' => $mc->project_name,
                 'type' => 'Maintenance Support',
@@ -467,9 +468,46 @@ class FinanceService
             ];
         }
 
-        usort($transactions, function($a, $b) {
-            return strtotime($b['date']) - strtotime($a['date']);
-        });
+        // Optional project filtering
+        if ($projectId && $projectId !== 'All') {
+            $transactions = array_values(array_filter($transactions, function($t) use ($projectId) {
+                return (string)($t['projectId'] ?? '') === (string)$projectId;
+            }));
+        }
+
+        // Ordering / grouping logic
+        if ($sort === 'income_first' || $sort === 'grouped') {
+            usort($transactions, function($a, $b) {
+                if ($a['incomeExpense'] !== $b['incomeExpense']) {
+                    return $a['incomeExpense'] === 'Income' ? -1 : 1;
+                }
+                $timeDiff = strtotime($b['date'] ?? 'now') - strtotime($a['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($b['id'] ?? '', $a['id'] ?? '');
+            });
+        } elseif ($sort === 'expense_first') {
+            usort($transactions, function($a, $b) {
+                if ($a['incomeExpense'] !== $b['incomeExpense']) {
+                    return $a['incomeExpense'] === 'Expense' ? -1 : 1;
+                }
+                $timeDiff = strtotime($b['date'] ?? 'now') - strtotime($a['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($b['id'] ?? '', $a['id'] ?? '');
+            });
+        } elseif ($sort === 'oldest') {
+            usort($transactions, function($a, $b) {
+                $timeDiff = strtotime($a['date'] ?? 'now') - strtotime($b['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($a['id'] ?? '', $b['id'] ?? '');
+            });
+        } else {
+            // Default chronological (newest first)
+            usort($transactions, function($a, $b) {
+                $timeDiff = strtotime($b['date'] ?? 'now') - strtotime($a['date'] ?? 'now');
+                if ($timeDiff !== 0) return $timeDiff;
+                return strcmp($b['id'] ?? '', $a['id'] ?? '');
+            });
+        }
 
         return $transactions;
     }
