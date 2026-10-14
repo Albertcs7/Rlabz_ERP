@@ -99,8 +99,9 @@ class FinanceService
         $maintenanceCharges = \Modules\Finance\Models\MaintenanceSupportCharge::sum('amount');
         $studentPayments = StudentPayment::sum('amount');
         $facultyPayments = \Modules\Finance\Models\FacultyPayment::sum('amount');
+        $marketingExpenses = \Modules\Finance\Models\MarketingExpense::sum('amount');
 
-        $totalOtherExpenses = $hostingCharges + $sslRenewals + $maintenanceCharges;
+        $totalOtherExpenses = $hostingCharges + $sslRenewals + $maintenanceCharges + $marketingExpenses;
         $totalExpenses = $studentPayments + $facultyPayments + $totalOtherExpenses;
 
         // Total Profit = Total Revenue/Billing - Total Costs.
@@ -119,6 +120,7 @@ class FinanceService
             // totalOtherExpenses = hosting + ssl renewals only (NOT maintenance, which is separate)
             'totalOtherExpenses' => round($hostingCharges + $sslRenewals, 2),
             'totalMaintenance' => round($maintenanceCharges, 2),
+            'totalMarketing' => round($marketingExpenses, 2),
             'totalExpenses' => round($totalExpenses, 2),
             'totalProfit' => round($totalProfit, 2),
             'projectProfit' => round($totalCollected - $totalExpenses, 2),
@@ -306,6 +308,11 @@ class FinanceService
             ->select('ssl_renewal_history.*', 'projects.title as project_name', 'projects.id as project_id')
             ->get();
 
+        $marketingExpenses = \Modules\Finance\Models\MarketingExpense::join('project_finances', 'marketing_expenses.project_finance_id', '=', 'project_finances.id')
+            ->join('projects', 'project_finances.project_id', '=', 'projects.id')
+            ->select('marketing_expenses.*', 'projects.title as project_name', 'projects.id as project_id')
+            ->get();
+
         $transactions = [];
         
         foreach ($clientPayments as $cp) {
@@ -394,6 +401,28 @@ class FinanceService
             ];
         }
 
+        foreach ($marketingExpenses as $me) {
+            $desc = $me->title . ($me->vendor ? ' (' . $me->vendor . ')' : '');
+            $txnDate = $me->expense_date;
+            if ($txnDate instanceof \DateTimeInterface) {
+                $txnDate = $txnDate->format('Y-m-d');
+            } elseif (!$txnDate && $me->created_at) {
+                $txnDate = $me->created_at instanceof \DateTimeInterface ? $me->created_at->format('Y-m-d') : (string)$me->created_at;
+            }
+
+            $transactions[] = [
+                'id' => 'ME-'.$me->id,
+                'date' => $txnDate ?: date('Y-m-d'),
+                'projectId' => $me->project_id,
+                'projectName' => $me->project_name,
+                'type' => 'Marketing Expense',
+                'desc' => $desc,
+                'amount' => (float) $me->amount,
+                'incomeExpense' => 'Expense',
+                'status' => 'Completed'
+            ];
+        }
+
         usort($transactions, function($a, $b) {
             return strtotime($b['date']) - strtotime($a['date']);
         });
@@ -407,7 +436,7 @@ class FinanceService
         // and MUST NOT be viewed or listed in Finance until accepted / in_progress.
         // Closed, cancelled, and zero-budget projects remain visible in tables and dropdowns with status tags.
         $projects = Project::whereNotIn('status', ['proposed', 'rejected'])->get();
-        $finances = ProjectFinance::with(['developmentAllocations', 'invoices.clientPayments', 'hostingCharges', 'maintenanceSupportCharges'])->get()->keyBy('project_id');
+        $finances = ProjectFinance::with(['developmentAllocations', 'invoices.clientPayments', 'hostingCharges', 'maintenanceSupportCharges', 'marketingExpenses'])->get()->keyBy('project_id');
         
         $projects->each(function($project) use ($finances) {
             $pf = $finances->get($project->id);
@@ -426,7 +455,7 @@ class FinanceService
 
     public function getProjectFinanceDetails($id)
     {
-        $projectFinance = ProjectFinance::with(['project', 'invoices.clientPayments', 'developmentAllocations', 'hostingCharges', 'maintenanceSupportCharges'])->where('project_id', $id)->first();
+        $projectFinance = ProjectFinance::with(['project', 'invoices.clientPayments', 'developmentAllocations', 'hostingCharges', 'maintenanceSupportCharges', 'marketingExpenses'])->where('project_id', $id)->first();
         if (!$projectFinance || ($projectFinance->project && in_array(strtolower($projectFinance->project->status ?? ''), ['proposed', 'rejected']))) {
             return null;
         }

@@ -117,6 +117,7 @@ class FinanceController extends Controller
             'dev_student'        => 'nullable|numeric|min:0',
             'dev_faculty'        => 'nullable|numeric|min:0',
             'dev_rlabz'          => 'nullable|numeric|min:0',
+            'marketing_budget'   => 'nullable|numeric|min:0',
             'host_ssl'           => 'nullable|numeric|min:0',
             'host_domain'        => 'nullable|numeric|min:0',
             'host_api'           => 'nullable|numeric|min:0',
@@ -143,6 +144,7 @@ class FinanceController extends Controller
         $pf = \Modules\Finance\Models\ProjectFinance::create([
             'project_id'               => $validated['project_id'],
             'total_development_amount' => $devTotal,
+            'marketing_budget'         => $validated['marketing_budget'] ?? 0.00,
             'created_by'               => $this->currentUserId($request),
         ]);
 

@@ -10,10 +10,16 @@ class ProjectFinance extends Model
     protected $fillable = [
         'project_id',
         'total_development_amount',
+        'marketing_budget',
         'created_by',
         'approved_by',
         'approved_at',
         'status',
+    ];
+
+    protected $casts = [
+        'marketing_budget' => 'decimal:2',
+        'total_development_amount' => 'decimal:2',
     ];
 
     public function project()
@@ -39,6 +45,11 @@ class ProjectFinance extends Model
     public function maintenanceSupportCharges()
     {
         return $this->hasMany(MaintenanceSupportCharge::class);
+    }
+
+    public function marketingExpenses()
+    {
+        return $this->hasMany(MarketingExpense::class);
     }
 
     public function getTotalInvoicedAttribute()
@@ -79,6 +90,8 @@ class ProjectFinance extends Model
             ->where('project_faculty.project_id', $this->project_id)
             ->sum('faculty_payments.amount');
 
-        return $hosting + $sslRenewals + $maintenance + $student + $faculty;
+        $marketing = $this->marketingExpenses->sum('amount');
+
+        return $hosting + $sslRenewals + $maintenance + $student + $faculty + $marketing;
     }
 }
