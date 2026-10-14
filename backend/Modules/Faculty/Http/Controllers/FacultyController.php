@@ -265,13 +265,25 @@ class FacultyController extends Controller
     public function updateProfile(Request $request)
     {
         $facultyId = $this->getFacultyId($request);
+        if (!$facultyId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
 
+        // Limits match the columns (users.name varchar(150), users.phone varchar(20),
+        // faculty_profiles.department varchar(150), .designation varchar(100)).
+        // The email must end in @rajagiri.edu: login only accepts those
+        // (AuthController::login + LoginView), so any other address would lock
+        // the faculty member out. Uniqueness is case-insensitive via the column collation.
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $facultyId,
-            'phone' => 'nullable|string|max:50',
-            'department' => 'nullable|string|max:255',
-            'designation' => 'nullable|string|max:255',
+            'name' => 'required|string|max:150',
+            'email' => 'required|email|max:255|ends_with:@rajagiri.edu|unique:users,email,' . $facultyId,
+            'phone' => 'nullable|string|max:20',
+            'department' => 'nullable|string|max:150',
+            'designation' => 'nullable|string|max:100',
+        ], [
+            'email.ends_with' => 'The email must be an @rajagiri.edu address — other addresses cannot be used to log in.',
+            'name.max' => 'The name must not be longer than 150 characters.',
+            'phone.max' => 'The phone number must not be longer than 20 characters.',
         ]);
 
         $user = DB::table('users')->where('id', $facultyId)->first();

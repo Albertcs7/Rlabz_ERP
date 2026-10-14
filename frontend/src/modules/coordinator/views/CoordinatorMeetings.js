@@ -15,6 +15,23 @@ function escapeHtml(value) {
   }[ch]));
 }
 
+function isHttpUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// Clickable meeting link, rendered only for http/https URLs and opened in a
+// new tab without giving the target page access to this window.
+function renderMeetingLink(link) {
+  if (!isHttpUrl(link)) return '';
+  const safe = escapeHtml(link);
+  return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${safe}</a>`;
+}
+
 const MONTH_INDEX = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
 
 // The coordinator meetings endpoint formats dates as "d M Y" (e.g. "07 Sep 2026").
@@ -193,12 +210,14 @@ export async function CoordinatorMeetings(route, router) {
 
           <div class="coordinator-form-group">
             <label>Venue</label>
-            <input type="text" id="meeting-location" placeholder="e.g. Google Meet">
+            <input type="text" id="meeting-location" placeholder="e.g. Seminar Hall, Room 204">
           </div>
 
-          <div class="coordinator-form-group">
-            <label>Meeting Link</label>
-            <input type="url" id="meeting-link" placeholder="https://meet.google.com/xyz-abc-def">
+          <!-- Shown (and required) only when Mode = Online -->
+          <div class="coordinator-form-group" id="meeting-link-group" hidden>
+            <label for="meeting-link">Meeting Link *</label>
+            <input type="url" id="meeting-link" placeholder="https://meet.google.com/xyz-abc-def" inputmode="url" autocomplete="off">
+            <small style="color:#6b7280; margin-top:0.25rem;">Teams, Google Meet or Zoom link (must start with http:// or https://).</small>
           </div>
 
           <div class="coordinator-form-group full-width">
@@ -250,7 +269,7 @@ export async function CoordinatorMeetings(route, router) {
           ${meeting.meeting_type ? `<div>Type: <strong style="color:#111827;">${escapeHtml(meeting.meeting_type)}</strong></div>` : ''}
           ${meeting.mode ? `<div>Mode: <strong style="color:#111827;">${escapeHtml(meeting.mode)}</strong></div>` : ''}
           ${meeting.location ? `<div>Venue: <strong style="color:#111827;">${escapeHtml(meeting.location)}</strong></div>` : ''}
-          ${meeting.meeting_link ? `<div>Meeting Link: <a href="${escapeHtml(meeting.meeting_link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(meeting.meeting_link)}</a></div>` : ''}
+          ${isHttpUrl(meeting.meeting_link) ? `<div>Meeting Link: ${renderMeetingLink(meeting.meeting_link)}</div>` : ''}
           ${meeting.agenda ? `<div style="margin-top:0.25rem; padding:0.5rem 0.75rem; background:var(--bg-canvas-light); border:1px solid #e5e7eb; border-radius:6px;"><strong>Agenda:</strong> ${escapeHtml(meeting.agenda)}</div>` : ''}
         </div>
 
@@ -278,6 +297,7 @@ export async function CoordinatorMeetings(route, router) {
         <td>
           <strong>${escapeHtml(meeting.title)}</strong>
           ${meeting.meeting_type || meeting.mode ? `<br><small style="color:#6b7280;">${[meeting.meeting_type, meeting.mode].filter(Boolean).map(escapeHtml).join(' • ')}</small>` : ''}
+          ${isHttpUrl(meeting.meeting_link) ? `<br><small>Link: ${renderMeetingLink(meeting.meeting_link)}</small>` : ''}
           ${meeting.agenda ? `<br><small style="color:#6b7280;">${escapeHtml(meeting.agenda)}</small>` : ''}
         </td>
         <td>${meeting.project ? escapeHtml(meeting.project) : '—'}</td>
@@ -394,6 +414,23 @@ export async function CoordinatorMeetings(route, router) {
 
     // Schedule form
     const scheduleForm = container.querySelector('#schedule-meeting-form');
+
+    // Meeting link: visible and required only for Online; cleared whenever the
+    // mode moves away from Online so a stale link can't be submitted.
+    const modeSelect = container.querySelector('#meeting-mode');
+    const linkGroup = container.querySelector('#meeting-link-group');
+    const linkInput = container.querySelector('#meeting-link');
+    function syncMeetingLinkField() {
+      const isOnline = modeSelect?.value === 'Online';
+      if (linkGroup) linkGroup.hidden = !isOnline;
+      if (linkInput) {
+        linkInput.required = isOnline;
+        if (!isOnline) linkInput.value = '';
+      }
+    }
+    modeSelect?.addEventListener('change', syncMeetingLinkField);
+    syncMeetingLinkField();
+
     scheduleForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -404,12 +441,22 @@ export async function CoordinatorMeetings(route, router) {
       const date = container.querySelector('#meeting-date').value;
       const time = container.querySelector('#meeting-time').value;
       const location = container.querySelector('#meeting-location').value.trim();
-      const meetingLink = container.querySelector('#meeting-link').value.trim();
+      const meetingLink = mode === 'Online' ? container.querySelector('#meeting-link').value.trim() : '';
       const agenda = container.querySelector('#meeting-agenda').value.trim();
 
       if (date < todayStr) {
         setBanner('error', 'Past dates are not allowed. Please select today or a future date.');
         render();
+        return;
+      }
+
+      if (mode === 'Online' && !isHttpUrl(meetingLink)) {
+        // Inline message on the field itself, so the rest of the form isn't reset.
+        linkInput.setCustomValidity(meetingLink
+          ? 'Enter a valid meeting link starting with http:// or https://'
+          : 'A meeting link is required for online meetings.');
+        linkInput.reportValidity();
+        linkInput.addEventListener('input', () => linkInput.setCustomValidity(''), { once: true });
         return;
       }
 

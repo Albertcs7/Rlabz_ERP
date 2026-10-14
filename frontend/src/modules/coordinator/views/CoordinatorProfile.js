@@ -1,5 +1,6 @@
 import { authStore } from '@/core/stores/auth.js';
 import { API_BASE } from '@/core/config/api.js';
+import { mountProfilePhotoEditor } from '@/core/shared/components/ProfilePhotoEditor.js';
 import '../coordinator.css';
 
 function getAuthToken() {
@@ -20,6 +21,22 @@ async function fetchProfile() {
   return data;
 }
 
+// The header (topbar name/email) is built from the user cached at login in
+// localStorage('user') / authStore.user. Update that cache with the values the
+// server saved so the header is correct after the reload, without re-login.
+function syncCachedUser({ name, email, phone }) {
+  try {
+    const cached = JSON.parse(localStorage.getItem('user') || 'null');
+    if (cached) {
+      const updated = { ...cached, name, email, phone };
+      localStorage.setItem('user', JSON.stringify(updated));
+      if (authStore) authStore.user = updated;
+    }
+  } catch (e) {
+    console.warn('Could not update cached user details:', e);
+  }
+}
+
 export async function CoordinatorProfile(route, router) {
   const container = document.createElement('div');
   container.className = 'coordinator-dashboard';
@@ -29,7 +46,8 @@ export async function CoordinatorProfile(route, router) {
     overlay.className = 'coordinator-modal-overlay';
     overlay.innerHTML = `<div class="coordinator-modal">${html}</div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('.coordinator-close-btn')?.addEventListener('click', () => overlay.remove());
+    // Both the header "×" and the footer "Cancel" carry .coordinator-close-btn.
+    overlay.querySelectorAll('.coordinator-close-btn').forEach((btn) => btn.addEventListener('click', () => overlay.remove()));
     return overlay;
   }
 
@@ -80,6 +98,16 @@ export async function CoordinatorProfile(route, router) {
       <div class="coordinator-panel">
         <div class="coordinator-panel-header">
           <div>
+            <h2>Profile photo</h2>
+            <p>Shown on your profile. Choose an image, check the preview, then save.</p>
+          </div>
+        </div>
+        <div id="profile-photo-slot"></div>
+      </div>
+
+      <div class="coordinator-panel">
+        <div class="coordinator-panel-header">
+          <div>
             <h2>Profile details</h2>
             <p>Your name, email, and phone number as stored on your account.</p>
           </div>
@@ -105,6 +133,8 @@ export async function CoordinatorProfile(route, router) {
       </div>
     `;
 
+    mountProfilePhotoEditor(container.querySelector('#profile-photo-slot'), { name: profile.name });
+
     container.querySelector('[data-action="back"]')?.addEventListener('click', () => {
       router.push('/coordinator');
     });
@@ -117,9 +147,9 @@ export async function CoordinatorProfile(route, router) {
           <button class="coordinator-close-btn">×</button>
         </div>
         <div class="coordinator-form-grid">
-          <div class="coordinator-form-group full-width"><label>Name *</label><input type="text" id="profile-name" maxlength="255" value="${profile.name || ''}" /></div>
-          <div class="coordinator-form-group full-width"><label>Email *</label><input type="email" id="profile-email" maxlength="255" value="${profile.email || ''}" /></div>
-          <div class="coordinator-form-group full-width"><label>Phone</label><input type="text" id="profile-phone" maxlength="50" value="${profile.phone || ''}" /></div>
+          <div class="coordinator-form-group full-width"><label>Name *</label><input type="text" id="profile-name" maxlength="150" value="${profile.name || ''}" /></div>
+          <div class="coordinator-form-group full-width"><label>Email *</label><input type="email" id="profile-email" maxlength="255" value="${profile.email || ''}" /><small style="color:#6b7280;">Must be your @rajagiri.edu address — it is also your login.</small></div>
+          <div class="coordinator-form-group full-width"><label>Phone</label><input type="text" id="profile-phone" maxlength="20" value="${profile.phone || ''}" /></div>
         </div>
         <div id="profile-form-error" style="color:#b91c1c; margin: 0 1rem 0.5rem;"></div>
         <div class="coordinator-modal-footer">
@@ -137,9 +167,15 @@ export async function CoordinatorProfile(route, router) {
 
         if (!name) { errorEl.textContent = 'Name is required.'; return; }
         if (!email) { errorEl.textContent = 'Email is required.'; return; }
+        // Same rule as the login page — any other address could not log in.
+        if (!email.endsWith('@rajagiri.edu')) {
+          errorEl.textContent = 'The email must be an @rajagiri.edu address — other addresses cannot be used to log in.';
+          return;
+        }
 
         try {
-          await putJson(`${API_BASE}/coordinator/profile`, { name, email, phone });
+          const result = await putJson(`${API_BASE}/coordinator/profile`, { name, email, phone });
+          syncCachedUser(result?.data || { name, email, phone: phone ?? null });
           alert('Profile updated successfully');
           overlay.remove();
           window.location.reload();

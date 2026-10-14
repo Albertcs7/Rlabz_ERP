@@ -95,7 +95,7 @@ export function buildCertificateHtml(certificate) {
       <div class="certificate-footer">
         <div class="certificate-footer-col">
           <div class="certificate-footer-line"></div>
-          <div class="certificate-footer-role">Director</div>
+          <div class="certificate-footer-role">Director Head</div>
         </div>
 
         <div class="certificate-footer-center">

@@ -52,9 +52,5 @@ Route::group(['prefix' => 'coordinator', 'middleware' => ['auth.jwt']], function
     Route::put('/profile', [CoordinatorController::class, 'updateProfile']);
     Route::post('/profile', [CoordinatorController::class, 'updateProfile']);
     Route::post('/change-password', [CoordinatorController::class, 'changePassword']);
-
-    Route::get('/password-requests', [CoordinatorController::class, 'pendingPasswordChangeRequests']);
-    Route::post('/password-requests/{id}/approve', [CoordinatorController::class, 'approvePasswordChangeRequest']);
-    Route::post('/password-requests/{id}/reject', [CoordinatorController::class, 'rejectPasswordChangeRequest']);
 });
 

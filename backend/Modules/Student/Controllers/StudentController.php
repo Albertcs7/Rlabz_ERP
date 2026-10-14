@@ -2353,136 +2353,9 @@ class StudentController extends Controller
     }
 
     /**
-     * Get the student's latest password change request status.
-     * Reuses existing notifications & audit_logs tables.
-     */
-    public function getPasswordRequestStatus(Request $request)
-    {
-        $studentId = $this->getStudentId($request);
-        if (!$studentId) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        // Query the latest password change notification/record for this student
-        $latest = DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->whereIn('type', ['password_change_request', 'password_change_approved', 'password_change_rejected'])
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if (!$latest || $latest->urgency === 'completed' || $latest->urgency === 'cancelled') {
-            return response()->json([
-                'has_request' => false,
-                'status' => 'none',
-                'request' => null,
-            ]);
-        }
-
-        // Determine status from notification type and urgency
-        $status = 'pending';
-        if ($latest->type === 'password_change_approved' || $latest->urgency === 'approved') {
-            $status = 'approved';
-        } elseif ($latest->type === 'password_change_rejected' || $latest->urgency === 'rejected') {
-            $status = 'rejected';
-        } elseif ($latest->urgency === 'pending' || $latest->type === 'password_change_request') {
-            $status = 'pending';
-        }
-
-        return response()->json([
-            'has_request' => true,
-            'status' => $status,
-            'request' => [
-                'id' => $latest->id,
-                'status' => $status,
-                'message' => $latest->message,
-                'created_at' => $latest->created_at,
-                'updated_at' => $latest->updated_at,
-            ],
-        ]);
-    }
-
-    /**
-     * Submit a request to coordinator for password change access.
-     * Reuses existing notifications & audit_logs tables.
-     */
-    public function requestPasswordChange(Request $request)
-    {
-        $studentId = $this->getStudentId($request);
-        if (!$studentId) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        $user = DB::table('users')->where('id', $studentId)->first();
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
-
-        // Check for an existing pending request
-        $existingPending = DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->where('type', 'password_change_request')
-            ->where('urgency', 'pending')
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($existingPending) {
-            return response()->json([
-                'error' => 'Your password change request is awaiting coordinator approval. Please wait for review before submitting another request.',
-                'status' => 'pending',
-            ], 400);
-        }
-
-        // Create notification record for the student representing their request state
-        $notifId = DB::table('notifications')->insertGetId([
-            'user_id' => $studentId,
-            'project_id' => null,
-            'type' => 'password_change_request',
-            'urgency' => 'pending',
-            'message' => 'Your password change request is awaiting coordinator approval.',
-            'is_read' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // Notify coordinators
-        $coordinatorIds = DB::table('users')->where('role', 'coordinator')->pluck('id')->toArray();
-        foreach ($coordinatorIds as $coordId) {
-            DB::table('notifications')->insert([
-                'user_id' => $coordId,
-                'project_id' => null,
-                'type' => 'password_change_request',
-                'urgency' => 'high',
-                'message' => "Student {$user->name} ({$user->email}) has submitted a request to change their account password.",
-                'is_read' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        // Record audit log
-        if (Schema::hasTable('audit_logs')) {
-            DB::table('audit_logs')->insert([
-                'user_id' => $studentId,
-                'action' => 'Password Change Request Submitted',
-                'description' => "Student {$user->name} submitted a password change access request to coordinator.",
-                'created_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Password change access request submitted successfully. Awaiting coordinator approval.',
-            'status' => 'pending',
-            'request' => [
-                'id' => $notifId,
-                'status' => 'pending',
-                'created_at' => now()->toDateTimeString(),
-            ],
-        ], 201);
-    }
-
-    /**
-     * Change password once approved.
-     * Reuses existing users hashing & notifications/audit tables.
+     * Change the logged-in student's own password. Requires the current
+     * password — same pattern as Faculty/Coordinator changePassword(). The
+     * former request → coordinator approval step has been retired.
      */
     public function updatePassword(Request $request)
     {
@@ -2496,28 +2369,12 @@ class StudentController extends Controller
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        // Check if latest request is approved
-        $latestRequest = DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->whereIn('type', ['password_change_request', 'password_change_approved'])
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $isApproved = $latestRequest && (
-            $latestRequest->type === 'password_change_approved' ||
-            $latestRequest->urgency === 'approved'
-        );
-
-        if (!$isApproved) {
-            return response()->json([
-                'error' => 'You must have an approved password change request from a coordinator before updating your password.'
-            ], 403);
-        }
-
         $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
             'new_password' => 'required|string|min:6',
             'confirm_password' => 'required|string|same:new_password',
         ], [
+            'current_password.required' => 'Please enter your current password.',
             'new_password.required' => 'Please enter your new password.',
             'new_password.min' => 'Password must be at least 6 characters.',
             'confirm_password.required' => 'Please confirm your new password.',
@@ -2528,18 +2385,13 @@ class StudentController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
 
-        $newPassword = $request->input('new_password');
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            return response()->json(['error' => 'Current password is incorrect.'], 400);
+        }
 
         // Update password with Laravel's standard Hash::make
         DB::table('users')->where('id', $studentId)->update([
-            'password' => Hash::make($newPassword),
-            'updated_at' => now(),
-        ]);
-
-        // Mark the request notification as completed
-        DB::table('notifications')->where('id', $latestRequest->id)->update([
-            'urgency' => 'completed',
-            'is_read' => 1,
+            'password' => Hash::make($request->input('new_password')),
             'updated_at' => now(),
         ]);
 
@@ -2547,56 +2399,14 @@ class StudentController extends Controller
         if (Schema::hasTable('audit_logs')) {
             DB::table('audit_logs')->insert([
                 'user_id' => $studentId,
-                'action' => 'Password Changed Successfully',
-                'description' => "Student {$user->name} updated their account password following coordinator approval.",
+                'action' => 'Password Changed',
+                'description' => "Student {$user->name} changed their account password.",
                 'created_at' => now(),
             ]);
         }
 
         return response()->json([
             'message' => 'Password changed successfully! You can now use your new password.'
-        ]);
-    }
-
-    /**
-     * Cancel / withdraw a pending or approved password change request.
-     */
-    public function cancelPasswordRequest(Request $request)
-    {
-        $studentId = $this->getStudentId($request);
-        if (!$studentId) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        $user = DB::table('users')->where('id', $studentId)->first();
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
-
-        DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->whereIn('type', ['password_change_request', 'password_change_approved', 'password_change_rejected'])
-            ->where(function ($q) {
-                $q->whereNotIn('urgency', ['completed', 'cancelled'])
-                  ->orWhereNull('urgency');
-            })
-            ->update([
-                'urgency' => 'cancelled',
-                'is_read' => 1,
-                'updated_at' => now(),
-            ]);
-
-        if (Schema::hasTable('audit_logs')) {
-            DB::table('audit_logs')->insert([
-                'user_id' => $studentId,
-                'action' => 'Password Change Request Cancelled',
-                'description' => "Student {$user->name} cancelled their password change request.",
-                'created_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Password change request cancelled successfully.'
         ]);
     }
 

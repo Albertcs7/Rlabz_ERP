@@ -284,7 +284,8 @@ export async function CoordinatorProjectDetail(route, router) {
       overlay.className = 'coordinator-modal-overlay';
       overlay.innerHTML = `<div class="coordinator-modal">${html}</div>`;
       document.body.appendChild(overlay);
-      overlay.querySelector('.coordinator-close-btn')?.addEventListener('click', () => overlay.remove());
+      // Both the header "×" and the footer "Cancel" carry .coordinator-close-btn.
+      overlay.querySelectorAll('.coordinator-close-btn').forEach((btn) => btn.addEventListener('click', () => overlay.remove()));
       return overlay;
     }
 
@@ -352,11 +353,9 @@ export async function CoordinatorProjectDetail(route, router) {
             </div>
             <div class="coordinator-form-group"><label>Role</label>
               <select id="assign-student-role">
-                <option value="project_lead">Project Lead</option>
-                <option value="developer">Developer</option>
-                <option value="designer">Designer</option>
-                <option value="tester">Tester</option>
-                <option value="other">Other</option>
+                <option value="nova">Nova</option>
+                <option value="orbit">Orbit</option>
+                <option value="spark">Spark</option>
               </select>
               <small id="assign-role-note" style="display:none; color:#6b7280; margin-top:0.25rem;">This student already has a role set — it applies to every project and can't be changed here.</small>
             </div>
@@ -421,8 +420,11 @@ export async function CoordinatorProjectDetail(route, router) {
         resultsBox.innerHTML = '';
         resultsBox.style.display = 'none';
 
+        // Only a Nova/Orbit/Spark global role locks the picker. A legacy role
+        // (project_lead, developer, ...) isn't offered any more, so the coordinator
+        // picks a new one and the backend replaces the legacy global role.
         const existingRole = student.existing_role;
-        if (existingRole) {
+        if (existingRole && Array.from(roleSel.options).some((o) => o.value === existingRole)) {
           roleSel.value = existingRole;
           roleSel.disabled = true;
           roleNote.style.display = 'block';

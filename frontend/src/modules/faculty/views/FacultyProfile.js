@@ -1,6 +1,8 @@
 import '../faculty.css';
 import { API_BASE } from '@/core/config/api.js';
+import { authStore } from '@/core/stores/auth.js';
 import { showFacultySuccessPopup, showFacultyErrorPopup } from '../facultyPopup.js';
+import { mountProfilePhotoEditor } from '@/core/shared/components/ProfilePhotoEditor.js';
 
 export function FacultyProfile() {
     const container = document.createElement('div');
@@ -15,7 +17,6 @@ export function FacultyProfile() {
     }
 
     const token = localStorage.getItem('token');
-    let facultyPhoto = localStorage.getItem('faculty_profile_photo') || storedUser?.avatar || null;
     let isEditing = false;
 
     // Default state derived from logged in user if available
@@ -82,28 +83,7 @@ export function FacultyProfile() {
                 <div class="simple-profile-card">
                     
                     <div class="simple-profile-avatar-wrap">
-                        <div id="avatar-display" class="simple-profile-avatar">
-                            ${facultyPhoto ? `
-                                <img src="${facultyPhoto}" alt="${facultyData.name}" />
-                            ` : `
-                                <span>${initials}</span>
-                            `}
-                        </div>
-
-                        <input type="file" id="faculty-photo-file-input" accept="image/*" style="display: none;" />
-
-                        <div style="display: flex; flex-direction: column; gap: 5px; align-items: center; width: 100%;">
-                            <button type="button" id="btn-upload-photo" class="btn btn-sm" style="font-size: 0.75rem; padding: 0.32rem 0.7rem; background: #ffffff; border: 1px solid #059669; color: #059669; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                ${facultyPhoto ? 'Change Photo' : 'Upload Photo'}
-                            </button>
-
-                            ${facultyPhoto ? `
-                                <button type="button" id="btn-remove-photo" style="background: none; border: none; font-size: 0.72rem; color: #dc2626; cursor: pointer; text-decoration: underline; padding: 0;">
-                                    Remove Photo
-                                </button>
-                            ` : ''}
-                        </div>
+                        <div id="faculty-photo-slot"></div>
                     </div>
 
                     <div class="simple-profile-details">
@@ -178,28 +158,28 @@ export function FacultyProfile() {
                         <div style="display: flex; flex-direction: column; gap: 14px;">
                             <div>
                                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Full Name *</label>
-                                <input type="text" id="edit-name" required value="${facultyData.name}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                                <input type="text" id="edit-name" required maxlength="150" value="${facultyData.name}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
                             </div>
 
                             <div>
                                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Email Address *</label>
-                                <input type="email" id="edit-email" required value="${facultyData.email}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                                <input type="email" id="edit-email" required maxlength="255" title="Must be your @rajagiri.edu address — it is also your login" value="${facultyData.email}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
                             </div>
 
                             <div>
                                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Phone Number</label>
-                                <input type="text" id="edit-phone" value="${facultyData.phone || ''}" placeholder="+91 484 2660605" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                                <input type="text" id="edit-phone" maxlength="20" value="${facultyData.phone || ''}" placeholder="+91 484 2660605" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
                             </div>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
                                     <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Department</label>
-                                    <input type="text" id="edit-department" value="${facultyData.department}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                                    <input type="text" id="edit-department" maxlength="150" value="${facultyData.department}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
                                 </div>
 
                                 <div>
                                     <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Designation</label>
-                                    <input type="text" id="edit-designation" value="${facultyData.designation}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
+                                    <input type="text" id="edit-designation" maxlength="100" value="${facultyData.designation}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;" />
                                 </div>
                             </div>
                         </div>
@@ -258,66 +238,23 @@ export function FacultyProfile() {
     }
 
     function setupListeners() {
-        const btnUpload = container.querySelector('#btn-upload-photo');
-        const fileInput = container.querySelector('#faculty-photo-file-input');
-        const btnRemove = container.querySelector('#btn-remove-photo');
+        // Profile photo — saved on the server via the shared editor (all roles).
+        // The URL is also cached under 'faculty_profile_photo' because
+        // FacultyLayout reads that key to show the topbar avatar.
+        mountProfilePhotoEditor(container.querySelector('#faculty-photo-slot'), {
+            name: facultyData.name,
+            layout: 'stacked',
+            onChange: (url) => {
+                if (url) localStorage.setItem('faculty_profile_photo', url);
+                else localStorage.removeItem('faculty_profile_photo');
+                updateTopbarAvatar(url);
+            },
+        });
         const btnEdit = container.querySelector('#btn-edit-profile');
         const editModal = container.querySelector('#edit-profile-modal');
         const btnCloseModal = container.querySelector('#btn-close-edit-modal');
         const btnCancelEdit = container.querySelector('#btn-cancel-edit');
         const editForm = container.querySelector('#edit-profile-form');
-
-        if (btnUpload && fileInput) {
-            btnUpload.addEventListener('click', () => {
-                fileInput.click();
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-
-                if (!file.type.startsWith('image/')) {
-                    showFacultyErrorPopup('Invalid File', 'Please select a valid image file (PNG, JPG, JPEG, WEBP).');
-                    return;
-                }
-
-                if (file.size > 5 * 1024 * 1024) {
-                    showFacultyErrorPopup('File Too Large', 'Please select an image smaller than 5MB.');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = (readEvent) => {
-                    const dataUrl = readEvent.target.result;
-                    facultyPhoto = dataUrl;
-                    localStorage.setItem('faculty_profile_photo', dataUrl);
-                    if (storedUser) {
-                        storedUser.avatar = dataUrl;
-                        localStorage.setItem('user', JSON.stringify(storedUser));
-                    }
-                    updateTopbarAvatar(dataUrl);
-                    showFacultySuccessPopup('Profile Photo Updated', 'Your profile photo has been updated successfully.');
-                    renderUI();
-                    setupListeners();
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        if (btnRemove) {
-            btnRemove.addEventListener('click', () => {
-                facultyPhoto = null;
-                localStorage.removeItem('faculty_profile_photo');
-                if (storedUser) {
-                    delete storedUser.avatar;
-                    localStorage.setItem('user', JSON.stringify(storedUser));
-                }
-                updateTopbarAvatar(null);
-                showFacultySuccessPopup('Photo Removed', 'Profile photo removed. Default initials avatar restored.');
-                renderUI();
-                setupListeners();
-            });
-        }
 
         // Edit Profile modal handlers
         if (btnEdit && editModal) {
@@ -370,14 +307,23 @@ export function FacultyProfile() {
                     return;
                 }
 
+                // Same rule as the login page — any other address could not log in.
+                if (!payload.email.endsWith('@rajagiri.edu')) {
+                    showFacultyErrorPopup('Validation Error', 'The email must be an @rajagiri.edu address — other addresses cannot be used to log in.');
+                    return;
+                }
+
                 if (btnSave) {
                     btnSave.disabled = true;
                     btnSave.textContent = 'Saving...';
                 }
 
                 try {
+                    // Accept: JSON so validation errors come back as a 422 JSON body
+                    // (without it Laravel answers with a redirect and the real message is lost).
                     const headers = {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     };
 
@@ -397,15 +343,22 @@ export function FacultyProfile() {
                         if (updated.department) facultyData.department = updated.department;
                         if (updated.designation) facultyData.designation = updated.designation;
 
-                        // Persist in localStorage stored user
+                        // Persist in localStorage stored user, and in the in-memory auth
+                        // store the header is rebuilt from, so name/email stay correct
+                        // without logging in again.
                         if (storedUser) {
                             storedUser.name = facultyData.name;
                             storedUser.email = facultyData.email;
                             storedUser.phone = facultyData.phone;
                             localStorage.setItem('user', JSON.stringify(storedUser));
                         }
+                        if (authStore?.user) {
+                            authStore.user = { ...authStore.user, name: facultyData.name, email: facultyData.email, phone: facultyData.phone };
+                        }
 
                         updateTopbarUserName(facultyData.name);
+                        const popoverEmail = document.querySelector('#popover-email');
+                        if (popoverEmail) popoverEmail.textContent = facultyData.email;
                         showFacultySuccessPopup('Profile Updated', 'Your profile details have been successfully updated in the database.');
                         editModal.style.display = 'none';
                         renderUI();

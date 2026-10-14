@@ -1,6 +1,7 @@
 import { useAuthStore } from '../stores/auth.js';
 import { modules } from '../../module-manifest.js';
 import { API_BASE } from '../config/api.js';
+import { loadHeaderProfilePhoto } from '../shared/profilePhoto.js';
 
 const BELL_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
 
@@ -291,6 +292,9 @@ export async function DashboardLayout(contentChild, route, router) {
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
+  // Other roles use the server-side profile photo (users.profile_photo_path):
+  // render the cached URL immediately, then refresh it from the API below.
+  const headerPhoto = isStudent ? studentPhoto : (user?.profile_photo_url || null);
 
   const designation = user?.designation || (isStudent ? 'Nova' : roleName);
   const email = user?.email || 'student@rajagiri.edu';
@@ -342,8 +346,8 @@ export async function DashboardLayout(contentChild, route, router) {
           ` : ''}
 
         <div class="user-profile" id="user-profile-header">
-          <div class="avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-            ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+          <div class="avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+            ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
           <div class="user-details">
             <span class="user-name">${displayName}</span>
@@ -353,8 +357,8 @@ export async function DashboardLayout(contentChild, route, router) {
           <!-- Floating Profile Popover -->
           <div class="profile-popover" id="profile-popover">
             <div class="profile-popover-header">
-              <div class="profile-popover-avatar" id="popover-avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-                ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+              <div class="profile-popover-avatar" id="popover-avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+                ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
               </div>
               <div class="profile-popover-meta">
                 <span class="profile-popover-name" id="popover-name">${displayName}</span>
@@ -627,6 +631,12 @@ export async function DashboardLayout(contentChild, route, router) {
         }
       });
     }
+  }
+
+  // Non-student roles: show the saved server-side profile photo in the header
+  // (falls back to the initial when there is none or the request fails).
+  if (!isStudent && user) {
+    loadHeaderProfilePhoto(wrapper, displayName);
   }
 
   return wrapper;

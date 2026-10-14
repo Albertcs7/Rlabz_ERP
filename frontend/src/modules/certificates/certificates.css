@@ -219,19 +219,19 @@
   z-index: 2;
 }
 
-/* Decorative side watermark — shows only the left half of the icon-only mark
-   (object-position shifts the crop), anchored to the right edge, low opacity
+/* Decorative side watermark — shows only the right half of the icon-only mark
+   (object-position shifts the crop), anchored to the left edge, low opacity
    so it reads as a background element rather than competing with the text.
    object-fit/object-position (not a CSS background-image) renders reliably
    in html2canvas for the downloaded PDF as well as the live preview. */
 .certificate-watermark {
   position: absolute;
   top: 0;
-  right: 0;
+  left: 0;
   height: 100%;
   width: 48%;
   object-fit: cover;
-  object-position: left center;
+  object-position: right center;
   opacity: 0.09;
   pointer-events: none;
   z-index: 0;

@@ -39,7 +39,12 @@ export async function CoordinatorStudents(route, router) {
     students = [];
   }
 
+  // Nova/Orbit/Spark are the roles offered by Assign Student; the older values
+  // stay listed so existing assignment records still display and filter correctly.
   const ROLE_LABELS = {
+    nova: 'Nova',
+    orbit: 'Orbit',
+    spark: 'Spark',
     project_lead: 'Project Lead',
     developer: 'Developer',
     designer: 'Designer',
@@ -68,9 +73,9 @@ export async function CoordinatorStudents(route, router) {
 
   // A student may belong to multiple projects at once — render one row per student
   // (never duplicate rows), listing every assignment within that row's cells.
-  function renderTableRows(data) {
+  function renderTableRows(data, emptyMessage = 'No students found.') {
     if (!data.length) {
-      return `<tr><td colspan="7" style="text-align:center; padding:2rem;">No students found.</td></tr>`;
+      return `<tr><td colspan="7" style="text-align:center; padding:2rem;">${emptyMessage}</td></tr>`;
     }
     return data.map(student => {
       const assignments = assignmentsOf(student);
@@ -142,21 +147,21 @@ export async function CoordinatorStudents(route, router) {
         </button>
       </div>
 
-      <!-- Student KPI Cards -->
+      <!-- Student KPI Cards — each one is also a filter for the roster below -->
       <div class="coordinator-kpi-grid">
-        <div class="coordinator-kpi-card">
+        <div class="coordinator-kpi-card kpi-primary" data-filter="all" role="button" tabindex="0" title="Show all students">
           <span>Total Students</span>
           <strong id="kpi-total">${students.length}</strong>
           <small>Registered in RLabZ</small>
         </div>
 
-        <div class="coordinator-kpi-card">
+        <div class="coordinator-kpi-card kpi-teal" data-filter="assigned" role="button" tabindex="0" title="Show students on a current project">
           <span>Assigned</span>
           <strong id="kpi-assigned">${assignedCount}</strong>
           <small>Currently on a project</small>
         </div>
 
-        <div class="coordinator-kpi-card">
+        <div class="coordinator-kpi-card kpi-amber" data-filter="unassigned" role="button" tabindex="0" title="Show students not on a current project">
           <span>Unassigned</span>
           <strong id="kpi-unassigned">${unassignedCount}</strong>
           <small>Not yet on a project</small>
@@ -170,31 +175,38 @@ export async function CoordinatorStudents(route, router) {
             <h2>Student Roster</h2>
             <p>View students and their current project assignments.</p>
           </div>
+        </div>
 
-          <div style="display:flex; gap:0.5rem;">
-            <select id="designation-filter">
-              <option value="all">All</option>
-              <option value="unassigned">Unassigned</option>
-              <option value="project_lead">Project Lead</option>
-              <option value="developer">Developer</option>
-              <option value="designer">Designer</option>
-              <option value="tester">Tester</option>
-              <option value="other">Other</option>
-            </select>
+        <div class="app-list-toolbar">
+          <input type="search" id="student-search" class="app-search-input" placeholder="Search students by name or email..." aria-label="Search students by name or email" autocomplete="off" />
 
-            <select id="project-filter">
-              <option value="all">All Projects</option>
-              ${projects.map(p => `<option value="${p.id}">${p.title}</option>`).join('')}
-            </select>
+          <select id="designation-filter" class="app-select" aria-label="Filter by designation">
+            <option value="all">All</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="nova">Nova</option>
+            <option value="orbit">Orbit</option>
+            <option value="spark">Spark</option>
+            <option value="project_lead">Project Lead</option>
+            <option value="developer">Developer</option>
+            <option value="designer">Designer</option>
+            <option value="tester">Tester</option>
+            <option value="other">Other</option>
+          </select>
 
-            <select id="sort-by">
-              <option value="name">Sort: Name</option>
-              <option value="email">Sort: Email</option>
-              <option value="project">Sort: Project</option>
-              <option value="designation">Sort: Designation</option>
-              <option value="status">Sort: Status</option>
-            </select>
-          </div>
+          <select id="project-filter" class="app-select" aria-label="Filter by project">
+            <option value="all">All Projects</option>
+            ${projects.map(p => `<option value="${p.id}">${p.title}</option>`).join('')}
+          </select>
+
+          <select id="sort-by" class="app-select" aria-label="Sort students">
+            <option value="name">Sort: Name</option>
+            <option value="email">Sort: Email</option>
+            <option value="project">Sort: Project</option>
+            <option value="designation">Sort: Designation</option>
+            <option value="status">Sort: Status</option>
+          </select>
+
+          <span class="app-list-toolbar-count" id="student-result-count" aria-live="polite"></span>
         </div>
 
         <div class="coordinator-table-wrapper">
@@ -223,37 +235,88 @@ export async function CoordinatorStudents(route, router) {
     container.querySelector('#designation-filter')?.addEventListener('change', applyFiltersAndSort);
     container.querySelector('#project-filter')?.addEventListener('change', applyFiltersAndSort);
     container.querySelector('#sort-by')?.addEventListener('change', applyFiltersAndSort);
+    container.querySelector('#student-search')?.addEventListener('input', applyFiltersAndSort);
     container.querySelector('#add-student-btn')?.addEventListener('click', showAddStudentModal);
-    bindRowClicks();
+
+    container.querySelectorAll('.coordinator-kpi-card[data-filter]').forEach((card) => {
+      const select = () => setStatusFilter(card.dataset.filter);
+      card.addEventListener('click', select);
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          select();
+        }
+      });
+    });
+
+    // Re-apply the selected card filter (e.g. after render() following Add Student).
+    applyFiltersAndSort();
+  }
+
+  // Summary-card filter: 'all' | 'assigned' | 'unassigned'. Uses student.status,
+  // which the backend derives from current assignments only (project status
+  // proposed/accepted/in_progress), so it always agrees with the card counts.
+  let statusFilter = 'all';
+
+  function setStatusFilter(value) {
+    statusFilter = value;
+    // Switching cards clears the search so e.g. Total Students never shows a
+    // list still narrowed by a query typed under Unassigned.
+    const searchInput = container.querySelector('#student-search');
+    if (searchInput) searchInput.value = '';
+    applyFiltersAndSort();
   }
 
   function applyFiltersAndSort() {
     const roleFilter = container.querySelector('#designation-filter')?.value || 'all';
     const projectFilter = container.querySelector('#project-filter')?.value || 'all';
     const sortBy = container.querySelector('#sort-by')?.value || 'name';
+    const searchInput = container.querySelector('#student-search');
+    const query = (searchInput?.value || '').trim().toLowerCase();
 
-    const tbody = container.querySelector('#students-table-body');
-    if (tbody) tbody.innerHTML = renderTableRows(sortStudents(students, sortBy));
-
-    container.querySelectorAll('#students-table-body tr').forEach(row => {
-      if (row.dataset.roles === undefined) return; // empty-state row has no dataset.roles
-
-      const roles = row.dataset.roles ? row.dataset.roles.split(' ') : [];
-      const projectIds = row.dataset.projectIds ? row.dataset.projectIds.split(' ') : [];
-
-      let show = true;
-      if (roleFilter === 'unassigned') {
-        show = roles.length === 0;
-      } else if (roleFilter !== 'all') {
-        show = roles.includes(roleFilter);
-      }
-
-      if (show && projectFilter !== 'all') {
-        show = projectIds.includes(projectFilter);
-      }
-
-      row.style.display = show ? '' : 'none';
+    container.querySelectorAll('.coordinator-kpi-card[data-filter]').forEach((card) => {
+      const active = card.dataset.filter === statusFilter;
+      card.classList.toggle('is-active', active);
+      card.setAttribute('aria-pressed', String(active));
     });
+    if (searchInput) {
+      searchInput.placeholder = statusFilter === 'unassigned'
+        ? 'Search unassigned students by name or email...'
+        : 'Search students by name or email...';
+    }
+
+    const visible = students.filter((student) => {
+      if (statusFilter === 'assigned' && student.status !== 'Active') return false;
+      if (statusFilter === 'unassigned' && student.status !== 'Unassigned') return false;
+
+      const assignments = assignmentsOf(student);
+      if (roleFilter === 'unassigned') {
+        if (student.status !== 'Unassigned') return false;
+      } else if (roleFilter !== 'all' && !assignments.some((a) => roleKey(a.designation) === roleFilter)) {
+        return false;
+      }
+
+      if (projectFilter !== 'all' && !assignments.some((a) => String(a.project_id) === projectFilter)) return false;
+
+      if (query) {
+        const name = String(student.name || '').toLowerCase();
+        const email = String(student.email || '').toLowerCase();
+        if (!name.includes(query) && !email.includes(query)) return false;
+      }
+      return true;
+    });
+
+    const isNarrowed = statusFilter !== 'all' || roleFilter !== 'all' || projectFilter !== 'all' || query;
+    const tbody = container.querySelector('#students-table-body');
+    if (tbody) {
+      tbody.innerHTML = renderTableRows(
+        sortStudents(visible, sortBy),
+        isNarrowed ? 'No students match the current filters.' : 'No students found.'
+      );
+    }
+
+    const countEl = container.querySelector('#student-result-count');
+    if (countEl) countEl.textContent = `Showing ${visible.length} of ${students.length} students`;
 
     bindRowClicks();
   }

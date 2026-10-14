@@ -84,19 +84,33 @@
   padding: 1.2rem;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  /* Fallback = the kpi-primary gradient, so a card rendered without an accent
+     class never ends up as white text on a transparent background. */
+  background: linear-gradient(145deg, var(--primary-hover) 0%, var(--primary) 100%);
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.coordinator-kpi-card[data-nav] {
+.coordinator-kpi-card[data-nav],
+.coordinator-kpi-card[data-filter] {
   cursor: pointer;
 }
 
 .coordinator-kpi-card:hover,
-.coordinator-kpi-card[data-nav]:focus-visible {
+.coordinator-kpi-card[data-nav]:focus-visible,
+.coordinator-kpi-card[data-filter]:focus-visible {
   transform: translateY(-4px);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25);
   outline: none;
+}
+
+/* Selected state for summary cards that act as list filters (Students page). */
+.coordinator-kpi-card.is-active,
+.coordinator-kpi-card.is-active:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.9);
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
 }
 
 .coordinator-kpi-icon {
@@ -876,6 +890,7 @@
 
 .coordinator-modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.7rem;
   padding: 1rem 1.5rem;
@@ -908,6 +923,17 @@
 
 .coordinator-secondary-btn:hover {
   background: var(--primary-light);
+}
+
+/* Footer "Cancel" buttons also carry .coordinator-close-btn so openModal()
+   can bind them as closers. Undo that class's round 32px "×" sizing for them,
+   otherwise "Cancel" is squeezed to 32px and hidden behind the Save button. */
+.coordinator-close-btn.coordinator-secondary-btn,
+.coordinator-close-btn.coordinator-primary-btn {
+  width: auto;
+  height: auto;
+  font-size: revert;
+  flex-shrink: 0;
 }
 
 @media (max-width: 900px) {
