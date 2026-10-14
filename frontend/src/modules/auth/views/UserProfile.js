@@ -15,29 +15,27 @@ export async function UserProfile(route, router) {
   let showNewPass = false;
   let showConfirmPass = false;
 
+  function getEyeIcon(isVisible) {
+    if (isVisible) {
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pass-eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="4"></circle></svg>`;
+    }
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pass-eye-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="23" x2="23" y2="1"></line></svg>`;
+  }
+
   let profileUser = {
     id: authStore.user?.id || 1,
     name: authStore.user?.name || authStore.user?.username || 'User',
     email: authStore.user?.email || 'user@rajagiri.edu',
     role: authStore.role || 'Member',
-    phone: authStore.user?.phone || '+91 9800000001',
-    bio: authStore.user?.bio || (authStore.role === 'finance'
-      ? 'Corporate Finance & Budget Specialist | Enterprise Project Billing, Student Payroll & Compliance Audits'
-      : (authStore.role === 'design_head'
-        ? 'Lead UI/UX Designer | Human-centered design | Design Systems & Accessibility'
-        : 'UI/UX Designer | Human-centered design | Design thinking | Creative changer | Accessibility | Sustainability')),
+    phone: authStore.user?.phone || '',
+    bio: authStore.user?.bio || '',
     location: authStore.user?.location || 'Kochi, Kerala, India',
-    department: authStore.user?.department || (authStore.role === 'finance' ? 'Finance & Accounts' : 'Creative Design & Innovation'),
+    department: authStore.user?.department || (authStore.role === 'finance' ? 'Finance & Accounts' : ''),
     avatar: authStore.user?.avatar || null,
-    created_at: authStore.user?.created_at || '2024-03-01',
+    created_at: authStore.user?.created_at || null,
   };
 
-  let teams = [
-    { id: 1, title: 'Smart Campus IoT System', status: 'in_progress', project_type: 'IoT' },
-    { id: 2, title: 'Campus ERP Mobile Application', status: 'in_progress', project_type: 'Mobile App' },
-    { id: 3, title: 'Automated Library Kiosk System', status: 'completed', project_type: 'Hardware & Kiosk' },
-    { id: 4, title: 'Department Design System', status: 'in_progress', project_type: 'Design System' }
-  ];
+  let teams = [];
 
   // Fetch live profile from backend if available
   if (token) {
@@ -54,8 +52,10 @@ export async function UserProfile(route, router) {
         if (body.user) {
           profileUser = { ...profileUser, ...body.user };
         }
-        if (body.teams && body.teams.length > 0) {
+        if (body.user?.role !== 'finance' && body.teams && body.teams.length > 0) {
           teams = body.teams;
+        } else {
+          teams = [];
         }
       }
     } catch (e) {
@@ -95,7 +95,7 @@ export async function UserProfile(route, router) {
           <div class="profile-hero-user">
             <div class="profile-avatar-wrap">
               ${profileUser.avatar
-                ? `<img src="${profileUser.avatar}" alt="${profileUser.name}">`
+                ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
                 : `<span class="profile-avatar-fallback">${initials}</span>`
               }
               <span class="profile-avatar-badge" title="Online & Active"></span>
@@ -103,12 +103,15 @@ export async function UserProfile(route, router) {
             <div class="profile-hero-details">
               <h1>${profileUser.name}</h1>
               <div class="profile-hero-sub">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 <span>Active session • Verified Rajagiri Member</span>
               </div>
               <div class="profile-hero-stats">
                 <span class="profile-role-pill">${roleLabel}</span>
-                <span><strong>${teams.length}</strong> Associated Projects</span>
+                ${profileUser.role === 'finance'
+                  ? `<span><strong>All Projects</strong> (Finance Scope)</span>`
+                  : `<span><strong>${teams.length}</strong> Associated Projects</span>`
+                }
                 <span><strong>Active</strong> Status</span>
               </div>
             </div>
@@ -137,9 +140,11 @@ export async function UserProfile(route, router) {
           <button class="profile-tab-item ${activeTab === 'security' ? 'active' : ''}" data-tab="security">
             Security & Password
           </button>
-          <button class="profile-tab-item ${activeTab === 'projects' ? 'active' : ''}" data-tab="projects">
-            Teams & Projects (${teams.length})
-          </button>
+          ${profileUser.role !== 'finance' ? `
+            <button class="profile-tab-item ${activeTab === 'projects' ? 'active' : ''}" data-tab="projects">
+              Teams & Projects (${teams.length})
+            </button>
+          ` : ''}
         </div>
       </div>
 
@@ -174,7 +179,7 @@ export async function UserProfile(route, router) {
                 </div>
                 <div class="contact-info-content">
                   <span class="contact-info-label">Department</span>
-                  <span class="contact-info-val">${profileUser.department || 'Creative Design Studio'}</span>
+                  <span class="contact-info-val">${profileUser.department || (profileUser.role === 'finance' ? 'Finance & Accounts' : 'General')}</span>
                 </div>
               </div>
 
@@ -221,29 +226,31 @@ export async function UserProfile(route, router) {
               Edit Bio
             </button>
           </div>
-          <p class="profile-bio-text">
-            ${profileUser.bio || 'UI/UX Designer | Human-centered design | Design thinking | Creative strategist | Accessibility | Sustainability'}
+          <p class="profile-bio-text" style="${!profileUser.bio ? 'color: var(--text-muted); font-style: italic;' : ''}">
+            ${profileUser.bio ? profileUser.bio : 'No biography provided yet. Click "Edit Bio" to add your professional background.'}
           </p>
         </div>
 
-        <!-- In Teams Section -->
-        <div class="profile-card">
-          <div class="profile-card-header">
-            <span>In teams</span>
-          </div>
-          <div class="teams-list">
-            ${teams.map(t => `
-              <div class="team-badge-item">
-                <div class="team-badge-icon">
-                  ${t.title.charAt(0)}
+        ${profileUser.role !== 'finance' ? `
+          <!-- In Teams Section -->
+          <div class="profile-card">
+            <div class="profile-card-header">
+              <span>In teams</span>
+            </div>
+            <div class="teams-list">
+              ${teams.length > 0 ? teams.map(t => `
+                <div class="team-badge-item">
+                  <div class="team-badge-icon">
+                    ${(t.title || 'P').charAt(0)}
+                  </div>
+                  <div class="team-badge-title" title="${t.title}">
+                    ${t.title}
+                  </div>
                 </div>
-                <div class="team-badge-title" title="${t.title}">
-                  ${t.title}
-                </div>
-              </div>
-            `).join('')}
+              `).join('') : '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0;">No active teams assigned.</div>'}
+            </div>
           </div>
-        </div>
+        ` : ''}
       `;
     }
 
@@ -314,8 +321,8 @@ export async function UserProfile(route, router) {
               <label for="current-password">Current Password *</label>
               <div class="pass-field-wrap">
                 <input type="${showCurrentPass ? 'text' : 'password'}" id="current-password" required placeholder="Enter current password" />
-                <button type="button" class="pass-toggle-btn" id="toggle-current-pass">
-                  ${showCurrentPass ? '👁️' : '🙈'}
+                <button type="button" class="pass-toggle-btn" id="toggle-current-pass" title="${showCurrentPass ? 'Hide password' : 'Show password'}">
+                  ${getEyeIcon(showCurrentPass)}
                 </button>
               </div>
             </div>
@@ -324,8 +331,8 @@ export async function UserProfile(route, router) {
               <label for="new-password">New Password *</label>
               <div class="pass-field-wrap">
                 <input type="${showNewPass ? 'text' : 'password'}" id="new-password" required minlength="8" placeholder="Minimum 8 characters" />
-                <button type="button" class="pass-toggle-btn" id="toggle-new-pass">
-                  ${showNewPass ? '👁️' : '🙈'}
+                <button type="button" class="pass-toggle-btn" id="toggle-new-pass" title="${showNewPass ? 'Hide password' : 'Show password'}">
+                  ${getEyeIcon(showNewPass)}
                 </button>
               </div>
             </div>
@@ -334,8 +341,8 @@ export async function UserProfile(route, router) {
               <label for="confirm-password">Confirm New Password *</label>
               <div class="pass-field-wrap">
                 <input type="${showConfirmPass ? 'text' : 'password'}" id="confirm-password" required minlength="8" placeholder="Confirm your new password" />
-                <button type="button" class="pass-toggle-btn" id="toggle-confirm-pass">
-                  ${showConfirmPass ? '👁️' : '🙈'}
+                <button type="button" class="pass-toggle-btn" id="toggle-confirm-pass" title="${showConfirmPass ? 'Hide password' : 'Show password'}">
+                  ${getEyeIcon(showConfirmPass)}
                 </button>
               </div>
             </div>
@@ -417,19 +424,39 @@ export async function UserProfile(route, router) {
       render();
     });
 
-    // Password visibility toggles
-    container.querySelector('#toggle-current-pass')?.addEventListener('click', () => {
-      showCurrentPass = !showCurrentPass;
-      render();
-    });
-    container.querySelector('#toggle-new-pass')?.addEventListener('click', () => {
-      showNewPass = !showNewPass;
-      render();
-    });
-    container.querySelector('#toggle-confirm-pass')?.addEventListener('click', () => {
-      showConfirmPass = !showConfirmPass;
-      render();
-    });
+    // Password visibility toggles (inline toggle to preserve user typing)
+    const toggleCurrent = container.querySelector('#toggle-current-pass');
+    if (toggleCurrent) {
+      toggleCurrent.addEventListener('click', () => {
+        showCurrentPass = !showCurrentPass;
+        const input = container.querySelector('#current-password');
+        if (input) input.type = showCurrentPass ? 'text' : 'password';
+        toggleCurrent.innerHTML = getEyeIcon(showCurrentPass);
+        toggleCurrent.title = showCurrentPass ? 'Hide password' : 'Show password';
+      });
+    }
+
+    const toggleNew = container.querySelector('#toggle-new-pass');
+    if (toggleNew) {
+      toggleNew.addEventListener('click', () => {
+        showNewPass = !showNewPass;
+        const input = container.querySelector('#new-password');
+        if (input) input.type = showNewPass ? 'text' : 'password';
+        toggleNew.innerHTML = getEyeIcon(showNewPass);
+        toggleNew.title = showNewPass ? 'Hide password' : 'Show password';
+      });
+    }
+
+    const toggleConfirm = container.querySelector('#toggle-confirm-pass');
+    if (toggleConfirm) {
+      toggleConfirm.addEventListener('click', () => {
+        showConfirmPass = !showConfirmPass;
+        const input = container.querySelector('#confirm-password');
+        if (input) input.type = showConfirmPass ? 'text' : 'password';
+        toggleConfirm.innerHTML = getEyeIcon(showConfirmPass);
+        toggleConfirm.title = showConfirmPass ? 'Hide password' : 'Show password';
+      });
+    }
 
     // Handle Edit Profile Form Submission
     const editForm = container.querySelector('#profile-edit-form');

@@ -27,7 +27,7 @@ return new class extends Migration
                 $table->string('avatar', 500)->nullable()->after('location');
             }
             if (!Schema::hasColumn('users', 'department')) {
-                $table->string('department', 150)->nullable()->default('Creative Design & Innovation')->after('avatar');
+                $table->string('department', 150)->nullable()->after('avatar');
             }
         });
     }

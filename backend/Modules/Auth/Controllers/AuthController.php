@@ -268,9 +268,9 @@ class AuthController extends Controller
         unset($userArray['password']);
         $userArray['permissions'] = is_string($user->permissions) ? json_decode($user->permissions, true) : ($user->permissions ?? []);
 
-        // Retrieve teams / projects
+        // Retrieve teams / projects (finance head oversees finances across all projects, so no team assignment)
         $projects = [];
-        if (Schema::hasTable('projects')) {
+        if (Schema::hasTable('projects') && $user->role !== 'finance') {
             $projects = DB::table('projects')
                 ->where('created_by', $userId)
                 ->orWhereIn('id', function ($q) use ($userId) {
