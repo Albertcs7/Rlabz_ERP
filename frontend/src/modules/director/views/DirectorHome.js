@@ -8,6 +8,25 @@ export function DirectorHome(route, router) {
   const container = document.createElement('div');
   container.className = 'director-dashboard';
 
+  const getDirectorPath = (targetSubpath) => {
+    let sub = targetSubpath.startsWith('/') ? targetSubpath : '/' + targetSubpath;
+    if (sub.startsWith('/director') || sub.startsWith('/dashboard')) {
+      return sub;
+    }
+    const isDirectorPrefix = window.location.pathname.startsWith('/director');
+    const base = isDirectorPrefix ? '/director' : '/dashboard';
+    return `${base}${sub}`;
+  };
+
+  const navigateTo = (targetSubpath) => {
+    const fullPath = getDirectorPath(targetSubpath);
+    if (router && typeof router.push === 'function') {
+      router.push(fullPath);
+    } else {
+      window.location.href = fullPath;
+    }
+  };
+
   let chartInstances = {};
 
   function destroyCharts() {
@@ -188,7 +207,7 @@ export function DirectorHome(route, router) {
       <!-- ══════════════════════════════════════════════════════ -->
       <div class="director-charts-grid">
         <!-- Chart 1: Doughnut Chart (Talent Distribution) -->
-        <div class="director-chart-card">
+        <div class="director-chart-card clickable-chart-card" id="chart-card-students" style="cursor: pointer;" title="Click to open Student Talent Pool & Capability Tracks">
           <div class="director-chart-header">
             <div class="director-chart-title-group">
               <h3>
@@ -228,7 +247,7 @@ export function DirectorHome(route, router) {
         </div>
 
         <!-- Chart 2: Grouped Bar Chart (Budget vs Actual Spend) -->
-        <div class="director-chart-card">
+        <div class="director-chart-card clickable-chart-card" id="chart-card-finance" style="cursor: pointer;" title="Click to open Capital Allocation & Finance Oversight">
           <div class="director-chart-header">
             <div class="director-chart-title-group">
               <h3>
@@ -261,7 +280,7 @@ export function DirectorHome(route, router) {
         </div>
 
         <!-- Chart 3: Smooth Spline Area Chart (Velocity Trajectory) -->
-        <div class="director-chart-card">
+        <div class="director-chart-card clickable-chart-card" id="chart-card-velocity" style="cursor: pointer;" title="Click to open Active Projects & Velocity">
           <div class="director-chart-header">
             <div class="director-chart-title-group">
               <h3>
@@ -294,7 +313,7 @@ export function DirectorHome(route, router) {
         </div>
 
         <!-- Chart 4: Polar Area / Radar Chart (Portfolio Status Matrix) -->
-        <div class="director-chart-card">
+        <div class="director-chart-card clickable-chart-card" id="chart-card-portfolio" style="cursor: pointer;" title="Click to open All Projects Portfolio">
           <div class="director-chart-header">
             <div class="director-chart-title-group">
               <h3>
@@ -421,7 +440,7 @@ export function DirectorHome(route, router) {
         <div class="director-panel">
           <div class="director-panel-header">
             <h2>⚡ Proposals Requiring ${isDirector ? 'Review' : 'Director Decision'} (${pendingProposals.length})</h2>
-            <button class="btn-director btn-director-outline btn-goto-projects">Manage All</button>
+            <button class="btn-director btn-director-outline btn-goto-proposals">Manage All (${pendingProposals.length})</button>
           </div>
           ${pendingProposals.length === 0 ? `
             <div style="text-align:center; padding:2rem; color:#6b7280; background:#f9fafb; border-radius:10px; border:1px dashed #d1d5db;">
@@ -503,21 +522,22 @@ export function DirectorHome(route, router) {
     // ══════════════════════════════════════════════════════
     // ATTACH DOM EVENT LISTENERS
     // ══════════════════════════════════════════════════════
+    // ── BUTTON CLICK NAVIGATION ──
     container.querySelector('.btn-goto-projects')?.addEventListener('click', () => {
-      if (router) router.push('/director/projects');
-      else window.location.href = '/director/projects';
+      navigateTo('/projects?tab=active');
+    });
+    container.querySelector('.btn-goto-proposals')?.addEventListener('click', () => {
+      navigateTo('/projects?tab=proposals');
     });
     container.querySelector('.btn-goto-audit')?.addEventListener('click', () => {
-      if (router) router.push('/director/audit');
-      else window.location.href = '/director/audit';
+      navigateTo('/audit');
     });
 
     // ── TOP 5 EXECUTIVE KPI CARDS CLICK & KEYBOARD NAVIGATION ──
-    // 1. Active Projects -> /director/projects?tab=all
+    // 1. Active Projects -> /projects?tab=active (Directly shows the Active Projects list)
     const kpiProjects = container.querySelector('#kpi-card-projects');
     const navigateToActiveProjects = () => {
-      if (router) router.push('/director/projects?tab=all');
-      else window.location.href = '/director/projects?tab=all';
+      navigateTo('/projects?tab=active');
     };
     kpiProjects?.addEventListener('click', navigateToActiveProjects);
     kpiProjects?.addEventListener('keydown', (e) => {
@@ -527,22 +547,21 @@ export function DirectorHome(route, router) {
       }
     });
 
+    // Project table row click -> takes to Active Projects filtered to this project
     container.querySelectorAll('.director-home-project-row').forEach(row => {
       row.addEventListener('click', () => {
         const title = row.getAttribute('data-project-title');
         const targetUrl = title 
-          ? `/director/projects?tab=all&search=${encodeURIComponent(title)}` 
-          : '/director/projects?tab=all';
-        if (router) router.push(targetUrl);
-        else window.location.href = targetUrl;
+          ? `/projects?tab=active&search=${encodeURIComponent(title)}` 
+          : '/projects?tab=active';
+        navigateTo(targetUrl);
       });
     });
 
-    // 2. Pending Proposals -> /director/projects?tab=proposals
+    // 2. Pending Proposals -> /projects?tab=proposals
     const kpiProposals = container.querySelector('#kpi-card-proposals');
     const navigateToProposals = () => {
-      if (router) router.push('/director/projects?tab=proposals');
-      else window.location.href = '/director/projects?tab=proposals';
+      navigateTo('/projects?tab=proposals');
     };
     kpiProposals?.addEventListener('click', navigateToProposals);
     kpiProposals?.addEventListener('keydown', (e) => {
@@ -552,12 +571,11 @@ export function DirectorHome(route, router) {
       }
     });
 
-    // 3. Student Talent Pool -> /director/students
+    // 3. Student Talent Pool -> /students
     const kpiStudents = container.querySelector('#kpi-card-students');
     const navigateToStudents = (e) => {
       if (e && e.target && e.target.closest('.track-badge-micro')) return;
-      if (router) router.push('/director/students');
-      else window.location.href = '/director/students';
+      navigateTo('/students');
     };
     kpiStudents?.addEventListener('click', navigateToStudents);
     kpiStudents?.addEventListener('keydown', (e) => {
@@ -567,11 +585,10 @@ export function DirectorHome(route, router) {
       }
     });
 
-    // 4. Sanctioned Capital -> /director/finance
+    // 4. Sanctioned Capital -> /finance
     const kpiFinance = container.querySelector('#kpi-card-finance');
     const navigateToFinance = () => {
-      if (router) router.push('/director/finance');
-      else window.location.href = '/director/finance';
+      navigateTo('/finance');
     };
     kpiFinance?.addEventListener('click', navigateToFinance);
     kpiFinance?.addEventListener('keydown', (e) => {
@@ -604,6 +621,31 @@ export function DirectorHome(route, router) {
       }
     });
 
+    // ── CLICK NAVIGATION FOR 4 ANALYTIC CHART CARDS ──
+    // Chart 1: Talent Pool & Capability Tracks Card -> /students
+    container.querySelector('#chart-card-students')?.addEventListener('click', (e) => {
+      if (e.target.closest('canvas') || e.target.closest('.chart-legend-item') || e.target.closest('.director-donut-center-metric')) return;
+      navigateTo('/students');
+    });
+
+    // Chart 2: Capital Allocation: Budget vs Spend Card -> /finance
+    container.querySelector('#chart-card-finance')?.addEventListener('click', (e) => {
+      if (e.target.closest('.chart-legend-item')) return;
+      navigateTo('/finance');
+    });
+
+    // Chart 3: Milestone Delivery & Department Velocity Card -> /projects?tab=active
+    container.querySelector('#chart-card-velocity')?.addEventListener('click', (e) => {
+      if (e.target.closest('.chart-legend-item')) return;
+      navigateTo('/projects?tab=active');
+    });
+
+    // Chart 4: Portfolio Status & Lifecycle Health Card -> /projects?tab=all
+    container.querySelector('#chart-card-portfolio')?.addEventListener('click', (e) => {
+      if (e.target.closest('.chart-legend-item')) return;
+      navigateTo('/projects?tab=all');
+    });
+
     // Faculty Card click popup
     container.querySelectorAll('.btn-view-faculty-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -625,19 +667,19 @@ export function DirectorHome(route, router) {
 
     // Doughnut chart legend items click navigation
     container.querySelectorAll('.chart-legend-item').forEach(item => {
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
         const track = item.getAttribute('data-track');
         if (track) {
-          if (router) router.push(`/director/students?track=${track}`);
-          else window.location.href = `/director/students?track=${track}`;
+          navigateTo(`/students?track=${track}`);
         }
       });
     });
 
     // Doughnut chart center metric click navigation
-    container.querySelector('.director-donut-center-metric')?.addEventListener('click', () => {
-      if (router) router.push('/director/students');
-      else window.location.href = '/director/students';
+    container.querySelector('.director-donut-center-metric')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigateTo('/students');
     });
 
     // KPI Card 3 track badges navigation
@@ -651,8 +693,16 @@ export function DirectorHome(route, router) {
         else if (badge.classList.contains('orbit')) track = 'Orbit';
         else if (badge.classList.contains('spark')) track = 'Spark';
 
-        if (router) router.push(`/director/students?track=${track}`);
-        else window.location.href = `/director/students?track=${track}`;
+        navigateTo(`/students?track=${track}`);
+      });
+    });
+
+    // Audit timeline item click navigation -> /audit
+    container.querySelectorAll('.audit-timeline-item').forEach(item => {
+      item.style.cursor = 'pointer';
+      item.setAttribute('title', 'Click to inspect in Full Audit Trail');
+      item.addEventListener('click', () => {
+        navigateTo('/audit');
       });
     });
   }
@@ -992,13 +1042,18 @@ export function DirectorHome(route, router) {
             </div>
           `}
         </div>
-        <div class="director-modal-footer">
-          <button class="btn-director btn-director-primary btn-close-popup">Close</button>
+        <div class="director-modal-footer" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+          <button class="btn-director btn-director-primary btn-view-faculty-oversight">View in Active Projects</button>
+          <button class="btn-director btn-director-outline btn-close-popup">Close</button>
         </div>
       </div>
     `;
 
     popupOverlay.querySelectorAll('.btn-close-popup').forEach(b => b.addEventListener('click', () => popupOverlay.remove()));
+    popupOverlay.querySelector('.btn-view-faculty-oversight')?.addEventListener('click', () => {
+      popupOverlay.remove();
+      navigateTo(`/projects?tab=active&search=${encodeURIComponent(faculty.name)}`);
+    });
     parentHost.appendChild(popupOverlay);
   }
 

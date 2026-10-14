@@ -15,8 +15,18 @@ class StudentController extends Controller
 {
     private function getStudentId(Request $request)
     {
-        $authUser = $request->get('auth_user');
-        return $authUser['sub'] ?? null;
+        $authUser = $request->get('auth_user') ?: $request->auth_user;
+        if (is_array($authUser)) {
+            return $authUser['sub'] ?? $authUser['id'] ?? null;
+        }
+        if (is_object($authUser)) {
+            return $authUser->sub ?? $authUser->id ?? null;
+        }
+        $user = $request->user();
+        if ($user) {
+            return $user->id ?? null;
+        }
+        return null;
     }
 
     public function getProjects(Request $request)
@@ -124,7 +134,10 @@ class StudentController extends Controller
 
             // Fetch team lead
             $lead = collect($membersList)->firstWhere('isTeamLead', true);
-            $teamLead = $lead ? $lead['name'] : null;
+            $teamLead = null;
+            if ($lead) {
+                $teamLead = is_array($lead) ? ($lead['name'] ?? null) : ($lead->name ?? null);
+            }
 
 
             // Calculate progress and fetch modules + tasks
@@ -2558,7 +2571,7 @@ class StudentController extends Controller
     }
 
     /**
-     * Change password once approved.
+     * Change password directly without requiring coordinator approval.
      * Reuses existing users hashing & notifications/audit tables.
      */
     public function updatePassword(Request $request)
@@ -2571,24 +2584,6 @@ class StudentController extends Controller
         $user = DB::table('users')->where('id', $studentId)->first();
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
-        }
-
-        // Check if latest request is approved
-        $latestRequest = DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->whereIn('type', ['password_change_request', 'password_change_approved'])
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $isApproved = $latestRequest && (
-            $latestRequest->type === 'password_change_approved' ||
-            $latestRequest->urgency === 'approved'
-        );
-
-        if (!$isApproved) {
-            return response()->json([
-                'error' => 'You must have an approved password change request from a coordinator before updating your password.'
-            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -2613,19 +2608,27 @@ class StudentController extends Controller
             'updated_at' => now(),
         ]);
 
-        // Mark the request notification as completed
-        DB::table('notifications')->where('id', $latestRequest->id)->update([
-            'urgency' => 'completed',
-            'is_read' => 1,
-            'updated_at' => now(),
-        ]);
+        // If there is any existing request notification, mark it completed
+        $latestRequest = DB::table('notifications')
+            ->where('user_id', $studentId)
+            ->whereIn('type', ['password_change_request', 'password_change_approved'])
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($latestRequest) {
+            DB::table('notifications')->where('id', $latestRequest->id)->update([
+                'urgency' => 'completed',
+                'is_read' => 1,
+                'updated_at' => now(),
+            ]);
+        }
 
         // Record audit log
         if (Schema::hasTable('audit_logs')) {
             DB::table('audit_logs')->insert([
                 'user_id' => $studentId,
                 'action' => 'Password Changed Successfully',
-                'description' => "Student {$user->name} updated their account password following coordinator approval.",
+                'description' => "Student {$user->name} updated their account password.",
                 'created_at' => now(),
             ]);
         }

@@ -48,14 +48,13 @@ function renderNotificationList(notifications) {
 function populateSidebarNav(sidebarNav, currentPath, authStore) {
   if (!sidebarNav) return;
 
-  const isStudent = authStore.role === 'student';
-  const isStudentPortal = currentPath.startsWith('/student');
+  const isStudent = authStore.role === 'student' || currentPath.startsWith('/student');
   const isDeveloper = authStore.role === 'developer' || currentPath.startsWith('/developer');
   const isDirector = authStore.role === 'director' || currentPath.startsWith('/director');
   const isDesignHead = authStore.role === 'design_head' || currentPath.startsWith('/design');
 
   let targetPortal = 'default';
-  if (isStudent && isStudentPortal) {
+  if (isStudent) {
     targetPortal = 'student';
   } else if (isDeveloper) {
     targetPortal = 'developer';
@@ -306,20 +305,51 @@ export function updateSidebar(currentPath) {
   populateSidebarNav(sidebarNav, currentPath, authStore);
 }
 
+export function updateTopBarAvatar(photoUrl, name) {
+  const authStore = useAuthStore();
+  const displayName = name || authStore.user?.name || authStore.user?.username || 'User';
+  const initial = displayName.charAt(0).toUpperCase() || 'U';
+
+  const avatarTargets = document.querySelectorAll('#user-profile-header .avatar, #finance-user-profile-header .avatar, .topbar .avatar, .user-profile .avatar');
+  avatarTargets.forEach(avatarEl => {
+    if (photoUrl) {
+      avatarEl.style.padding = '0';
+      avatarEl.style.overflow = 'hidden';
+      avatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+    } else {
+      avatarEl.style.padding = '';
+      avatarEl.style.overflow = '';
+      avatarEl.textContent = initial;
+    }
+  });
+
+  const popoverAvatarTargets = document.querySelectorAll('#popover-avatar, #finance-popover-avatar, .profile-popover-avatar');
+  popoverAvatarTargets.forEach(popAvatarEl => {
+    if (photoUrl) {
+      popAvatarEl.style.padding = '0';
+      popAvatarEl.style.overflow = 'hidden';
+      popAvatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+    } else {
+      popAvatarEl.style.padding = '';
+      popAvatarEl.style.overflow = '';
+      popAvatarEl.textContent = initial;
+    }
+  });
+}
+
 export async function DashboardLayout(contentChild, route, router) {
   const authStore = useAuthStore();
   const currentPath = window.location.pathname;
 
-  const wrapper = document.createElement('div');
-  const isStudentPortal = currentPath.startsWith('/student');
-  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
-
   const user = authStore.user;
   const isStudent = authStore.role === 'student';
+  const isStudentPortal = isStudent || currentPath.startsWith('/student');
+  const wrapper = document.createElement('div');
+  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
   const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
-  const studentPhoto = (isStudent && studentIdentifier)
+  const topbarUserPhoto = (isStudent && studentIdentifier)
     ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
-    : null;
+    : (user?.avatar || null);
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
@@ -380,8 +410,8 @@ export async function DashboardLayout(contentChild, route, router) {
           ` : ''}
 
         <div class="user-profile" id="user-profile-header">
-          <div class="avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-            ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+          <div class="avatar" style="${topbarUserPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+            ${topbarUserPhoto ? `<img src="${topbarUserPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
           <div class="user-details">
             <span class="user-name">${displayName}</span>
@@ -391,8 +421,8 @@ export async function DashboardLayout(contentChild, route, router) {
           <!-- Floating Profile Popover -->
           <div class="profile-popover" id="profile-popover">
             <div class="profile-popover-header">
-              <div class="profile-popover-avatar" id="popover-avatar" style="${studentPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-                ${studentPhoto ? `<img src="${studentPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+              <div class="profile-popover-avatar" id="popover-avatar" style="${topbarUserPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+                ${topbarUserPhoto ? `<img src="${topbarUserPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
               </div>
               <div class="profile-popover-meta">
                 <span class="profile-popover-name" id="popover-name">${displayName}</span>

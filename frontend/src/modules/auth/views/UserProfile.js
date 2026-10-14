@@ -1,6 +1,8 @@
 import { useAuthStore } from '@/core/stores/auth.js';
 import { API_BASE } from '@/core/config/api.js';
 import Swal from 'sweetalert2';
+import { renderStudentSidebar, updateStudentNavbarAvatar, updateTopBarAvatar } from '@/modules/student/views/StudentSidebar.js';
+import { getStudentProfilePhoto, saveStudentProfilePhoto, removeStudentProfilePhoto } from '@/modules/student/views/studentStore.js';
 import '../userProfile.css';
 
 export async function UserProfile(route, router) {
@@ -8,6 +10,9 @@ export async function UserProfile(route, router) {
   container.className = 'profile-page-shell animate-fade-in';
 
   const authStore = useAuthStore();
+  if (authStore.role === 'student' || window.location.pathname.startsWith('/student')) {
+    renderStudentSidebar();
+  }
   const token = localStorage.getItem('token');
 
   let activeTab = 'profile'; // 'profile' | 'edit' | 'security' | 'projects'
@@ -22,6 +27,9 @@ export async function UserProfile(route, router) {
     return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pass-eye-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="23" x2="23" y2="1"></line></svg>`;
   }
 
+  const isStudentRole = authStore.role === 'student' || window.location.pathname.startsWith('/student');
+  const studentInitialPhoto = isStudentRole ? getStudentProfilePhoto(authStore.user) : null;
+
   let profileUser = {
     id: authStore.user?.id || 1,
     name: authStore.user?.name || authStore.user?.username || 'User',
@@ -31,7 +39,7 @@ export async function UserProfile(route, router) {
     bio: authStore.user?.bio || '',
     location: authStore.user?.location || 'Kochi, Kerala, India',
     department: authStore.user?.department || (authStore.role === 'finance' ? 'Finance & Accounts' : ''),
-    avatar: authStore.user?.avatar || null,
+    avatar: studentInitialPhoto || authStore.user?.avatar || null,
     created_at: authStore.user?.created_at || null,
   };
 
@@ -40,7 +48,8 @@ export async function UserProfile(route, router) {
   // Fetch live profile from backend if available
   if (token) {
     try {
-      const res = await fetch(`${API_BASE}/auth/profile`, {
+      const endpoint = isStudentRole ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
+      const res = await fetch(endpoint, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -49,11 +58,17 @@ export async function UserProfile(route, router) {
       });
       if (res.ok) {
         const body = await res.json();
-        if (body.user) {
-          profileUser = { ...profileUser, ...body.user };
+        const liveUser = body.user || body;
+        if (liveUser && liveUser.name) {
+          profileUser = { ...profileUser, ...liveUser };
+          if (studentInitialPhoto) {
+            profileUser.avatar = studentInitialPhoto;
+          }
         }
         if (body.user?.role !== 'finance' && body.teams && body.teams.length > 0) {
           teams = body.teams;
+        } else if (Array.isArray(body.projects) && body.projects.length > 0) {
+          teams = body.projects;
         } else {
           teams = [];
         }
@@ -76,10 +91,11 @@ export async function UserProfile(route, router) {
     const roleLabel = (profileUser.role || 'Member').replace('_', ' ').toUpperCase();
     const initials = getInitials(profileUser.name);
     const joinDate = profileUser.created_at ? new Date(profileUser.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'March, 2024';
+    const isStudent = authStore.role === 'student' || window.location.pathname.startsWith('/student');
     const isFinancePath = window.location.pathname.startsWith('/finance');
     const isDesignPath = window.location.pathname.startsWith('/design');
-    const homeLabel = isFinancePath ? 'Finance Portal' : (isDesignPath ? 'Design Studio' : 'Homepage');
-    const homeHref = isFinancePath ? '/finance' : (isDesignPath ? '/design' : '/');
+    const homeLabel = isStudent ? 'Student Portal' : (isFinancePath ? 'Finance Portal' : (isDesignPath ? 'Design Studio' : 'Homepage'));
+    const homeHref = isStudent ? '/student' : (isFinancePath ? '/finance' : (isDesignPath ? '/design' : '/'));
 
     container.innerHTML = `
       <!-- Breadcrumb -->
@@ -93,13 +109,19 @@ export async function UserProfile(route, router) {
       <div class="profile-hero-card">
         <div class="profile-hero-top">
           <div class="profile-hero-user">
-            <div class="profile-avatar-wrap">
-              ${profileUser.avatar
-                ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
-                : `<span class="profile-avatar-fallback">${initials}</span>`
-              }
-              <span class="profile-avatar-badge" title="Online & Active"></span>
+            <div class="profile-avatar-container" style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
+              <div class="profile-avatar-wrap" id="user-avatar-wrap" title="Click to upload profile photo" style="cursor: pointer; width: 100%; height: 100%;">
+                ${profileUser.avatar
+                  ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
+                  : `<span class="profile-avatar-fallback">${initials}</span>`
+                }
+                <span class="profile-avatar-badge" title="Online & Active"></span>
+              </div>
+              <button type="button" class="profile-avatar-camera-btn" id="btn-hero-cam" title="Change Profile Photo" style="position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; border-radius: 50%; background: #059669; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.18); padding: 0; z-index: 2;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              </button>
             </div>
+            <input type="file" id="hero-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
             <div class="profile-hero-details">
               <h1>${profileUser.name}</h1>
               <div class="profile-hero-sub">
@@ -283,8 +305,19 @@ export async function UserProfile(route, router) {
               </div>
 
               <div class="profile-field form-group-full">
-                <label for="edit-avatar">Profile Photo URL (optional)</label>
-                <input type="url" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="https://..." />
+                <label for="edit-avatar">Profile Photo</label>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <input type="text" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="Enter image URL or upload image file..." style="flex: 1; min-width: 220px;" />
+                  <button type="button" class="prof-btn secondary" id="btn-browse-photo" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 0.95rem; font-size: 0.82rem; white-space: nowrap;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Upload Image
+                  </button>
+                  ${profileUser.avatar ? `
+                    <button type="button" class="prof-btn secondary" id="btn-remove-avatar-edit" style="color: #dc2626; border-color: #fecaca; padding: 0.55rem 0.95rem; font-size: 0.82rem; white-space: nowrap;">
+                      Remove Photo
+                    </button>
+                  ` : ''}
+                </div>
               </div>
 
               <div class="profile-field form-group-full">
@@ -458,6 +491,104 @@ export async function UserProfile(route, router) {
       });
     }
 
+    // Quick Profile Photo Upload Handler
+    async function applyProfilePhoto(photoDataUrl) {
+      profileUser.avatar = photoDataUrl;
+      if (authStore.user) {
+        authStore.user.avatar = photoDataUrl;
+        localStorage.setItem('user', JSON.stringify(authStore.user));
+      }
+
+      if (authStore.role === 'student' || window.location.pathname.startsWith('/student')) {
+        if (photoDataUrl) {
+          saveStudentProfilePhoto(authStore.user, photoDataUrl);
+        } else {
+          removeStudentProfilePhoto(authStore.user);
+        }
+      }
+
+      // Sync topbar & popover avatars immediately
+      updateTopBarAvatar(photoDataUrl, profileUser.name);
+      updateStudentNavbarAvatar();
+
+      // Persist to backend
+      if (token) {
+        try {
+          const endpoint = authStore.role === 'student' ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
+          await fetch(endpoint, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ avatar: photoDataUrl })
+          });
+        } catch (err) {
+          console.warn('Could not persist avatar to server:', err);
+        }
+      }
+
+      render();
+    }
+
+    const fileInput = container.querySelector('#hero-avatar-file-input');
+    const triggerUpload = () => fileInput?.click();
+
+    container.querySelector('#user-avatar-wrap')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerUpload();
+    });
+
+    container.querySelector('#btn-hero-cam')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerUpload();
+    });
+
+    container.querySelector('#btn-browse-photo')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerUpload();
+    });
+
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+          Swal.fire({ icon: 'warning', title: 'File Too Large', text: 'Please choose an image under 5MB.' });
+          fileInput.value = '';
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const dataUrl = ev.target.result;
+          await applyProfilePhoto(dataUrl);
+          Swal.fire({
+            icon: 'success',
+            title: 'Profile Picture Updated!',
+            text: 'Your new photo has been updated in the topbar and profile.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        };
+        reader.readAsDataURL(file);
+        fileInput.value = '';
+      });
+    }
+
+    container.querySelector('#btn-remove-avatar-edit')?.addEventListener('click', async () => {
+      await applyProfilePhoto(null);
+      Swal.fire({
+        icon: 'success',
+        title: 'Profile Picture Removed',
+        text: 'Default initials avatar restored.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    });
+
     // Handle Edit Profile Form Submission
     const editForm = container.querySelector('#profile-edit-form');
     if (editForm) {
@@ -478,7 +609,8 @@ export async function UserProfile(route, router) {
 
         try {
           if (token) {
-            const res = await fetch(`${API_BASE}/auth/profile`, {
+            const endpoint = authStore.role === 'student' ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
+            const res = await fetch(endpoint, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -506,16 +638,29 @@ export async function UserProfile(route, router) {
             localStorage.setItem('user', JSON.stringify(authStore.user));
           }
 
+          // Update scoped student photo storage
+          if (authStore.role === 'student' || window.location.pathname.startsWith('/student')) {
+            if (updatedData.avatar) {
+              saveStudentProfilePhoto(authStore.user, updatedData.avatar);
+            } else {
+              removeStudentProfilePhoto(authStore.user);
+            }
+          }
+
           // Update header display if present
           const headerName = document.querySelector('#user-profile-header .user-name') || document.querySelector('#finance-user-profile-header .user-name');
           if (headerName) headerName.textContent = updatedData.name;
           const popoverName = document.querySelector('#popover-name') || document.querySelector('#finance-popover-name');
           if (popoverName) popoverName.textContent = updatedData.name;
 
+          // Update topbar avatar immediately
+          updateTopBarAvatar(updatedData.avatar, updatedData.name);
+          updateStudentNavbarAvatar();
+
           Swal.fire({
             icon: 'success',
             title: 'Profile Updated!',
-            text: 'Your personal profile details have been saved successfully.',
+            text: 'Your personal profile details and topbar photo have been updated successfully.',
             timer: 2000,
             showConfirmButton: false
           });
