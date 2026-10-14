@@ -99,6 +99,10 @@ class FinanceService {
     return this._fetch('/finance/maintenance-charges', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  async addMarketingExpense(data) {
+    return this._fetch('/finance/marketing-expenses', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   async createInvoice(data) {
     return this._fetch('/finance/invoices', { method: 'POST', body: JSON.stringify(data) });
   }

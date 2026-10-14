@@ -46,36 +46,47 @@ export async function ProjectFinance(route, router) {
       try {
         const projectData = await financeService.getProjectDetails(route.params.id);
         if (!projectData) throw new Error('Project finance details not found');
-      
-      const project    = projectData.project || {};
-      const projectLock = getFinanceLock(project);
-      const payments = (projectData.invoices || []).flatMap(inv => (inv.client_payments || []).map(cp => ({
-        date: fmtDate(cp.payment_date),
-        type: cp.payment_method ? cp.payment_method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Bank Transfer',
-        amount: cp.amount,
-        status: 'Confirmed'
-      })));
-      const allResources = projectData.assigned_resources || [];
-      const payroll = allResources.filter(r => r.type === 'Student');
-      const faculty = allResources.filter(r => r.type === 'Faculty');
-      const estCost = parseFloat(project.budget || projectData.total_development_amount || 0);
-      const totalBilled = parseFloat(projectData.total_invoiced || 0);
-      const collected = parseFloat(projectData.total_collected || 0);
-      const billedPending = Math.max(0, totalBilled - collected);
-      const unbilledBalance = Math.max(0, estCost - totalBilled);
-      const totalRemaining = Math.max(0, estCost - collected);
-      const budgetPct = estCost > 0 ? Math.round((collected / estCost) * 100) : 0;
-      const billedPct = totalBilled > 0 ? Math.round((collected / totalBilled) * 100) : 0;
-      const devTotal = projectData.development_allocations ? (projectData.development_allocations.reduce((sum, a) => sum + parseFloat(a.amount), 0)) : 0;
-      const hostTotal = projectData.hosting_charges ? (projectData.hosting_charges.reduce((sum, h) => sum + parseFloat(h.amount), 0)) : 0;
 
-      container.innerHTML = `
+        const project = projectData.project || {};
+        const projectLock = getFinanceLock(project);
+        const payments = (projectData.invoices || []).flatMap(inv => (inv.client_payments || []).map(cp => ({
+          date: fmtDate(cp.payment_date),
+          type: cp.payment_method ? cp.payment_method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Bank Transfer',
+          amount: cp.amount,
+          status: 'Confirmed'
+        })));
+        const allResources = projectData.assigned_resources || [];
+        const payroll = allResources.filter(r => r.type === 'Student');
+        const faculty = allResources.filter(r => r.type === 'Faculty');
+        const estCost = parseFloat(project.budget || projectData.total_development_amount || 0);
+        const totalBilled = parseFloat(projectData.total_invoiced || 0);
+        const collected = parseFloat(projectData.total_collected || 0);
+        const billedPending = Math.max(0, totalBilled - collected);
+        const unbilledBalance = Math.max(0, estCost - totalBilled);
+        const totalRemaining = Math.max(0, estCost - collected);
+        const budgetPct = estCost > 0 ? Math.round((collected / estCost) * 100) : 0;
+        const billedPct = totalBilled > 0 ? Math.round((collected / totalBilled) * 100) : 0;
+        const devTotal = projectData.development_allocations ? (projectData.development_allocations.reduce((sum, a) => sum + parseFloat(a.amount), 0)) : 0;
+        const hostTotal = projectData.hosting_charges ? (projectData.hosting_charges.reduce((sum, h) => sum + parseFloat(h.amount), 0)) : 0;
+        const marketingBudget = parseFloat(projectData.marketing_budget || 0);
+        const marketingExpenses = projectData.marketing_expenses || [];
+        const marketingSpent = marketingExpenses.reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
+        const marketingRemaining = Math.max(0, marketingBudget - marketingSpent);
+
+        container.innerHTML = `
         <div class="fin-page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h1>${project.title || 'Unknown Project'}</h1>
             <p>Client: ${project.client_name || '-'}&nbsp;&nbsp;|&nbsp;&nbsp;Status: <span class="fin-badge ${statusBadgeClass(project.status)}">${(project.status || 'active').replace('_', ' ')}</span>${projectLock.locked ? `&nbsp;<span style="font-size:0.75rem;font-weight:600;color:${projectLock.reason === 'status' ? '#b91c1c' : '#92400e'}">· ${projectLock.reason === 'status' ? '🔒 Locked' : '⚠ No Budget'}</span>` : ''}</p>
           </div>
-          <div>
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            ${projectLock.locked
+            ? `<button class="fin-btn outline sm" disabled style="opacity:0.5; cursor:not-allowed;" title="${projectLock.reason === 'status' ? 'Locked: project is ' + projectLock.label : 'Locked: no approved budget'}">🔒 + Add Expense</button>`
+            : `<button class="fin-btn primary sm" id="top-add-marketing-expense-btn" style="display:inline-flex; align-items:center; gap:6px;">
+                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                   <span>Add Marketing Expense</span>
+                 </button>`
+          }
             <button class="btn-back-nav" id="back-btn" title="Return to Projects">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -96,9 +107,9 @@ export async function ProjectFinance(route, router) {
             <div class="kpi-label">Pending from Client</div>
             <div class="kpi-value">${fmt(totalRemaining)}</div>
             <div class="kpi-sub" style="font-size:0.85rem; font-weight:500; line-height:1.45; margin-top:4px;">
-              ${totalRemaining === 0 
-                ? 'Fully collected ✓' 
-                : `<div style="font-size:0.92rem; font-weight:600; margin-top:2px">Invoiced Pending: <strong style="font-weight:700">${fmt(billedPending)}</strong></div>
+              ${totalRemaining === 0
+            ? 'Fully collected ✓'
+            : `<div style="font-size:0.92rem; font-weight:600; margin-top:2px">Invoiced Pending: <strong style="font-weight:700">${fmt(billedPending)}</strong></div>
                    <div style="font-size:0.84rem; margin-top:2px">Unbilled Contract: <strong>${fmt(unbilledBalance)}</strong></div>`}
             </div>
           </div>
@@ -121,8 +132,8 @@ export async function ProjectFinance(route, router) {
           border:1px solid ${projectLock.reason === 'status' ? '#fca5a5' : '#fcd34d'}">
           <span style="font-size:1.1rem">${projectLock.reason === 'status' ? '🔒' : '⚠'}</span>
           <span><strong>Read-only:</strong> ${projectLock.reason === 'status'
-            ? `This project is <strong>${projectLock.label}</strong> — financial modifications are disabled.`
-            : 'This project has no approved budget. Financial modifications are disabled until a budget is set.'}
+              ? `This project is <strong>${projectLock.label}</strong> — financial modifications are disabled.`
+              : 'This project has no approved budget. Financial modifications are disabled until a budget is set.'}
           </span>
         </div>` : ''}
 
@@ -146,11 +157,18 @@ export async function ProjectFinance(route, router) {
               </div>
 
               <div class="fin-cost-section" style="margin-top:0.75rem;">
+                <div class="fin-cost-section-title">Marketing Allocation</div>
+                <div class="fin-cost-item"><span class="label">Budget Allocated</span><span class="value" style="font-weight:600;">${fmt(marketingBudget)}</span></div>
+                <div class="fin-cost-item"><span class="label">Spent / Realized</span><span class="value" style="color:#ef4444;font-weight:600;">${fmt(marketingSpent)}</span></div>
+                <div class="fin-cost-item"><span class="label">Remaining Balance</span><span class="value" style="color:${marketingRemaining > 0 ? '#10b981' : (marketingBudget > 0 ? '#f59e0b' : 'var(--text-muted)')};font-weight:600;">${fmt(marketingRemaining)}</span></div>
+              </div>
+
+              <div class="fin-cost-section" style="margin-top:0.75rem;">
                 <div class="fin-cost-section-title">Maintenance & Support</div>
                 ${projectData.maintenance_support_charges?.length > 0
-                  ? `<div class="fin-cost-item"><span class="label">Annual Support</span><span class="value">${fmt(projectData.maintenance_support_charges.reduce((s,c)=>s+parseFloat(c.amount),0))}</span></div>`
-                  : `<div class="fin-cost-item"><span class="label" style="font-style:italic;">Not included</span><span class="value">–</span></div>`
-                }
+            ? `<div class="fin-cost-item"><span class="label">Annual Support</span><span class="value">${fmt(projectData.maintenance_support_charges.reduce((s, c) => s + parseFloat(c.amount), 0))}</span></div>`
+            : `<div class="fin-cost-item"><span class="label" style="font-style:italic;">Not included</span><span class="value">–</span></div>`
+          }
               </div>
 
               <div style="margin-top: 1rem; border-top: 2px solid var(--border-color); padding-top: 0.75rem;">
@@ -165,13 +183,13 @@ export async function ProjectFinance(route, router) {
             <div class="fin-panel-header">
               <div class="fin-panel-title">Client Payments</div>
               ${projectLock.locked
-                ? `<button class="fin-btn outline sm" id="add-payment-btn" disabled aria-disabled="true"
+            ? `<button class="fin-btn outline sm" id="add-payment-btn" disabled aria-disabled="true"
                     title="${projectLock.reason === 'status'
-                      ? 'Payments disabled: project is ' + projectLock.label
-                      : 'Payments disabled: no approved budget set'}"
+              ? 'Payments disabled: project is ' + projectLock.label
+              : 'Payments disabled: no approved budget set'}"
                     style="opacity:0.45;cursor:not-allowed">🔒 Record Payment</button>`
-                : `<button class="fin-btn outline sm" id="add-payment-btn">+ Record Payment</button>`
-              }
+            : `<button class="fin-btn outline sm" id="add-payment-btn">+ Record Payment</button>`
+          }
             </div>
             <div class="fin-table-wrap">
               <table class="fin-table">
@@ -237,23 +255,192 @@ export async function ProjectFinance(route, router) {
             </table>
           </div>
         </div>
+
+        <!-- Dedicated Marketing Expenses Card -->
+        <div class="fin-panel" style="margin-top: 1.5rem;">
+          <div class="fin-panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div class="fin-panel-title">Marketing Expenses</div>
+              <div class="fin-panel-subtitle">Itemized campaign and marketing expenditures</div>
+            </div>
+            ${projectLock.locked ? '' : `
+              <button class="fin-btn outline sm" id="card-add-marketing-expense-btn" style="display:inline-flex; align-items:center; gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                 Add Marketing Expense
+              </button>
+            `}
+          </div>
+          <div class="fin-table-wrap">
+            <table class="fin-table">
+              <thead>
+                <tr>
+                  <th>Expense ID</th>
+                  <th>Date</th>
+                  <th>Campaign / Title</th>
+                  <th>Category</th>
+                  <th>Vendor / Platform</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${marketingExpenses.map(me => `
+                  <tr>
+                    <td style="font-family:monospace; font-size:0.8rem; font-weight:600; color:var(--primary);">ME-${me.id}</td>
+                    <td style="white-space:nowrap; color:var(--text-muted);">${fmtDate(me.expense_date)}</td>
+                    <td><div style="font-weight:600;">${me.title}</div></td>
+                    <td><span class="fin-badge neutral" style="font-size:0.72rem; text-transform:capitalize;">${(me.category || 'other').replace('_', ' ')}</span></td>
+                    <td style="color:var(--text-muted); font-size:0.85rem;">${me.vendor || '—'}</td>
+                    <td style="font-weight:700; color:#ef4444;">${fmt(me.amount)}</td>
+                    <td><span class="fin-badge success" style="font-size:0.72rem;">Completed</span></td>
+                  </tr>
+                `).join('')}
+                ${marketingExpenses.length === 0 ? '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.75rem;">No marketing expenses recorded for this project yet.</td></tr>' : ''}
+              </tbody>
+            </table>
+          </div>
+        </div>
       `;
 
-      container.querySelector('#back-btn').addEventListener('click', () => router.push('/finance/projects'));
-      const payBtn = container.querySelector('#add-payment-btn');
-      if (payBtn && !projectLock.locked) {
-        payBtn.addEventListener('click', () => {
-          alert('Please record client payments via the Invoices Ledger.');
-          router.push('/finance/invoices');
-        });
-      }
+        container.querySelector('#back-btn').addEventListener('click', () => router.push('/finance/projects'));
+        const payBtn = container.querySelector('#add-payment-btn');
+        if (payBtn && !projectLock.locked) {
+          payBtn.addEventListener('click', () => {
+            alert('Please record client payments via the Invoices Ledger.');
+            router.push('/finance/invoices');
+          });
+        }
 
-      // Fetch and render SSL Information
-      const hasSsl = projectData.hosting_charges && projectData.hosting_charges.some(hc => hc.charge_type === 'ssl' && hc.domain_name);
-      if (hasSsl) {
-        const sslContainer = container.querySelector('#project-ssl-info-container');
-        if (sslContainer) {
-          sslContainer.innerHTML = `
+        // Unified Marketing Expense Modal
+        const openMarketingModal = () => {
+          const modal = document.createElement('div');
+          modal.className = 'fin-modal-overlay';
+          modal.innerHTML = `
+          <div class="fin-modal" style="max-width:480px; width:95%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <h3 style="margin:0; font-size:1.15rem;">Record Marketing Expense</h3>
+              <button id="close-mkt-x" style="background:none; border:none; cursor:pointer; font-size:1.25rem; color:var(--text-muted);">&times;</button>
+            </div>
+            <div style="font-size:0.825rem; color:var(--text-muted); margin-bottom:1rem; padding:0.5rem 0.75rem; background:var(--bg-light); border-radius:6px; line-height:1.5;">
+              Project: <strong>${project.title || 'Unknown'}</strong><br>
+              Marketing Budget: <strong>${fmt(marketingBudget)}</strong> | Spent: <span style="color:#ef4444;font-weight:600;">${fmt(marketingSpent)}</span> | Remaining: <span style="color:#10b981;font-weight:600;">${fmt(marketingRemaining)}</span>
+            </div>
+            <div id="mkt-error-msg" style="display:none; color:#ef4444; font-size:0.8rem; margin-bottom:0.75rem; padding:0.5rem; background:#fee2e2; border-radius:4px;"></div>
+            
+            <div class="fin-form-group">
+              <label style="font-weight:600;">Expense Title / Campaign *</label>
+              <input type="text" class="fin-input" id="mkt-title" placeholder="e.g. Meta Lead Campaign, Google Ads, Print flyers" required>
+            </div>
+
+            <div style="display:flex; gap:0.75rem;">
+              <div class="fin-form-group" style="flex:1;">
+                <label style="font-weight:600;">Category</label>
+                <select class="fin-input" id="mkt-category">
+                  <option value="digital_ads">Digital Ads</option>
+                  <option value="campaign">Campaign</option>
+                  <option value="branding">Branding</option>
+                  <option value="events">Events & Expos</option>
+                  <option value="print">Print & Collateral</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="fin-form-group" style="flex:1;">
+                <label style="font-weight:600;">Amount (₹) *</label>
+                <input type="number" class="fin-input" id="mkt-amount" placeholder="0.00" min="0.01" step="0.01" required>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:0.75rem;">
+              <div class="fin-form-group" style="flex:1;">
+                <label style="font-weight:600;">Expense Date *</label>
+                <input type="date" class="fin-input" id="mkt-date" value="${new Date().toISOString().split('T')[0]}" required>
+              </div>
+              <div class="fin-form-group" style="flex:1;">
+                <label>Vendor / Platform</label>
+                <input type="text" class="fin-input" id="mkt-vendor" placeholder="e.g. Google, Meta, Local Agency">
+              </div>
+            </div>
+
+            <div class="fin-form-actions" style="margin-top:1.25rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+              <button class="fin-btn outline" id="cancel-mkt">Cancel</button>
+              <button class="fin-btn primary" id="save-mkt-btn">Save Expense</button>
+            </div>
+          </div>
+        `;
+          document.body.appendChild(modal);
+
+          const closeModal = () => modal.remove();
+          modal.querySelector('#cancel-mkt').addEventListener('click', closeModal);
+          modal.querySelector('#close-mkt-x').addEventListener('click', closeModal);
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+          });
+
+          modal.querySelector('#save-mkt-btn').addEventListener('click', async () => {
+            const title = modal.querySelector('#mkt-title').value.trim();
+            const category = modal.querySelector('#mkt-category').value;
+            const amount = parseFloat(modal.querySelector('#mkt-amount').value);
+            const expenseDate = modal.querySelector('#mkt-date').value;
+            const vendor = modal.querySelector('#mkt-vendor').value.trim();
+            const errEl = modal.querySelector('#mkt-error-msg');
+            const saveBtn = modal.querySelector('#save-mkt-btn');
+
+            if (!title) {
+              errEl.textContent = 'Please enter an expense title.';
+              errEl.style.display = 'block';
+              return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+              errEl.textContent = 'Please enter a valid amount greater than 0.';
+              errEl.style.display = 'block';
+              return;
+            }
+            if (!expenseDate) {
+              errEl.textContent = 'Please select an expense date.';
+              errEl.style.display = 'block';
+              return;
+            }
+
+            try {
+              saveBtn.disabled = true;
+              saveBtn.textContent = 'Saving...';
+              errEl.style.display = 'none';
+
+              await financeService.addMarketingExpense({
+                project_finance_id: projectData.id,
+                title,
+                category,
+                amount,
+                expense_date: expenseDate,
+                vendor: vendor || null
+              });
+
+              closeModal();
+              loadProjectDetails();
+            } catch (err) {
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Save Expense';
+              errEl.textContent = err.message || 'Failed to save marketing expense.';
+              errEl.style.display = 'block';
+            }
+          });
+        };
+
+        const topAddMktBtn = container.querySelector('#top-add-marketing-expense-btn');
+        if (topAddMktBtn) {
+          topAddMktBtn.addEventListener('click', openMarketingModal);
+        }
+        const cardAddMktBtn = container.querySelector('#card-add-marketing-expense-btn');
+        if (cardAddMktBtn) {
+          cardAddMktBtn.addEventListener('click', openMarketingModal);
+        }
+
+        // Fetch and render SSL Information
+        const hasSsl = projectData.hosting_charges && projectData.hosting_charges.some(hc => hc.charge_type === 'ssl' && hc.domain_name);
+        if (hasSsl) {
+          const sslContainer = container.querySelector('#project-ssl-info-container');
+          if (sslContainer) {
+            sslContainer.innerHTML = `
             <div class="fin-panel" style="margin-bottom: 1.25rem;">
               <div class="fin-panel-header">
                 <div class="fin-panel-title">SSL Information</div>
@@ -264,40 +451,40 @@ export async function ProjectFinance(route, router) {
               </div>
             </div>
           `;
-          
-          financeService._fetch('/finance/ssl-status').then(async response => {
-            if (response && response.ssl_status) {
-              const sslData = response.ssl_status.find(s => s.project_id === project.id);
-              if (sslData) {
-                let renewals = [];
-                try {
-                  const allRenewals = await financeService._fetch('/finance/ssl-renewal-history');
-                  if (allRenewals && Array.isArray(allRenewals)) {
-                    renewals = allRenewals.filter(r => r.project_id === project.id);
+
+            financeService._fetch('/finance/ssl-status').then(async response => {
+              if (response && response.ssl_status) {
+                const sslData = response.ssl_status.find(s => s.project_id === project.id);
+                if (sslData) {
+                  let renewals = [];
+                  try {
+                    const allRenewals = await financeService._fetch('/finance/ssl-renewal-history');
+                    if (allRenewals && Array.isArray(allRenewals)) {
+                      renewals = allRenewals.filter(r => r.project_id === project.id);
+                    }
+                  } catch (e) { }
+
+                  const fmtN = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+                  let statusBadge = '';
+                  if (sslData.error) {
+                    statusBadge = '<span class="fin-badge danger">Unable to fetch SSL certificate</span>';
+                  } else if (sslData.status === 'Expired') {
+                    statusBadge = '<span class="fin-badge danger">Expired</span>';
+                  } else if (sslData.status === 'Critical') {
+                    statusBadge = '<span class="fin-badge danger">Critical</span>';
+                  } else if (sslData.status === 'Expiring Soon') {
+                    statusBadge = '<span class="fin-badge warning">Expiring Soon</span>';
+                  } else {
+                    statusBadge = '<span class="fin-badge success">Active</span>';
                   }
-                } catch(e) {}
-                
-                const fmtN = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
-                let statusBadge = '';
-                if (sslData.error) {
-                  statusBadge = '<span class="fin-badge danger">Unable to fetch SSL certificate</span>';
-                } else if (sslData.status === 'Expired') {
-                  statusBadge = '<span class="fin-badge danger">Expired</span>';
-                } else if (sslData.status === 'Critical') {
-                  statusBadge = '<span class="fin-badge danger">Critical</span>';
-                } else if (sslData.status === 'Expiring Soon') {
-                  statusBadge = '<span class="fin-badge warning">Expiring Soon</span>';
-                } else {
-                  statusBadge = '<span class="fin-badge success">Active</span>';
-                }
-                
-                const renewalWarning = sslData.unrecorded_renewal
-                  ? `<div style="background:#e0f2fe; color:#0369a1; padding: 10px; margin-top: 15px; border-radius: 6px; font-size: 0.9rem;">
+
+                  const renewalWarning = sslData.unrecorded_renewal
+                    ? `<div style="background:#e0f2fe; color:#0369a1; padding: 10px; margin-top: 15px; border-radius: 6px; font-size: 0.9rem;">
                       <strong>Notice:</strong> SSL certificate appears to have been renewed. Please record the renewal expense if it has not already been recorded.
                      </div>`
-                  : '';
-                
-                const renewalsTable = renewals.length > 0 ? `
+                    : '';
+
+                  const renewalsTable = renewals.length > 0 ? `
                   <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
                     <div style="font-size: 0.95rem; font-weight: 600; margin-bottom: 10px;">Renewal History</div>
                     <div class="fin-table-wrap" style="max-height: 250px; overflow-y: auto;">
@@ -326,8 +513,8 @@ export async function ProjectFinance(route, router) {
                     </div>
                   </div>
                 ` : '';
-                
-                sslContainer.innerHTML = `
+
+                  sslContainer.innerHTML = `
                   <div class="fin-panel" style="margin-bottom: 1.25rem;">
                     <div class="fin-panel-header">
                       <div class="fin-panel-title">SSL Information</div>
@@ -383,12 +570,12 @@ export async function ProjectFinance(route, router) {
                     ${renewalWarning}
                   </div>
                 `;
-              } else {
-                sslContainer.innerHTML = '';
+                } else {
+                  sslContainer.innerHTML = '';
+                }
               }
-            }
-          }).catch(err => {
-            sslContainer.innerHTML = `
+            }).catch(err => {
+              sslContainer.innerHTML = `
               <div class="fin-panel" style="margin-bottom: 1.25rem;">
                 <div class="fin-panel-header">
                   <div class="fin-panel-title">SSL Information</div>
@@ -399,9 +586,9 @@ export async function ProjectFinance(route, router) {
                 </div>
               </div>
             `;
-          });
+            });
+          }
         }
-      }
 
       } catch (e) {
         container.innerHTML = `<div class="alert-error" style="margin:2rem">Failed to load project details: ${e.message} <button class="fin-btn outline sm" onclick="window.location.reload()" style="margin-left:1rem">Retry</button></div>`;
@@ -482,6 +669,11 @@ export async function ProjectFinance(route, router) {
             </div>
           </div>
           <div>
+            <div class="fin-form-subhead" style="margin-top:0;">Marketing Allocation</div>
+            <div class="fin-form-group">
+              <label style="font-weight:600;">Marketing Budget (₹)</label>
+              <input type="number" class="fin-input" id="new-p-marketing" placeholder="0" min="0">
+            </div>
             <div class="fin-form-subhead">Hosting Charges</div>
             <div class="fin-form-group">
               <label>SSL (₹)</label>
@@ -522,6 +714,7 @@ export async function ProjectFinance(route, router) {
                 <th>Project</th>
                 <th>Status</th>
                 <th>Est. Cost</th>
+                <th>Marketing Budget</th>
                 <th>Total Billing</th>
                 <th style="color:var(--primary)">Collected</th>
                 <th style="color:var(--warning-text,#92400e)">Pending from Client</th>
@@ -544,14 +737,14 @@ export async function ProjectFinance(route, router) {
     let allProjects = [];
     let currentPage = 1;
     const itemsPerPage = 10;
-    
+
     const renderProjects = () => {
       const searchTerm = container.querySelector('#search-input').value.toLowerCase();
       const statusFilter = container.querySelector('#status-filter').value;
       const tbody = container.querySelector('#projects-tbody');
       const noResults = container.querySelector('#no-results');
       const countEl = container.querySelector('#results-count');
-      
+
       const filtered = allProjects.filter(p => {
         const pName = p.title || 'Unknown Project';
         const client = p.client_name || 'Unknown Client';
@@ -579,22 +772,23 @@ export async function ProjectFinance(route, router) {
       } else {
         noResults.style.display = 'none';
         tbody.innerHTML = paginated.map(p => {
-          const pf      = p.project_finance || {};
-          const pName   = p.title || 'Unknown Project';
-          const client  = p.client_name || 'Unknown Client';
-          const status  = p.status || 'proposed';
-          const lock    = getFinanceLock(p);
+          const pf = p.project_finance || {};
+          const pName = p.title || 'Unknown Project';
+          const client = p.client_name || 'Unknown Client';
+          const status = p.status || 'proposed';
+          const lock = getFinanceLock(p);
           const billing = pf.total_invoiced || 0;
           const collected = pf.total_collected || 0;
-          const expenses  = pf.total_expenses || 0;
-          const profit    = collected - expenses;
+          const expenses = pf.total_expenses || 0;
+          const profit = collected - expenses;
+          const marketingBudget = pf.marketing_budget || 0;
 
           const lockLabel = lock.locked
             ? (lock.reason === 'status'
-                ? `<span style="font-size:0.68rem;font-weight:600;padding:2px 6px;border-radius:8px;background:#fee2e2;color:#b91c1c;margin-left:5px">🔒 ${lock.label}</span>`
-                : `<span style="font-size:0.68rem;font-weight:600;padding:2px 6px;border-radius:8px;background:#fef3c7;color:#92400e;margin-left:5px">⚠ No Budget</span>`)
+              ? `<span style="font-size:0.68rem;font-weight:600;padding:2px 6px;border-radius:8px;background:#fee2e2;color:#b91c1c;margin-left:5px">🔒 ${lock.label}</span>`
+              : `<span style="font-size:0.68rem;font-weight:600;padding:2px 6px;border-radius:8px;background:#fef3c7;color:#92400e;margin-left:5px">⚠ No Budget</span>`)
             : '';
-          
+
           return `
           <tr style="${lock.locked ? 'background:rgba(0,0,0,0.014)' : ''}">
             <td>
@@ -603,6 +797,7 @@ export async function ProjectFinance(route, router) {
             </td>
             <td><span class="fin-badge ${statusBadgeClass(status)}">${formatStatus(status)}</span></td>
             <td>${fmt(p.budget || 0)}</td>
+            <td style="font-weight:600;color:#6366f1">${fmt(marketingBudget)}</td>
             <td style="font-weight:600">${fmt(billing)}</td>
             <td style="color:var(--primary);font-weight:700">${fmt(pf.total_collected || 0)}</td>
             <td style="color:#d97706;font-weight:700">${fmt(pf.pending_amount || 0)}</td>
@@ -642,16 +837,16 @@ export async function ProjectFinance(route, router) {
     const loadProjects = async () => {
       const tbody = container.querySelector('#projects-tbody');
       const noResults = container.querySelector('#no-results');
-      
+
       if (tbody) {
         noResults.style.display = 'none';
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:3rem;color:var(--text-muted)"><span class="fin-spinner" style="margin-right:10px"></span> Loading projects...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:3rem;color:var(--text-muted)"><span class="fin-spinner" style="margin-right:10px"></span> Loading projects...</td></tr>`;
       }
-      
+
       try {
         allProjects = await financeService.getProjectFinances();
         renderProjects();
-        
+
         // All projects without a finance record are available for selection,
         // but locked ones (closed / cancelled / no budget) are shown as disabled.
         const availableProjects = allProjects.filter(p => !p.project_finance);
@@ -670,6 +865,8 @@ export async function ProjectFinance(route, router) {
           // Clear any inline form error when selection changes
           const formErr = container.querySelector('#form-save-error');
           if (formErr) formErr.style.display = 'none';
+          const mktInp = container.querySelector('#new-p-marketing');
+          if (mktInp) mktInp.value = '';
           if (p) {
             container.querySelector('#new-p-client').value = p.client_name || '';
             container.querySelector('#new-p-est').value = p.budget || p.estimated_cost || 0;
@@ -680,7 +877,7 @@ export async function ProjectFinance(route, router) {
         });
 
       } catch (e) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:#ef4444">Failed to load projects: ${e.message} <button class="fin-btn outline sm" onclick="window.location.reload()" style="margin-left:10px">Retry</button></td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:#ef4444">Failed to load projects: ${e.message} <button class="fin-btn outline sm" onclick="window.location.reload()" style="margin-left:10px">Retry</button></td></tr>`;
       }
     };
 
@@ -698,7 +895,7 @@ export async function ProjectFinance(route, router) {
     container.querySelector('#cancel-new-project').addEventListener('click', () => addForm.classList.remove('visible'));
     container.querySelector('#save-new-project').addEventListener('click', async () => {
       const projSelect = container.querySelector('#new-p-name');
-      const formErr    = container.querySelector('#form-save-error');
+      const formErr = container.querySelector('#form-save-error');
       if (formErr) formErr.style.display = 'none';
 
       if (!projSelect.value) {
@@ -726,16 +923,17 @@ export async function ProjectFinance(route, router) {
       saveBtn.textContent = 'Saving…';
 
       const data = {
-        project_id:          projSelect.value,
-        name:                projSelect.options[projSelect.selectedIndex].text,
-        client:              container.querySelector('#new-p-client').value.trim() || 'Unknown',
-        estimated_cost:      parseFloat(container.querySelector('#new-p-est').value) || 0,
-        dev_student:         parseFloat(container.querySelector('#new-p-dev-stu').value) || 0,
-        dev_faculty:         parseFloat(container.querySelector('#new-p-dev-fac').value) || 0,
-        dev_rlabz:           parseFloat(container.querySelector('#new-p-dev-rlabz').value) || 0,
-        host_ssl:            parseFloat(container.querySelector('#new-p-host-ssl').value) || 0,
-        host_domain:         parseFloat(container.querySelector('#new-p-host-dom').value) || 0,
-        host_api:            parseFloat(container.querySelector('#new-p-host-api').value) || 0,
+        project_id: projSelect.value,
+        name: projSelect.options[projSelect.selectedIndex].text,
+        client: container.querySelector('#new-p-client').value.trim() || 'Unknown',
+        estimated_cost: parseFloat(container.querySelector('#new-p-est').value) || 0,
+        marketing_budget: parseFloat(container.querySelector('#new-p-marketing')?.value) || 0,
+        dev_student: parseFloat(container.querySelector('#new-p-dev-stu').value) || 0,
+        dev_faculty: parseFloat(container.querySelector('#new-p-dev-fac').value) || 0,
+        dev_rlabz: parseFloat(container.querySelector('#new-p-dev-rlabz').value) || 0,
+        host_ssl: parseFloat(container.querySelector('#new-p-host-ssl').value) || 0,
+        host_domain: parseFloat(container.querySelector('#new-p-host-dom').value) || 0,
+        host_api: parseFloat(container.querySelector('#new-p-host-api').value) || 0,
         maintenance_support: parseFloat(container.querySelector('#new-p-maint').value) || 0,
       };
 
