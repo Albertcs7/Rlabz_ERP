@@ -101,7 +101,7 @@ export function DirectorStudents(route, router) {
 
       <!-- Designation Track Explanation Banner -->
       <div class="director-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
-        <div class="director-panel" style="border-top: 4px solid #9333ea; padding: 1rem;">
+        <div class="director-panel track-summary-card" id="card-track-nova" style="border-top: 4px solid #9333ea; padding: 1rem; cursor: pointer;" title="Click to filter by Nova Lead Track">
           <div style="display:flex; align-items:center; justify-content:space-between;">
             <span class="track-badge nova">Nova Track</span>
             <strong>${counts.nova} Students</strong>
@@ -111,7 +111,7 @@ export function DirectorStudents(route, router) {
           </p>
         </div>
 
-        <div class="director-panel" style="border-top: 4px solid #2563eb; padding: 1rem;">
+        <div class="director-panel track-summary-card" id="card-track-orbit" style="border-top: 4px solid #2563eb; padding: 1rem; cursor: pointer;" title="Click to filter by Orbit Dev Track">
           <div style="display:flex; align-items:center; justify-content:space-between;">
             <span class="track-badge orbit">Orbit Track</span>
             <strong>${counts.orbit} Students</strong>
@@ -121,7 +121,7 @@ export function DirectorStudents(route, router) {
           </p>
         </div>
 
-        <div class="director-panel" style="border-top: 4px solid var(--primary); padding: 1rem;">
+        <div class="director-panel track-summary-card" id="card-track-spark" style="border-top: 4px solid var(--primary); padding: 1rem; cursor: pointer;" title="Click to filter by Spark Learner Track">
           <div style="display:flex; align-items:center; justify-content:space-between;">
             <span class="track-badge spark">Spark Track</span>
             <strong>${counts.spark} Students</strong>
@@ -238,7 +238,9 @@ export function DirectorStudents(route, router) {
         e.preventDefault();
         const pTitle = chip.getAttribute('data-project-title');
         if (pTitle) {
-          const targetUrl = `/director/projects?tab=all&search=${encodeURIComponent(pTitle)}`;
+          const isDirector = window.location.pathname.startsWith('/director');
+          const base = isDirector ? '/director' : '/dashboard';
+          const targetUrl = `${base}/projects?tab=active&search=${encodeURIComponent(pTitle)}`;
           if (router) router.push(targetUrl);
           else window.location.href = targetUrl;
         }
@@ -250,7 +252,9 @@ export function DirectorStudents(route, router) {
         e.stopPropagation();
         const studentId = btn.getAttribute('data-student-id');
         if (studentId) {
-          router ? router.push(`/director/students/${studentId}`) : (window.location.href = `/director/students/${studentId}`);
+          const isDirector = window.location.pathname.startsWith('/director');
+          const base = isDirector ? '/director' : '/dashboard';
+          router ? router.push(`${base}/students/${studentId}`) : (window.location.href = `${base}/students/${studentId}`);
         }
       });
     });
@@ -281,27 +285,25 @@ export function DirectorStudents(route, router) {
       render();
     });
 
-    // Attach Filter Listeners
-    container.querySelector('#filter-all')?.addEventListener('click', () => { 
-      currentTrackFilter = 'All'; 
-      window.history.replaceState({}, '', '/director/students');
-      render(); 
-    });
-    container.querySelector('#filter-nova')?.addEventListener('click', () => { 
-      currentTrackFilter = 'Nova'; 
-      window.history.replaceState({}, '', '/director/students?track=Nova');
-      render(); 
-    });
-    container.querySelector('#filter-orbit')?.addEventListener('click', () => { 
-      currentTrackFilter = 'Orbit'; 
-      window.history.replaceState({}, '', '/director/students?track=Orbit');
-      render(); 
-    });
-    container.querySelector('#filter-spark')?.addEventListener('click', () => { 
-      currentTrackFilter = 'Spark'; 
-      window.history.replaceState({}, '', '/director/students?track=Spark');
-      render(); 
-    });
+    // Attach Filter Listeners (Buttons & Cards)
+    const selectTrack = (track) => {
+      currentTrackFilter = track;
+      const isDirector = window.location.pathname.startsWith('/director');
+      const base = isDirector ? '/director' : '/dashboard';
+      const path = track === 'All' ? `${base}/students` : `${base}/students?track=${track}`;
+      window.history.replaceState({}, '', path);
+      render();
+    };
+
+    container.querySelector('#filter-all')?.addEventListener('click', () => selectTrack('All'));
+    container.querySelector('#filter-nova')?.addEventListener('click', () => selectTrack('Nova'));
+    container.querySelector('#filter-orbit')?.addEventListener('click', () => selectTrack('Orbit'));
+    container.querySelector('#filter-spark')?.addEventListener('click', () => selectTrack('Spark'));
+
+    // Top track banner cards click
+    container.querySelector('#card-track-nova')?.addEventListener('click', () => selectTrack('Nova'));
+    container.querySelector('#card-track-orbit')?.addEventListener('click', () => selectTrack('Orbit'));
+    container.querySelector('#card-track-spark')?.addEventListener('click', () => selectTrack('Spark'));
   }
 
   // Instant 0ms render
