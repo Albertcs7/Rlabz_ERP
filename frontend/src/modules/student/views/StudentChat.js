@@ -136,8 +136,8 @@ export async function StudentChat(route, router) {
 
       <!-- KPI Grid -->
       <div class="student-comm-kpi-grid">
-        <div class="student-comm-kpi-card kpi-blue">
-          <div class="student-comm-kpi-icon blue">
+        <div class="student-comm-kpi-card kpi-sidebar-primary" title="Active Supervisors">
+          <div class="student-comm-kpi-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           </div>
           <div class="student-comm-kpi-info">
@@ -146,8 +146,8 @@ export async function StudentChat(route, router) {
           </div>
         </div>
 
-        <div class="student-comm-kpi-card kpi-indigo">
-          <div class="student-comm-kpi-icon indigo">
+        <div class="student-comm-kpi-card kpi-purple" title="Total Messages in System">
+          <div class="student-comm-kpi-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
           </div>
           <div class="student-comm-kpi-info">
@@ -156,13 +156,23 @@ export async function StudentChat(route, router) {
           </div>
         </div>
 
-        <div class="student-comm-kpi-card kpi-emerald">
-          <div class="student-comm-kpi-icon emerald">
+        <div class="student-comm-kpi-card kpi-indigo" title="Messages Sent by Me">
+          <div class="student-comm-kpi-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
           </div>
           <div class="student-comm-kpi-info">
             <div class="student-comm-kpi-val">${mySentCount}</div>
             <div class="student-comm-kpi-lbl">Messages Sent</div>
+          </div>
+        </div>
+
+        <div class="student-comm-kpi-card kpi-amber" title="Messages in Current Project Thread">
+          <div class="student-comm-kpi-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          </div>
+          <div class="student-comm-kpi-info">
+            <div class="student-comm-kpi-val">${projectMsgsCount}</div>
+            <div class="student-comm-kpi-lbl">Current Thread</div>
           </div>
         </div>
       </div>
