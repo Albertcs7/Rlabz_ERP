@@ -1,7 +1,14 @@
 import { useAuthStore } from '../stores/auth.js';
 import { modules } from '../../module-manifest.js';
 import { API_BASE } from '../config/api.js';
-import { loadHeaderProfilePhoto } from '../shared/profilePhoto.js';
+import { profilePhotoUrl, applyHeaderAvatar, rememberProfilePhoto } from '../shared/profilePhoto.js';
+
+// Primary profile page per role; roles without their own page use the shared /profile.
+const ROLE_PROFILE_ROUTES = {
+  coordinator: '/coordinator/profile',
+  faculty: '/faculty/profile',
+  student: '/student/profile',
+};
 
 const BELL_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
 
@@ -306,36 +313,12 @@ export function updateSidebar(currentPath) {
   populateSidebarNav(sidebarNav, currentPath, authStore);
 }
 
+// Kept for existing callers (StudentSidebar, UserProfile); the implementation
+// lives in core/shared/profilePhoto.js so there is one header-avatar code path.
 export function updateTopBarAvatar(photoUrl, name) {
   const authStore = useAuthStore();
   const displayName = name || authStore.user?.name || authStore.user?.username || 'User';
-  const initial = displayName.charAt(0).toUpperCase() || 'U';
-
-  const avatarTargets = document.querySelectorAll('#user-profile-header .avatar, #finance-user-profile-header .avatar, .topbar .avatar, .user-profile .avatar');
-  avatarTargets.forEach(avatarEl => {
-    if (photoUrl) {
-      avatarEl.style.padding = '0';
-      avatarEl.style.overflow = 'hidden';
-      avatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      avatarEl.style.padding = '';
-      avatarEl.style.overflow = '';
-      avatarEl.textContent = initial;
-    }
-  });
-
-  const popoverAvatarTargets = document.querySelectorAll('#popover-avatar, #finance-popover-avatar, .profile-popover-avatar');
-  popoverAvatarTargets.forEach(popAvatarEl => {
-    if (photoUrl) {
-      popAvatarEl.style.padding = '0';
-      popAvatarEl.style.overflow = 'hidden';
-      popAvatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      popAvatarEl.style.padding = '';
-      popAvatarEl.style.overflow = '';
-      popAvatarEl.textContent = initial;
-    }
-  });
+  applyHeaderAvatar(document, photoUrl || null, displayName);
 }
 
 export async function DashboardLayout(contentChild, route, router) {
@@ -640,10 +623,11 @@ export async function DashboardLayout(contentChild, route, router) {
       popoverProfileLink.addEventListener('click', (e) => {
         e.preventDefault();
         profilePopover.style.display = 'none';
+        const profileRoute = ROLE_PROFILE_ROUTES[authStore.role] || '/profile';
         if (router && typeof router.push === 'function') {
-          router.push('/profile');
+          router.push(profileRoute);
         } else {
-          window.location.href = '/profile';
+          window.location.href = profileRoute;
         }
       });
     }
@@ -684,15 +668,17 @@ export async function DashboardLayout(contentChild, route, router) {
           if (p.designation) user.designation = p.designation;
           localStorage.setItem('user', JSON.stringify(user));
         }
+
+        // Non-student roles: the header photo comes only from profile_photo_path
+        // (returned by /auth/profile). Students keep their existing photo source.
+        if (!isStudent && 'profile_photo_path' in p) {
+          const photoUrl = profilePhotoUrl(p.profile_photo_path);
+          rememberProfilePhoto(photoUrl);
+          applyHeaderAvatar(wrapper, photoUrl, p.name || displayName);
+        }
       })
       .catch(() => {});
     }
-  }
-
-  // Non-student roles: show the saved server-side profile photo in the header
-  // (falls back to the initial when there is none or the request fails).
-  if (!isStudent && user) {
-    loadHeaderProfilePhoto(wrapper, displayName);
   }
 
   return wrapper;

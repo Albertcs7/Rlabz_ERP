@@ -1,10 +1,11 @@
 import { authStore } from '@/core/stores/auth.js';
-import { API_BASE, STORAGE_BASE } from '@/core/config/api.js';
+import { STORAGE_BASE } from '@/core/config/api.js';
 
 /**
  * Header (topbar + profile popover) avatar for the user's server-side profile
- * photo (users.profile_photo_path, see ProfilePhotoController). Shared by
- * DashboardLayout (initial render) and ProfilePhotoEditor (after save/remove).
+ * photo (users.profile_photo_path, see ProfilePhotoController) — the only
+ * source of profile photos for non-student roles. Used by DashboardLayout
+ * (from its /auth/profile sync), ProfilePhotoEditor and the shared /profile page.
  */
 
 /** Public URL for a stored relative path such as "profile_photos/abc.jpg". */
@@ -25,12 +26,25 @@ export function headerAvatarContent(url, displayName) {
     : escapeHtml(String(displayName || 'User').charAt(0).toUpperCase());
 }
 
-/** Puts the photo (or the initial) into the topbar and popover avatars under `root`. */
+// Every header avatar spot: the DashboardLayout topbar/popover and the
+// Finance layout's own header.
+const HEADER_AVATAR_SELECTORS = [
+  '#user-profile-header .avatar',
+  '#finance-user-profile-header .avatar',
+  '.topbar .avatar',
+  '.user-profile .avatar',
+  '#popover-avatar',
+  '#finance-popover-avatar',
+  '.profile-popover-avatar',
+].join(', ');
+
+/**
+ * Puts the photo (or the initial) into every header avatar under `root`.
+ * The single implementation behind DashboardLayout's updateTopBarAvatar().
+ */
 export function applyHeaderAvatar(root, url, displayName) {
   const scope = root || document;
-  ['#user-profile-header .avatar', '#popover-avatar'].forEach((selector) => {
-    const el = scope.querySelector(selector);
-    if (!el) return;
+  scope.querySelectorAll(HEADER_AVATAR_SELECTORS).forEach((el) => {
     el.innerHTML = headerAvatarContent(url, displayName);
     el.style.padding = url ? '0' : '';
     el.style.overflow = url ? 'hidden' : '';
@@ -49,27 +63,5 @@ export function rememberProfilePhoto(url) {
     if (cached) localStorage.setItem('user', JSON.stringify({ ...cached, profile_photo_url: url || null }));
   } catch (e) {
     // Cache only — the header still updates from the server response.
-  }
-}
-
-/**
- * Fetches the logged-in user's photo and applies it to the header under `root`.
- * Failures (no token, migration not run, network) leave the current avatar as is.
- */
-export async function loadHeaderProfilePhoto(root, displayName) {
-  const token = authStore?.token || localStorage.getItem('token') || localStorage.getItem('access_token');
-  if (!token) return;
-  try {
-    const resp = await fetch(`${API_BASE}/auth/profile-photo`, {
-      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-    });
-    if (!resp.ok) return;
-    const data = await resp.json().catch(() => null);
-    if (!data || !('profile_photo_path' in data)) return;
-    const url = profilePhotoUrl(data.profile_photo_path);
-    rememberProfilePhoto(url);
-    applyHeaderAvatar(root, url, displayName);
-  } catch (e) {
-    // Keep the existing avatar (initial) on any failure.
   }
 }
