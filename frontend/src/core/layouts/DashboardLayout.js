@@ -1,6 +1,14 @@
 import { useAuthStore } from '../stores/auth.js';
 import { modules } from '../../module-manifest.js';
 import { API_BASE } from '../config/api.js';
+import { profilePhotoUrl, applyHeaderAvatar, rememberProfilePhoto } from '../shared/profilePhoto.js';
+
+// Primary profile page per role; roles without their own page use the shared /profile.
+const ROLE_PROFILE_ROUTES = {
+  coordinator: '/coordinator/profile',
+  faculty: '/faculty/profile',
+  student: '/student/profile',
+};
 
 const BELL_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
 
@@ -305,36 +313,12 @@ export function updateSidebar(currentPath) {
   populateSidebarNav(sidebarNav, currentPath, authStore);
 }
 
+// Kept for existing callers (StudentSidebar, UserProfile); the implementation
+// lives in core/shared/profilePhoto.js so there is one header-avatar code path.
 export function updateTopBarAvatar(photoUrl, name) {
   const authStore = useAuthStore();
   const displayName = name || authStore.user?.name || authStore.user?.username || 'User';
-  const initial = displayName.charAt(0).toUpperCase() || 'U';
-
-  const avatarTargets = document.querySelectorAll('#user-profile-header .avatar, #finance-user-profile-header .avatar, .topbar .avatar, .user-profile .avatar');
-  avatarTargets.forEach(avatarEl => {
-    if (photoUrl) {
-      avatarEl.style.padding = '0';
-      avatarEl.style.overflow = 'hidden';
-      avatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      avatarEl.style.padding = '';
-      avatarEl.style.overflow = '';
-      avatarEl.textContent = initial;
-    }
-  });
-
-  const popoverAvatarTargets = document.querySelectorAll('#popover-avatar, #finance-popover-avatar, .profile-popover-avatar');
-  popoverAvatarTargets.forEach(popAvatarEl => {
-    if (photoUrl) {
-      popAvatarEl.style.padding = '0';
-      popAvatarEl.style.overflow = 'hidden';
-      popAvatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      popAvatarEl.style.padding = '';
-      popAvatarEl.style.overflow = '';
-      popAvatarEl.textContent = initial;
-    }
-  });
+  applyHeaderAvatar(document, photoUrl || null, displayName);
 }
 
 export async function DashboardLayout(contentChild, route, router) {
@@ -347,12 +331,15 @@ export async function DashboardLayout(contentChild, route, router) {
   const wrapper = document.createElement('div');
   wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
   const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
-  const topbarUserPhoto = (isStudent && studentIdentifier)
+  const studentPhoto = (isStudent && studentIdentifier)
     ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
-    : (user?.avatar || null);
+    : null;
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
+  // Other roles use the server-side profile photo (users.profile_photo_path):
+  // render the cached URL immediately, then refresh it from the API below.
+  const headerPhoto = isStudent ? studentPhoto : (user?.profile_photo_url || null);
 
   const designation = user?.designation || (isStudent ? 'Nova' : roleName);
   const email = user?.email || 'student@rajagiri.edu';
@@ -381,7 +368,7 @@ export async function DashboardLayout(contentChild, route, router) {
   wrapper.innerHTML = `
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-logo">
+        <div class="sidebar-logo" id="sidebar-logo-link" role="link" tabindex="0" title="Go to dashboard" style="cursor: pointer;">
           <img src="/assets/Rlabz_Logo_dark.png" alt="RLabZ ERP" class="sidebar-watermark" style="height: 84px; width: auto;" />
         </div>
       </div>
@@ -410,8 +397,8 @@ export async function DashboardLayout(contentChild, route, router) {
           ` : ''}
 
         <div class="user-profile" id="user-profile-header">
-          <div class="avatar" style="${topbarUserPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-            ${topbarUserPhoto ? `<img src="${topbarUserPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+          <div class="avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+            ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
           <div class="user-details">
             <span class="user-name">${displayName}</span>
@@ -421,8 +408,8 @@ export async function DashboardLayout(contentChild, route, router) {
           <!-- Floating Profile Popover -->
           <div class="profile-popover" id="profile-popover">
             <div class="profile-popover-header">
-              <div class="profile-popover-avatar" id="popover-avatar" style="${topbarUserPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-                ${topbarUserPhoto ? `<img src="${topbarUserPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+              <div class="profile-popover-avatar" id="popover-avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+                ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
               </div>
               <div class="profile-popover-meta">
                 <span class="profile-popover-name" id="popover-name">${displayName}</span>
@@ -585,6 +572,29 @@ export async function DashboardLayout(contentChild, route, router) {
     router.push('/auth/login');
   });
 
+  // Bind sidebar logo click — goes to the current role's own dashboard
+  // (same role→route mapping AuthController::respondWithToken() already
+  // sends down as `user.defaultRoute`), never a generic/other-role page.
+  const ROLE_HOME_ROUTES = {
+    director: '/dashboard',
+    coordinator: '/coordinator',
+    finance: '/finance',
+    faculty: '/faculty',
+    student: '/student',
+  };
+  const sidebarLogoLink = wrapper.querySelector('#sidebar-logo-link');
+  const goToDashboard = () => {
+    const target = authStore.user?.defaultRoute || ROLE_HOME_ROUTES[authStore.role] || '/';
+    router.push(target);
+  };
+  sidebarLogoLink?.addEventListener('click', goToDashboard);
+  sidebarLogoLink?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      goToDashboard();
+    }
+  });
+
   // Bind User Profile Header Click
   const userProfileHeader = wrapper.querySelector('#user-profile-header');
   const profilePopover = wrapper.querySelector('#profile-popover');
@@ -613,10 +623,11 @@ export async function DashboardLayout(contentChild, route, router) {
       popoverProfileLink.addEventListener('click', (e) => {
         e.preventDefault();
         profilePopover.style.display = 'none';
+        const profileRoute = ROLE_PROFILE_ROUTES[authStore.role] || '/profile';
         if (router && typeof router.push === 'function') {
-          router.push('/profile');
+          router.push(profileRoute);
         } else {
-          window.location.href = '/profile';
+          window.location.href = profileRoute;
         }
       });
     }
@@ -656,6 +667,14 @@ export async function DashboardLayout(contentChild, route, router) {
           user.department = p.department || user.department;
           if (p.designation) user.designation = p.designation;
           localStorage.setItem('user', JSON.stringify(user));
+        }
+
+        // Non-student roles: the header photo comes only from profile_photo_path
+        // (returned by /auth/profile). Students keep their existing photo source.
+        if (!isStudent && 'profile_photo_path' in p) {
+          const photoUrl = profilePhotoUrl(p.profile_photo_path);
+          rememberProfilePhoto(photoUrl);
+          applyHeaderAvatar(wrapper, photoUrl, p.name || displayName);
         }
       })
       .catch(() => {});

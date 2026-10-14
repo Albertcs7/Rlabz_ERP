@@ -128,25 +128,25 @@ export async function CoordinatorProjects(route, router) {
         </div>
 
       <div class="coordinator-kpi-grid">
-        <div class="coordinator-kpi-card">
+        <div class="coordinator-kpi-card kpi-primary">
           <span>Total Projects</span>
           <strong>${projects.length}</strong>
           <small>All tracked projects</small>
         </div>
 
-        <div class="coordinator-kpi-card">
+        <div class="coordinator-kpi-card kpi-teal">
           <span>In Progress</span>
           <strong>${projects.filter((project) => String(project.status || '').toLowerCase() === 'in_progress').length}</strong>
           <small>Current active work</small>
         </div>
 
-        <div class="coordinator-kpi-card">
+        <div class="coordinator-kpi-card kpi-crimson">
           <span>Urgent</span>
           <strong>${projects.filter((project) => String(project.priority || '').toLowerCase() === 'urgent').length}</strong>
           <small>Require attention</small>
         </div>
 
-        <div class="coordinator-kpi-card">
+        <div class="coordinator-kpi-card kpi-indigo">
           <span>Average Progress</span>
           <strong>${projects.length ? Math.round(projects.reduce((sum, project) => sum + getProjectProgress(project).percent, 0) / projects.length) : 0}%</strong>
           <small>Portfolio completion</small>
@@ -159,22 +159,26 @@ export async function CoordinatorProjects(route, router) {
             <h2>Project overview</h2>
             <p>Track project status and view more detail for each record.</p>
           </div>
+        </div>
 
-          <div style="display:flex; gap:0.5rem;">
-            <select id="project-sort">
-              <option value="priority">Sort: Urgent first</option>
-              <option value="newest">Sort: Newest first</option>
-              <option value="oldest">Sort: Oldest first</option>
-            </select>
+        <div class="app-list-toolbar">
+          <input type="search" id="project-search" class="app-search-input" placeholder="Search by project or client name..." aria-label="Search projects by project or client name" autocomplete="off" />
 
-            <select id="project-filter">
-              <option value="all">All projects</option>
-              <option value="in_progress">In progress</option>
-              <option value="accepted">Accepted</option>
-              <option value="proposed">Proposed</option>
-              <option value="closed">Closed</option>
-            </select>
-          </div>
+          <select id="project-sort" class="app-select" aria-label="Sort projects">
+            <option value="priority">Sort: Urgent first</option>
+            <option value="newest">Sort: Newest first</option>
+            <option value="oldest">Sort: Oldest first</option>
+          </select>
+
+          <select id="project-filter" class="app-select" aria-label="Filter projects by status">
+            <option value="all">All projects</option>
+            <option value="in_progress">In progress</option>
+            <option value="accepted">Accepted</option>
+            <option value="proposed">Proposed</option>
+            <option value="closed">Closed</option>
+          </select>
+
+          <span class="app-list-toolbar-count" id="project-result-count" aria-live="polite"></span>
         </div>
 
         <div class="coordinator-table-wrapper">
@@ -208,24 +212,33 @@ export async function CoordinatorProjects(route, router) {
       });
     }
 
+    // Status filter, search and sort all run against the already-loaded
+    // `projects` array on every change, so they always compose — no refetch.
     function applySortAndFilter() {
       const sortBy = container.querySelector('#project-sort')?.value || 'priority';
       const filterValue = container.querySelector('#project-filter')?.value || 'all';
+      const query = (container.querySelector('#project-search')?.value || '').trim().toLowerCase();
+
+      const visible = projects.filter((project) => {
+        if (filterValue !== 'all' && String(project.status || 'in_progress') !== filterValue) return false;
+        if (!query) return true;
+        return String(project.title || '').toLowerCase().includes(query)
+          || String(project.client_name || '').toLowerCase().includes(query);
+      });
 
       const tbody = container.querySelector('#projects-table-body');
-      const sorted = sortProjects(projects, sortBy);
-      tbody.innerHTML = renderRows(sorted) || '<tr><td colspan="8">No projects found.</td></tr>';
+      const emptyMessage = query || filterValue !== 'all' ? 'No projects match the current search or filter.' : 'No projects found.';
+      tbody.innerHTML = renderRows(sortProjects(visible, sortBy)) || `<tr><td colspan="8">${emptyMessage}</td></tr>`;
 
-      container.querySelectorAll('#projects-table-body tr').forEach((row) => {
-        const shouldShow = filterValue === 'all' || row.dataset.status === filterValue;
-        row.style.display = shouldShow ? '' : 'none';
-      });
+      const countEl = container.querySelector('#project-result-count');
+      if (countEl) countEl.textContent = `Showing ${visible.length} of ${projects.length} projects`;
 
       bindDetailButtons();
     }
 
     container.querySelector('#project-filter')?.addEventListener('change', applySortAndFilter);
     container.querySelector('#project-sort')?.addEventListener('change', applySortAndFilter);
+    container.querySelector('#project-search')?.addEventListener('input', applySortAndFilter);
 
     // Apply the default sort (Urgent first) on initial load too.
     applySortAndFilter();
@@ -388,39 +401,10 @@ export async function CoordinatorProjects(route, router) {
           }
 
           closeModal();
-          // refresh list
-          const fresh = await fetchProjects();
-          const tbody = container.querySelector('#projects-table-body');
-          if (tbody) {
-            tbody.innerHTML = fresh.map(project => {
-              const progress = getProjectProgress(project);
-              const status = String(project.status || 'in_progress');
-              return `
-                <tr data-status="${status}">
-                  <td><strong>${project.title || 'Untitled project'}</strong></td>
-                  <td>${project.client_name || '—'}</td>
-                  <td>${formatLabel(project.project_type || project.type || 'General')}</td>
-                  <td>${Array.isArray(project.students) ? project.students.length : 0}</td>
-                  <td>
-                    <div class="coordinator-progress">
-                      <div class="coordinator-progress-bg">
-                        <div class="coordinator-progress-fill" style="width:${progress.percent}%"></div>
-                      </div>
-                      <span>${progress.percent}%</span>
-                    </div>
-                  </td>
-                  <td><span class="priority-badge ${String(project.priority || 'normal').toLowerCase()}">${formatLabel(project.priority || 'Normal')}</span></td>
-                  <td><span class="project-status ${status.toLowerCase().replace(/_/g, '-')}">${formatLabel(status)}</span></td>
-                  <td><button class="coord-btn coord-btn-secondary" data-id="${project.id}">View details</button></td>
-                </tr>
-              `;
-            }).join('');
-
-            // rebind detail buttons
-            tbody.querySelectorAll('[data-id]').forEach((button) => {
-              button.addEventListener('click', () => router.push(`/coordinator/projects/${button.dataset.id}`));
-            });
-          }
+          // refresh list — update the shared `projects` array and re-run the
+          // same filter/search/sort path so the new project respects them.
+          projects = await fetchProjects();
+          applySortAndFilter();
 
         } catch (err) {
           console.error(err);

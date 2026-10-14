@@ -43,7 +43,7 @@ export function DirectorAuditLog(route, router) {
           </div>
 
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-            <input type="text" id="audit-search" placeholder="Search logs..." value="${searchQuery}" style="padding:0.4rem 0.8rem; border-radius:6px; border:1px solid #d1d5db; font-size:0.85rem;" />
+            <input type="text" id="audit-search" class="app-search-input" placeholder="Search logs..." value="${searchQuery}" style="max-width: 220px;" />
             <button class="btn-director ${currentTypeFilter === 'all' ? 'btn-director-primary' : 'btn-director-outline'}" id="btn-filter-all">All</button>
             <button class="btn-director ${currentTypeFilter === 'success' ? 'btn-director-primary' : 'btn-director-outline'}" id="btn-filter-success">Success / Approvals</button>
             <button class="btn-director ${currentTypeFilter === 'warning' ? 'btn-director-primary' : 'btn-director-outline'}" id="btn-filter-warning">Warnings / Rejections</button>

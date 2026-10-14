@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Controllers\AuthController;
+use Modules\Auth\Controllers\ProfilePhotoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,11 @@ Route::group(['prefix' => 'auth'], function () {
         Route::get('profile', [AuthController::class, 'getProfile']);
         Route::put('profile', [AuthController::class, 'updateProfile']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
+
+        // The logged-in user's own profile photo (any role).
+        Route::get('profile-photo', [ProfilePhotoController::class, 'show']);
+        Route::post('profile-photo', [ProfilePhotoController::class, 'store']);
+        Route::delete('profile-photo', [ProfilePhotoController::class, 'destroy']);
         
         // Example of a route protected by both JWT and our custom Permission middleware
         Route::get('me', function () {

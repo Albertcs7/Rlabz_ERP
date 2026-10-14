@@ -31,6 +31,9 @@ export async function StudentProfile(route, router) {
     semester_text: currentUser.semester_text || (currentUser.semester ? `${currentUser.semester}th Semester` : '2nd Year / 3rd Semester'),
   };
 
+  let showNewPassword = false;
+  let showConfirmPassword = false;
+
   // Load initial data
   try {
     const liveProfile = await fetchLiveStudentProfile();
@@ -50,7 +53,118 @@ export async function StudentProfile(route, router) {
       .toUpperCase()
       .slice(0, 2);
 
+    // Direct password change: current password + new + confirm (no approval step).
+    const passwordFormHTML = `
+        <form id="password-change-form" style="display: flex; flex-direction: column; gap: 18px;">
+          <div>
+            <label for="current-password-input" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
+              Current Password <span style="color: #ef4444;">*</span>
+            </label>
+            <div style="position: relative;">
+              <input
+                id="current-password-input"
+                type="password"
+                required
+                autocomplete="current-password"
+                placeholder="Enter your current password"
+                style="width: 100%; padding: 10px 42px 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.2s; background: #ffffff;"
+              />
+              <button
+                type="button"
+                id="toggle-current-password"
+                class="password-visibility-toggle"
+                data-target="current-password-input"
+                aria-label="Toggle current password visibility"
+                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center; justify-content: center;"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+          </div>
 
+          <div>
+            <label for="new-password-input" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
+              New Password <span style="color: #ef4444;">*</span>
+            </label>
+            <div style="position: relative;">
+              <input
+                id="new-password-input"
+                type="${showNewPassword ? 'text' : 'password'}"
+                required
+                minlength="6"
+                placeholder="Enter new password (min. 6 characters)"
+                style="width: 100%; padding: 10px 42px 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.2s; background: #ffffff;"
+              />
+              <button
+                type="button"
+                id="toggle-new-password"
+                aria-label="Toggle new password visibility"
+                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center; justify-content: center;"
+              >
+                ${showNewPassword ? `
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                ` : `
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                `}
+              </button>
+            </div>
+            <div id="password-hint" style="font-size: 0.775rem; color: #64748b; margin-top: 4px;">
+              Password must be at least 6 characters long.
+            </div>
+          </div>
+
+          <div>
+            <label for="confirm-password-input" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
+              Confirm New Password <span style="color: #ef4444;">*</span>
+            </label>
+            <div style="position: relative;">
+              <input
+                id="confirm-password-input"
+                type="${showConfirmPassword ? 'text' : 'password'}"
+                required
+                minlength="6"
+                placeholder="Re-enter new password"
+                style="width: 100%; padding: 10px 42px 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.2s; background: #ffffff;"
+              />
+              <button
+                type="button"
+                id="toggle-confirm-password"
+                aria-label="Toggle confirm password visibility"
+                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center; justify-content: center;"
+              >
+                ${showConfirmPassword ? `
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                ` : `
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                `}
+              </button>
+            </div>
+            <div id="match-error" style="display: none; font-size: 0.775rem; color: #dc2626; margin-top: 4px; font-weight: 500;">
+              Passwords do not match.
+            </div>
+          </div>
+
+          <div style="margin-top: 6px; display: flex; justify-content: flex-start; gap: 10px; align-items: center;">
+            <button
+              type="submit"
+              id="btn-update-password"
+              class="btn"
+              style="background: #059669; color: #ffffff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              Update Password
+            </button>
+            <button
+              type="reset"
+              id="btn-clear-password-form"
+              class="btn"
+              style="background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;"
+            >
+              Clear
+            </button>
+          </div>
+        </form>
+    `;
 
     container.innerHTML = `
       <!-- Top Page Header -->
@@ -150,91 +264,22 @@ export async function StudentProfile(route, router) {
 
         <!-- 2. Security & Change Password Section -->
         <div style="background: var(--surface-card, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-          <div style="margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color, #f1f5f9);">
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              Change Password
-            </h3>
-            <p style="margin: 4px 0 0 0; font-size: 0.825rem; color: var(--text-muted);">
-              Update your account password below.
-            </p>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color, #f1f5f9); flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                Change Password
+              </h3>
+              <p style="margin: 3px 0 0 0; font-size: 0.825rem; color: var(--text-muted);">
+                Update your account password. Your current password is required.
+              </p>
+            </div>
           </div>
 
-          <form id="password-change-form" style="display: flex; flex-direction: column; gap: 18px;">
-            <div>
-              <label for="new-password-input" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
-                New Password <span style="color: #ef4444;">*</span>
-              </label>
-              <div style="position: relative;">
-                <input
-                  id="new-password-input"
-                  type="password"
-                  required
-                  minlength="6"
-                  placeholder="Enter new password (min. 6 characters)"
-                  style="width: 100%; padding: 10px 42px 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.2s; background: #ffffff;"
-                />
-                <button
-                  type="button"
-                  id="toggle-new-password"
-                  aria-label="Toggle new password visibility"
-                  style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center; justify-content: center;"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                </button>
-              </div>
-              <div id="password-hint" style="font-size: 0.775rem; color: #64748b; margin-top: 4px;">
-                Password must be at least 6 characters long.
-              </div>
-            </div>
-
-            <div>
-              <label for="confirm-password-input" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
-                Confirm New Password <span style="color: #ef4444;">*</span>
-              </label>
-              <div style="position: relative;">
-                <input
-                  id="confirm-password-input"
-                  type="password"
-                  required
-                  minlength="6"
-                  placeholder="Re-enter new password"
-                  style="width: 100%; padding: 10px 42px 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.2s; background: #ffffff;"
-                />
-                <button
-                  type="button"
-                  id="toggle-confirm-password"
-                  aria-label="Toggle confirm password visibility"
-                  style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center; justify-content: center;"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                </button>
-              </div>
-              <div id="match-error" style="display: none; font-size: 0.775rem; color: #dc2626; margin-top: 4px; font-weight: 500;">
-                Passwords do not match.
-              </div>
-            </div>
-
-            <div style="margin-top: 6px; display: flex; justify-content: flex-start; gap: 10px; align-items: center;">
-              <button
-                type="submit"
-                id="btn-update-password"
-                class="btn"
-                style="background: #059669; color: #ffffff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                Update Password
-              </button>
-              <button
-                type="reset"
-                id="btn-clear-password"
-                class="btn"
-                style="background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;"
-              >
-                Clear
-              </button>
-            </div>
-          </form>
+          <!-- Dynamic Status & Form Content -->
+          <div id="password-section-content">
+            ${passwordFormHTML}
+          </div>
 
         </div>
 
@@ -352,50 +397,24 @@ export async function StudentProfile(route, router) {
       });
     });
 
-    // 1. Password input visibility toggles
-    let showNewPassword = false;
-    let showConfirmPassword = false;
-    const btnToggleNew = container.querySelector('#toggle-new-password');
-    const newPassInput = container.querySelector('#new-password-input');
-    if (btnToggleNew && newPassInput) {
-      btnToggleNew.addEventListener('click', () => {
-        showNewPassword = !showNewPassword;
-        newPassInput.type = showNewPassword ? 'text' : 'password';
-        btnToggleNew.innerHTML = showNewPassword ? `
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-        ` : `
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-        `;
+    // 1. Eye toggle buttons — flip the input type in place so typed values are kept
+    container.querySelectorAll('#toggle-current-password, #toggle-new-password, #toggle-confirm-password').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = btn.parentElement?.querySelector('input');
+        if (!input) return;
+        input.type = input.type === 'password' ? 'text' : 'password';
+        if (btn.id === 'toggle-new-password') showNewPassword = input.type === 'text';
+        if (btn.id === 'toggle-confirm-password') showConfirmPassword = input.type === 'text';
       });
-    }
+    });
 
-    const btnToggleConfirm = container.querySelector('#toggle-confirm-password');
-    const confirmPassInput = container.querySelector('#confirm-password-input');
-    if (btnToggleConfirm && confirmPassInput) {
-      btnToggleConfirm.addEventListener('click', () => {
-        showConfirmPassword = !showConfirmPassword;
-        confirmPassInput.type = showConfirmPassword ? 'text' : 'password';
-        btnToggleConfirm.innerHTML = showConfirmPassword ? `
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-        ` : `
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-        `;
-      });
-    }
-
-    // 2. Clear / Reset button
-    const btnClear = container.querySelector('#btn-clear-password');
-    const matchError = container.querySelector('#match-error');
-    if (btnClear) {
-      btnClear.addEventListener('click', () => {
-        if (matchError) matchError.style.display = 'none';
-        if (confirmPassInput) confirmPassInput.style.borderColor = '#cbd5e1';
-      });
-    }
-
-    // 3. Password Form Submission
+    // 2. Password Form Submission
     const passwordForm = container.querySelector('#password-change-form');
     if (passwordForm) {
+      const currentPassInput = container.querySelector('#current-password-input');
+      const newPassInput = container.querySelector('#new-password-input');
+      const confirmPassInput = container.querySelector('#confirm-password-input');
+      const matchError = container.querySelector('#match-error');
       const btnUpdate = container.querySelector('#btn-update-password');
 
       const checkMatch = () => {
@@ -424,8 +443,14 @@ export async function StudentProfile(route, router) {
       passwordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const currentPass = currentPassInput?.value || '';
         const newPass = (newPassInput?.value || '').trim();
         const confirmPass = (confirmPassInput?.value || '').trim();
+
+        if (!currentPass) {
+          showStudentWarning('Current Password Required', 'Please enter your current password.');
+          return;
+        }
 
         if (newPass.length < 6) {
           showStudentWarning('Password Too Short', 'Password must be at least 6 characters long.');
@@ -447,20 +472,17 @@ export async function StudentProfile(route, router) {
         }
 
         try {
-          const res = await updateStudentPassword(newPass, confirmPass);
+          const res = await updateStudentPassword(currentPass, newPass, confirmPass);
           await showStudentSuccess('Password Changed Successfully', res.message || 'Your password has been successfully updated! You can now use your new password.');
-          passwordForm.reset();
-          if (matchError) matchError.style.display = 'none';
-          if (confirmPassInput) confirmPassInput.style.borderColor = '#cbd5e1';
+          showNewPassword = false;
+          showConfirmPassword = false;
+          render();
         } catch (err) {
           showStudentError('Update Failed', err.message || 'Failed to update password.');
         } finally {
           if (btnUpdate) {
             btnUpdate.disabled = false;
-            btnUpdate.innerHTML = `
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              Update Password
-            `;
+            btnUpdate.textContent = 'Update Password';
           }
         }
       });

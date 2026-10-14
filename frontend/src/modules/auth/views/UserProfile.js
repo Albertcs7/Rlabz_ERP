@@ -3,6 +3,8 @@ import { API_BASE } from '@/core/config/api.js';
 import Swal from 'sweetalert2';
 import { renderStudentSidebar, updateStudentNavbarAvatar, updateTopBarAvatar } from '@/modules/student/views/StudentSidebar.js';
 import { getStudentProfilePhoto, saveStudentProfilePhoto, removeStudentProfilePhoto } from '@/modules/student/views/studentStore.js';
+import { profilePhotoUrl } from '@/core/shared/profilePhoto.js';
+import { mountProfilePhotoEditor } from '@/core/shared/components/ProfilePhotoEditor.js';
 import '../userProfile.css';
 
 export async function UserProfile(route, router) {
@@ -39,7 +41,11 @@ export async function UserProfile(route, router) {
     bio: authStore.user?.bio || '',
     location: authStore.user?.location || 'Kochi, Kerala, India',
     department: authStore.user?.department || (authStore.role === 'finance' ? 'Finance & Accounts' : ''),
-    avatar: studentInitialPhoto || authStore.user?.avatar || null,
+    // Students keep their existing photo source; every other role uses only the
+    // server-side profile photo (users.profile_photo_path), never users.avatar.
+    avatar: isStudentRole
+      ? (studentInitialPhoto || authStore.user?.avatar || null)
+      : (authStore.user?.profile_photo_url || null),
     created_at: authStore.user?.created_at || null,
   };
 
@@ -63,6 +69,11 @@ export async function UserProfile(route, router) {
           profileUser = { ...profileUser, ...liveUser };
           if (studentInitialPhoto) {
             profileUser.avatar = studentInitialPhoto;
+          }
+          if (!isStudentRole) {
+            profileUser.avatar = 'profile_photo_path' in liveUser
+              ? profilePhotoUrl(liveUser.profile_photo_path)
+              : (authStore.user?.profile_photo_url || null);
           }
         }
         if (body.user?.role !== 'finance' && body.teams && body.teams.length > 0) {
@@ -109,6 +120,10 @@ export async function UserProfile(route, router) {
       <div class="profile-hero-card">
         <div class="profile-hero-top">
           <div class="profile-hero-user">
+            ${!isStudent ? `
+            <!-- Non-student roles: the shared, server-backed profile photo uploader -->
+            <div id="profile-photo-slot" style="flex-shrink: 0;"></div>
+            ` : `
             <div class="profile-avatar-container" style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
               <div class="profile-avatar-wrap" id="user-avatar-wrap" title="Click to upload profile photo" style="cursor: pointer; width: 100%; height: 100%;">
                 ${profileUser.avatar
@@ -122,6 +137,7 @@ export async function UserProfile(route, router) {
               </button>
             </div>
             <input type="file" id="hero-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+            `}
             <div class="profile-hero-details">
               <h1>${profileUser.name}</h1>
               <div class="profile-hero-sub">
@@ -304,6 +320,7 @@ export async function UserProfile(route, router) {
                 <input type="text" id="edit-department" value="${profileUser.department || ''}" />
               </div>
 
+              ${isStudentRole ? `
               <div class="profile-field form-group-full">
                 <label for="edit-avatar">Profile Photo</label>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -319,6 +336,7 @@ export async function UserProfile(route, router) {
                   ` : ''}
                 </div>
               </div>
+              ` : ''}
 
               <div class="profile-field form-group-full">
                 <label for="edit-bio">About User / Bio</label>
@@ -491,7 +509,18 @@ export async function UserProfile(route, router) {
       });
     }
 
-    // Quick Profile Photo Upload Handler
+    // Non-student roles: the shared, validated uploader (POST /api/auth/profile-photo
+    // → users.profile_photo_path). It also refreshes the header avatar itself.
+    if (!isStudentRole) {
+      mountProfilePhotoEditor(container.querySelector('#profile-photo-slot'), {
+        name: profileUser.name,
+        layout: 'stacked',
+        onChange: (url) => { profileUser.avatar = url; },
+      });
+    }
+
+    // Quick Profile Photo Upload Handler (students — unchanged; its elements only
+    // exist on the student layout)
     async function applyProfilePhoto(photoDataUrl) {
       profileUser.avatar = photoDataUrl;
       if (authStore.user) {
@@ -603,9 +632,13 @@ export async function UserProfile(route, router) {
           phone: container.querySelector('#edit-phone').value.trim(),
           location: container.querySelector('#edit-location').value.trim(),
           department: container.querySelector('#edit-department').value.trim(),
-          avatar: container.querySelector('#edit-avatar').value.trim() || null,
           bio: container.querySelector('#edit-bio').value.trim(),
         };
+        // Only students still send `avatar` (their unchanged photo flow). Other roles
+        // manage their photo through the uploader above, never via users.avatar.
+        if (isStudentRole) {
+          updatedData.avatar = container.querySelector('#edit-avatar')?.value.trim() || null;
+        }
 
         try {
           if (token) {
@@ -633,7 +666,7 @@ export async function UserProfile(route, router) {
             authStore.user.phone = updatedData.phone;
             authStore.user.location = updatedData.location;
             authStore.user.department = updatedData.department;
-            authStore.user.avatar = updatedData.avatar;
+            if (isStudentRole) authStore.user.avatar = updatedData.avatar;
             authStore.user.bio = updatedData.bio;
             localStorage.setItem('user', JSON.stringify(authStore.user));
           }
@@ -653,8 +686,8 @@ export async function UserProfile(route, router) {
           const popoverName = document.querySelector('#popover-name') || document.querySelector('#finance-popover-name');
           if (popoverName) popoverName.textContent = updatedData.name;
 
-          // Update topbar avatar immediately
-          updateTopBarAvatar(updatedData.avatar, updatedData.name);
+          // Update topbar avatar immediately (staff: their saved server photo)
+          updateTopBarAvatar(isStudentRole ? updatedData.avatar : profileUser.avatar, updatedData.name);
           updateStudentNavbarAvatar();
 
           Swal.fire({

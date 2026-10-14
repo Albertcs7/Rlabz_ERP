@@ -1,9 +1,10 @@
 import { renderStudentSidebar } from './StudentSidebar.js';
-import { getProjects, ensureDataLoaded } from './studentStore.js';
+import { getCertificates, ensureDataLoaded } from './studentStore.js';
 import { useAuthStore } from '@/core/stores/auth.js';
 import { StudentSwal } from '../studentAlerts.js';
-import html2pdf from 'html2pdf.js';
+import { buildCertificateHtml, downloadCertificatePdf, formatReadableDate, escapeHtml } from '@/modules/certificates/certificateTemplate.js';
 import '../student.css';
+import '@/modules/certificates/certificates.css';
 
 export async function StudentCertificates(route, router) {
   await ensureDataLoaded();
@@ -13,130 +14,109 @@ export async function StudentCertificates(route, router) {
   container.className = 'student-portal-container animate-fade-in student-certificates-view';
 
   const authStore = useAuthStore();
-  const studentName = authStore.user?.name || 'Student Nova';
+  const studentName = authStore.user?.name || 'Student';
 
-  // Modal & Filter State
   let activeCertificate = null;
   let certSearch = '';
   let certSort = 'newest'; // 'newest' | 'oldest' | 'alpha'
 
+  // Every certificate returned by /certificates/mine belongs to the
+  // authenticated student by construction (backend-scoped by JWT subject),
+  // so the recipient name is always the logged-in user — no `student`
+  // relation needs to be loaded for this view.
+  function normalizeCertificate(cert) {
+    const facultyList = Array.isArray(cert.project?.faculty) ? cert.project.faculty : [];
+    return {
+      id: cert.id,
+      student: studentName,
+      project: cert.project?.title || 'Unknown project',
+      module: cert.module?.module_name || '',
+      certificateNumber: cert.certificate_number,
+      description: cert.description,
+      date: cert.issue_date,
+      issuer: cert.issuer?.name || '',
+      facultyNames: facultyList.map((f) => f.name).filter(Boolean).join(' and '),
+      teamMembers: Array.isArray(cert.team_members) ? cert.team_members : [],
+      developerName: cert.developer_name || null,
+    };
+  }
+
   function render() {
-    const projects = getProjects() || [];
-    
-    // Only completed projects that student is part of
-    const completedProjects = projects.filter(p => {
-      const isCompleted = p.status === 'Completed';
-      const isMember = p.members && p.members.toLowerCase().includes(studentName.toLowerCase());
-      return isCompleted && isMember;
-    });
+    const certificates = (getCertificates() || []).map(normalizeCertificate);
 
-    // KPI Metrics
-    const totalCerts = completedProjects.length;
-    const verifiedCerts = completedProjects.length; // 100% Verified
-    const distinctTracks = new Set(completedProjects.map(p => p.designation || 'Academic Specialist')).size;
+    // KPI summary (real counts — every certificate returned by the backend is
+    // already an issued record, there is no draft/pending state in the schema)
+    const totalCerts = certificates.length;
+    const verifiedCerts = certificates.length;
+    const distinctModules = new Set(certificates.map((c) => c.module).filter(Boolean)).size;
 
-    // Apply Search Filter
-    let filteredCertificates = completedProjects.filter(p => {
-      if (certSearch.trim()) {
-        const q = certSearch.toLowerCase().trim();
-        const matchTitle = (p.title || '').toLowerCase().includes(q);
-        const matchFaculty = (p.faculty || '').toLowerCase().includes(q);
-        const matchRole = (p.designation || '').toLowerCase().includes(q);
-        if (!matchTitle && !matchFaculty && !matchRole) return false;
-      }
-      return true;
-    });
+    let filtered = certSearch.trim()
+      ? certificates.filter((c) => {
+          const q = certSearch.toLowerCase().trim();
+          return (c.project || '').toLowerCase().includes(q)
+            || (c.module || '').toLowerCase().includes(q)
+            || (c.certificateNumber || '').toLowerCase().includes(q)
+            || (c.facultyNames || '').toLowerCase().includes(q);
+        })
+      : certificates.slice();
 
-    // Apply Sorting
-    filteredCertificates.sort((a, b) => {
+    filtered.sort((a, b) => {
       if (certSort === 'alpha') {
-        return (a.title || '').localeCompare(b.title || '');
+        return (a.project || '').localeCompare(b.project || '');
       }
-      const getDateVal = (p) => {
-        if (p.timeline && p.timeline.includes(' - ')) {
-          return new Date(p.timeline.split(' - ')[1]).getTime() || 0;
-        }
-        return 0;
+      const getDateVal = (c) => {
+        const t = c.date ? new Date(c.date).getTime() : 0;
+        return Number.isNaN(t) ? 0 : t;
       };
-      if (certSort === 'oldest') {
-        return getDateVal(a) - getDateVal(b);
-      }
-      return getDateVal(b) - getDateVal(a);
+      return certSort === 'oldest' ? getDateVal(a) - getDateVal(b) : getDateVal(b) - getDateVal(a);
     });
 
     const isFiltersActive = certSearch.trim() !== '' || certSort !== 'newest';
 
-    const certificateCards = filteredCertificates.map(p => {
-      let issuedDate = '30 Sep 2026';
-      if (p.timeline) {
-        const parts = p.timeline.split(' - ');
-        if (parts.length > 1) {
-          issuedDate = parts[1].trim();
-        }
-      }
-      const certCode = p.certificate_number || `CERT-2026-${String(p.id || '001').padStart(3, '0')}`;
-
-      return `
-        <div class="student-cert-card" data-id="${p.id}">
-          <div>
-            <div class="student-cert-card-header">
-              <span class="student-cert-seal-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
-                Verified Credential
-              </span>
-              <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; font-family: monospace;">${certCode}</span>
-            </div>
-            
-            <h3 class="student-cert-card-title">${p.title}</h3>
-          </div>
-          
-          <div class="student-cert-details-grid">
-            <div class="student-cert-detail-box">
-              <span class="student-cert-detail-lbl">Issued Date</span>
-              <span class="student-cert-detail-val">${issuedDate}</span>
-            </div>
-            <div class="student-cert-detail-box">
-              <span class="student-cert-detail-lbl">Status</span>
-              <span class="student-badge student-badge-success" style="font-size: 0.7rem; padding: 2px 6px;">
-                Verified
-              </span>
-            </div>
-            <div class="student-cert-detail-box">
-              <span class="student-cert-detail-lbl">Supervisor</span>
-              <span class="student-cert-detail-val">${p.faculty || 'Faculty Lead'}</span>
-            </div>
-            <div class="student-cert-detail-box">
-              <span class="student-cert-detail-lbl">Role Track</span>
-              <span class="student-cert-detail-val">${p.designation || 'Academic Specialist'}</span>
-            </div>
+    const certificateCards = filtered.map((c) => `
+      <div class="student-cert-card" data-id="${c.id}">
+        <div>
+          <div class="student-cert-card-header">
+            <span class="student-cert-seal-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+              Verified Credential
+            </span>
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; font-family: monospace;">${escapeHtml(c.certificateNumber || '—')}</span>
           </div>
 
-          <div class="student-cert-actions-row">
-            <button type="button" class="student-cert-btn-view btn-view-cert" data-id="${p.id}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <span>View</span>
-            </button>
-            <button type="button" class="student-cert-btn-download btn-download-cert" data-id="${p.id}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Download PDF</span>
-            </button>
-            <button type="button" class="student-cert-btn-icon btn-copy-cert-info" data-id="${p.id}" title="Copy Certificate Verification ID">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
+          <h3 class="student-cert-card-title">${escapeHtml(c.project)}</h3>
+        </div>
+
+        <div class="student-cert-details-grid">
+          <div class="student-cert-detail-box">
+            <span class="student-cert-detail-lbl">Module</span>
+            <span class="student-cert-detail-val">${escapeHtml(c.module || '—')}</span>
+          </div>
+          <div class="student-cert-detail-box">
+            <span class="student-cert-detail-lbl">Issue Date</span>
+            <span class="student-cert-detail-val">${escapeHtml(formatReadableDate(c.date))}</span>
+          </div>
+          <div class="student-cert-detail-box">
+            <span class="student-cert-detail-lbl">Issued By</span>
+            <span class="student-cert-detail-val">${escapeHtml(c.issuer || '—')}</span>
+          </div>
+          <div class="student-cert-detail-box">
+            <span class="student-cert-detail-lbl">Status</span>
+            <span class="student-badge student-badge-success" style="font-size: 0.7rem; padding: 2px 6px;">Verified</span>
           </div>
         </div>
-      `;
-    }).join('');
+
+        <div class="student-cert-actions-row">
+          <button type="button" class="student-cert-btn-view btn-view-cert" data-id="${c.id}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span>View Certificate</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
 
     container.innerHTML = `
       <!-- Header Banner -->
@@ -150,7 +130,7 @@ export async function StudentCertificates(route, router) {
           </div>
           <div>
             <h1 class="student-cert-title">My Certificates</h1>
-            <p class="student-cert-subtitle"></p>
+            <p class="student-cert-subtitle">View, verify, and download official certificates issued to you.</p>
           </div>
         </div>
       </div>
@@ -182,8 +162,8 @@ export async function StudentCertificates(route, router) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
           </div>
           <div class="student-cert-kpi-info">
-            <div class="student-cert-kpi-val">${distinctTracks}</div>
-            <div class="student-cert-kpi-lbl">Specializations</div>
+            <div class="student-cert-kpi-val">${distinctModules}</div>
+            <div class="student-cert-kpi-lbl">Modules Certified</div>
           </div>
         </div>
 
@@ -198,12 +178,12 @@ export async function StudentCertificates(route, router) {
         </div>
       </div>
 
-      ${completedProjects.length === 0 ? `
+      ${certificates.length === 0 ? `
         <div style="text-align: center; padding: 56px 24px; background: var(--surface-card); border: 1px dashed var(--border-subtle); border-radius: 18px;">
           <div style="font-size: 3rem; margin-bottom: 14px;">🎓</div>
-          <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">No Certificates Available Yet</h3>
+          <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">No Certificates Yet</h3>
           <p style="color: var(--text-muted); max-width: 420px; margin: 0 auto; font-size: 0.88rem; line-height: 1.5;">
-            Certificates are automatically issued once your assigned projects are completed and approved by your faculty supervisor.
+            Certificates issued to you by your coordinator will appear here once a completed module is certified.
           </p>
         </div>
       ` : `
@@ -214,7 +194,7 @@ export async function StudentCertificates(route, router) {
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="cert-search-input" class="student-cert-search-input" placeholder="Search certificates by project, supervisor, or track..." value="${certSearch}">
+            <input type="text" id="cert-search-input" class="student-cert-search-input" placeholder="Search certificates by project, module, or certificate number..." value="${certSearch}">
           </div>
 
           <select id="cert-sort-select" class="student-cert-select">
@@ -231,7 +211,7 @@ export async function StudentCertificates(route, router) {
           ` : ''}
         </div>
 
-        ${filteredCertificates.length === 0 ? `
+        ${filtered.length === 0 ? `
           <div style="text-align: center; padding: 48px 20px; background: var(--surface-card); border: 1px dashed var(--border-subtle); border-radius: 16px;">
             <div style="font-size: 2rem; margin-bottom: 8px;">🔍</div>
             <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem; margin-bottom: 4px;">No certificates match your search query</div>
@@ -247,59 +227,30 @@ export async function StudentCertificates(route, router) {
         `}
       `}
 
-      <!-- Certificate Preview Modal -->
-      <div class="student-cert-modal" id="cert-preview-modal" style="display: none;">
-        <div class="student-cert-modal-overlay"></div>
-        <div class="student-cert-modal-content">
-          <button type="button" class="student-cert-modal-close" id="btn-close-modal">&times;</button>
-          <div>
-            <div class="student-cert-framed-doc">
-              <div class="student-cert-border-outer">
-                <div class="student-cert-border-inner">
-                  <div class="student-cert-doc-logo">RLABZ ACADEMY</div>
-                  <div class="student-cert-doc-title">CERTIFICATE OF COMPLETION</div>
-                  <div class="student-cert-doc-sub">PROUDLY PRESENTED TO</div>
-                  <div class="student-cert-doc-recipient">${studentName}</div>
-                  <div class="student-cert-doc-body">
-                    for successfully completing all requirements and active project contributions in the project
-                  </div>
-                  <div class="student-cert-doc-project" id="modal-project-name">CMS Academic Module</div>
-                  <div class="student-cert-doc-body">
-                    under the supervision of CS Faculty and Co-ordinators.
-                  </div>
-                  
-                  <div class="student-cert-doc-signatures">
-                    <div class="student-cert-doc-sig-box">
-                      <div class="student-cert-doc-sig-line"></div>
-                      <span style="font-size: 13px; font-weight: 700; color: #1e293b;" id="modal-faculty-name">Prof. Mathew John</span>
-                      <label style="font-size: 11px; color: var(--text-muted); margin-top: 2px; font-family: sans-serif;">Project Supervisor</label>
-                    </div>
-                    <div class="student-cert-doc-sig-box">
-                      <div class="student-cert-doc-sig-line"></div>
-                      <span style="font-size: 13px; font-weight: 700; color: #1e293b;">Director, RLabZ ERP</span>
-                      <label style="font-size: 11px; color: var(--text-muted); margin-top: 2px; font-family: sans-serif;">Issuing Authority</label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <!-- Certificate Preview Modal (shared certificate design) -->
+      <div class="cert-modal" id="cert-preview-modal" style="display: none;">
+        <div class="cert-modal-overlay"></div>
+        <div class="cert-modal-content">
+          <button class="cert-modal-close" id="btn-close-modal">&times;</button>
+          <div class="cert-modal-body">
+            <div id="student-certificate-printable" class="certificate-sheet"></div>
           </div>
-          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; width: 100%;">
-            <button type="button" class="student-btn student-btn-outline" id="btn-modal-close-action">Close</button>
-            <button type="button" class="student-btn student-btn-outline" id="btn-modal-copy-action">
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; width: 100%;">
+            <button class="student-btn student-btn-outline" id="btn-modal-close-action">Close</button>
+            <button class="student-btn student-btn-outline" id="btn-modal-copy-action">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
               <span>Copy Verification Text</span>
             </button>
-            <button type="button" class="student-btn student-btn-primary" id="btn-modal-download-action">
+            <button class="student-btn student-btn-primary" id="btn-modal-download-action">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              <span>Download PDF</span>
+              Download Certificate
             </button>
           </div>
         </div>
@@ -331,34 +282,13 @@ export async function StudentCertificates(route, router) {
     container.querySelector('#btn-clear-cert-filters')?.addEventListener('click', clearCertFilters);
     container.querySelector('#btn-empty-clear-cert')?.addEventListener('click', clearCertFilters);
 
-    container.querySelectorAll('.btn-view-cert').forEach(btn => {
+    container.querySelectorAll('.btn-view-cert').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const id = parseInt(btn.dataset.id);
-        const proj = projects.find(p => p.id === id);
-        if (proj) {
-          activeCertificate = proj;
-          showModal(proj);
-        }
-      });
-    });
-
-    container.querySelectorAll('.btn-download-cert').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = parseInt(btn.dataset.id);
-        const proj = projects.find(p => p.id === id);
-        if (proj) {
-          downloadCertificatePdf(proj, e.currentTarget);
-        }
-      });
-    });
-
-    // Copy certificate verification details
-    container.querySelectorAll('.btn-copy-cert-info').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = parseInt(btn.dataset.id);
-        const proj = projects.find(p => p.id === id);
-        if (proj) {
-          copyCertSummary(proj);
+        const id = parseInt(btn.dataset.id, 10);
+        const cert = filtered.find((c) => c.id === id) || certificates.find((c) => c.id === id);
+        if (cert) {
+          activeCertificate = cert;
+          showModal(cert);
         }
       });
     });
@@ -376,153 +306,42 @@ export async function StudentCertificates(route, router) {
 
     closeBtn?.addEventListener('click', hideModal);
     closeActionBtn?.addEventListener('click', hideModal);
-    modal?.querySelector('.student-cert-modal-overlay')?.addEventListener('click', hideModal);
-
-    downloadActionBtn?.addEventListener('click', (e) => {
-      if (activeCertificate) {
-        downloadCertificatePdf(activeCertificate, e.currentTarget);
-      }
-    });
+    modal?.querySelector('.cert-modal-overlay')?.addEventListener('click', hideModal);
 
     copyActionBtn?.addEventListener('click', () => {
-      if (activeCertificate) {
-        copyCertSummary(activeCertificate);
-      }
-    });
-
-    function showModal(proj) {
-      container.querySelector('#modal-project-name').textContent = proj.title;
-      container.querySelector('#modal-faculty-name').textContent = proj.faculty || 'Project Supervisor';
-      modal.style.display = 'flex';
-    }
-
-    function copyCertSummary(proj) {
-      const text = `RLabZ Academy Certificate of Completion\nRecipient: ${studentName}\nProject: ${proj.title}\nSupervisor: ${proj.faculty || 'Faculty Lead'}\nStatus: Issued & Verified`;
+      if (!activeCertificate) return;
+      const c = activeCertificate;
+      const text = `RLabZ Certificate of Completion\nRecipient: ${c.student}\nProject: ${c.project}${c.module ? `\nModule: ${c.module}` : ''}\nCertificate No: ${c.certificateNumber || '—'}\nIssue Date: ${formatReadableDate(c.date)}\nIssued By: ${c.issuer || '—'}`;
       navigator.clipboard?.writeText(text).then(() => {
         StudentSwal.fire({
           toast: true,
           position: 'top-end',
           icon: 'success',
           title: 'Verification Info Copied!',
-          text: `Certificate details for "${proj.title}" copied.`,
+          text: `Certificate details for "${c.project}" copied.`,
           showConfirmButton: false,
           timer: 2000,
-          timerProgressBar: true
+          timerProgressBar: true,
         });
       });
-    }
+    });
 
-    async function downloadCertificatePdf(proj, triggerBtn = null) {
-      const originalHTML = triggerBtn ? triggerBtn.innerHTML : '';
-      if (triggerBtn) {
-        triggerBtn.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cert-spin">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-          </svg>
-          <span>Generating PDF...</span>
-        `;
-        triggerBtn.disabled = true;
-      }
-
-      let issuedDate = '30 Sep 2026';
-      if (proj.timeline) {
-        const parts = proj.timeline.split(' - ');
-        if (parts.length > 1) {
-          issuedDate = parts[1].trim();
-        }
-      }
-
-      const certNumber = proj.certificate_number || `CERT-2026-${String(proj.id || '001').padStart(3, '0')}`;
-      const supervisorName = proj.faculty || 'Prof. Mathew John';
-
-      const certElement = document.createElement('div');
-      certElement.style.cssText = 'width: 820px; padding: 12px; background: var(--surface-card); box-sizing: border-box; margin: 0 auto; font-family: "Times New Roman", Times, Georgia, serif; color: #1e293b;';
-      certElement.innerHTML = `
-        <div style="width: 100%; background: #fdfdfa; border: 1px solid var(--border-subtle); padding: 8px; box-sizing: border-box;">
-          <div style="border: 6px solid #1e293b; padding: 4px; box-sizing: border-box;">
-            <div style="border: 2px solid #b45309; padding: 36px 24px; text-align: center; box-sizing: border-box; background: #fffdf9;">
-              
-              <div style="font-size: 14px; letter-spacing: 5px; font-weight: 700; color: #b45309; margin-bottom: 12px; text-transform: uppercase;">
-                RLABZ ACADEMY
-              </div>
-
-              <div style="font-size: 28px; font-weight: 800; color: #1e293b; letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase;">
-                CERTIFICATE OF COMPLETION
-              </div>
-
-              <div style="font-size: 11px; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 16px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                PROUDLY PRESENTED TO
-              </div>
-
-              <div style="font-size: 30px; font-style: italic; font-weight: 700; color: var(--primary); border-bottom: 2px solid #cbd5e1; padding-bottom: 4px; margin: 0 auto 16px; display: inline-block; min-width: 260px;">
-                ${studentName}
-              </div>
-
-              <div style="font-size: 14px; line-height: 1.6; color: #475569; max-width: 580px; margin: 0 auto 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                for successfully completing all requirements and active project contributions in the project
-              </div>
-
-              <div style="font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 12px;">
-                ${proj.title}
-              </div>
-
-              <div style="font-size: 13.5px; line-height: 1.5; color: #475569; margin-bottom: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                under the supervision of CS Faculty and Co-ordinators.
-              </div>
-
-              <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                Certificate No: <strong style="color: #1e293b;">${certNumber}</strong> &nbsp;|&nbsp; 
-                Issued Date: <strong style="color: #1e293b;">${issuedDate}</strong> &nbsp;|&nbsp; 
-                Status: <strong style="color: var(--primary);">Issued &amp; Verified</strong>
-              </div>
-
-              <div style="display: flex; justify-content: space-between; width: 100%; max-width: 540px; margin: 20px auto 0;">
-                <div style="display: flex; flex-direction: column; align-items: center; width: 200px;">
-                  <div style="width: 100%; border-top: 1px solid var(--text-secondary); margin-bottom: 6px;"></div>
-                  <span style="font-size: 13px; font-weight: 700; color: #1e293b;">${supervisorName}</span>
-                  <label style="font-size: 11px; color: var(--text-muted); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Project Supervisor</label>
-                </div>
-
-                <div style="display: flex; flex-direction: column; align-items: center; width: 200px;">
-                  <div style="width: 100%; border-top: 1px solid var(--text-secondary); margin-bottom: 6px;"></div>
-                  <span style="font-size: 13px; font-weight: 700; color: #1e293b;">Director, RLabZ ERP</span>
-                  <label style="font-size: 11px; color: var(--text-muted); margin-top: 2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Issuing Authority</label>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      `;
-
-      const sanitizedTitle = (proj.title || 'Project').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const filename = `Certificate_${sanitizedTitle}.pdf`;
-
+    downloadActionBtn?.addEventListener('click', async (e) => {
+      if (!activeCertificate) return;
+      const btn = e.currentTarget;
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Generating...';
       try {
-        const blob = await html2pdf().set({
-          margin: [0.4, 0.4, 0.4, 0.4],
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' },
-          pagebreak: { mode: 'avoid-all' }
-        }).from(certElement).output('blob');
-
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-
+        const printable = container.querySelector('#student-certificate-printable');
+        await downloadCertificatePdf(activeCertificate, printable);
         StudentSwal.fire({
           icon: 'success',
           title: 'Certificate Downloaded!',
-          text: `Official project completion certificate for "${proj.title}" downloaded successfully as PDF.`,
+          text: `Certificate for "${activeCertificate.project}" downloaded successfully as PDF.`,
           timer: 3000,
           showConfirmButton: false,
-          timerProgressBar: true
+          timerProgressBar: true,
         });
       } catch (err) {
         console.error('Certificate PDF generation error:', err);
@@ -532,11 +351,15 @@ export async function StudentCertificates(route, router) {
           text: 'Failed to generate PDF certificate: ' + (err.message || 'Unknown error'),
         });
       } finally {
-        if (triggerBtn) {
-          triggerBtn.innerHTML = originalHTML;
-          triggerBtn.disabled = false;
-        }
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
       }
+    });
+
+    function showModal(cert) {
+      const printable = container.querySelector('#student-certificate-printable');
+      printable.innerHTML = buildCertificateHtml(cert);
+      modal.style.display = 'flex';
     }
   }
 

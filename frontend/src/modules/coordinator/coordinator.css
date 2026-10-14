@@ -20,7 +20,8 @@
 
 .coordinator-header h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: #111827;
 }
 
@@ -73,43 +74,127 @@
   color: #b91c1c;
 }
 
+/* Coordinator KPI cards — restyled to match the Director Dashboard's KPI
+   card recipe exactly (dashboard.css: .director-kpi-card / .director-kpi-*),
+   reusing its gradients, border-radius, shadow, icon treatment, typography,
+   and hover motion. Director's own styles are untouched. */
 .coordinator-kpi-card {
-  background: white;
+  position: relative;
+  overflow: hidden;
   padding: 1.2rem;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  /* Fallback = the kpi-primary gradient, so a card rendered without an accent
+     class never ends up as white text on a transparent background. */
+  background: linear-gradient(145deg, var(--primary-hover) 0%, var(--primary) 100%);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.coordinator-kpi-card[data-nav] {
+.coordinator-kpi-card[data-nav],
+.coordinator-kpi-card[data-filter] {
   cursor: pointer;
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.coordinator-kpi-card[data-nav]:hover,
-.coordinator-kpi-card[data-nav]:focus-visible {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+.coordinator-kpi-card:hover,
+.coordinator-kpi-card[data-nav]:focus-visible,
+.coordinator-kpi-card[data-filter]:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25);
   outline: none;
+}
+
+/* Selected state for summary cards that act as list filters (Students page). */
+.coordinator-kpi-card.is-active,
+.coordinator-kpi-card.is-active:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.9);
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.coordinator-kpi-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  margin-bottom: 0.6rem;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.coordinator-kpi-card:hover .coordinator-kpi-icon {
+  transform: scale(1.08) rotate(3deg);
 }
 
 .coordinator-kpi-card span {
   display: block;
-  color: #6b7280;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .coordinator-kpi-card strong {
   display: block;
   margin: 0.5rem 0;
-  font-size: 1.8rem;
-  color: #00897B;
+  font-size: 2.15rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }
 
 .coordinator-kpi-card small {
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Accent gradients — identical values to dashboard.css's five
+   .director-kpi-card accent classes (kpi-sidebar-primary/teal/indigo/amber/
+   crimson), reused 1:1 so the two dashboards read as the same system. */
+.coordinator-kpi-card.kpi-primary {
+  background: linear-gradient(145deg, var(--primary-hover) 0%, var(--primary) 100%);
+  box-shadow: 0 8px 24px -4px rgba(4, 120, 87, 0.32);
+}
+.coordinator-kpi-card.kpi-primary:hover {
+  box-shadow: 0 16px 32px rgba(4, 120, 87, 0.32);
+}
+
+.coordinator-kpi-card.kpi-teal {
+  background: linear-gradient(135deg, #00897B 0%, #00796B 100%);
+  box-shadow: 0 8px 24px -4px rgba(0, 150, 136, 0.32);
+}
+.coordinator-kpi-card.kpi-teal:hover {
+  box-shadow: 0 16px 32px rgba(0, 150, 136, 0.32);
+}
+
+.coordinator-kpi-card.kpi-indigo {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.32);
+}
+.coordinator-kpi-card.kpi-indigo:hover {
+  box-shadow: 0 16px 32px rgba(99, 102, 241, 0.32);
+}
+
+.coordinator-kpi-card.kpi-amber {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 8px 24px -4px rgba(245, 158, 11, 0.32);
+}
+.coordinator-kpi-card.kpi-amber:hover {
+  box-shadow: 0 16px 32px rgba(245, 158, 11, 0.32);
+}
+
+.coordinator-kpi-card.kpi-crimson {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 8px 24px -4px rgba(239, 68, 68, 0.32);
+}
+.coordinator-kpi-card.kpi-crimson:hover {
+  box-shadow: 0 16px 32px rgba(239, 68, 68, 0.32);
 }
 
 .coordinator-panel {
@@ -194,6 +279,19 @@
 
 .coordinator-table tbody tr:hover {
   background: var(--bg-canvas-light);
+}
+
+.coordinator-row-clickable {
+  cursor: pointer;
+}
+
+.coordinator-row-clickable:hover {
+  background: var(--bg-canvas-light);
+}
+
+.coordinator-row-clickable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
 .designation-badge {
@@ -467,25 +565,6 @@
   }
 }
 
-.coordinator-kpi-card span {
-  display: block;
-  color: #6b7280;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-}
-
-.coordinator-kpi-card strong {
-  display: block;
-  font-size: 1.8rem;
-  color: #111827;
-}
-
-.coordinator-kpi-card small {
-  color: #6b7280;
-  font-size: 0.75rem;
-}
 
 .coordinator-panel-header {
   display: flex;
@@ -496,6 +575,8 @@
 
 .coordinator-panel-header h2 {
   margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: #111827;
 }
 
@@ -526,8 +607,8 @@
 .coordinator-table th {
   text-align: left;
   padding: 0.8rem;
-  background: var(--bg-canvas-light);
-  color: #6b7280;
+  background: #f9fafb;
+  color: #4b5563;
   font-weight: 600;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -654,6 +735,110 @@
   padding: 1.5rem;
 }
 
+/* Assign Student modal — searchable student list + current-project side panel */
+.coordinator-assign-student-layout {
+  display: flex;
+  gap: 1rem;
+  padding: 0 1.5rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.coordinator-assign-student-layout .coordinator-form-grid {
+  padding: 0;
+}
+
+.coordinator-student-search-results {
+  position: relative;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-top: 0.3rem;
+  background: white;
+  display: none;
+}
+
+.coordinator-student-result {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.coordinator-student-result:last-child {
+  border-bottom: none;
+}
+
+.coordinator-student-result:hover {
+  background: var(--primary-light);
+}
+
+.coordinator-student-result strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #111827;
+}
+
+.coordinator-student-result small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.coordinator-student-result-empty {
+  padding: 0.6rem 0.75rem;
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
+.coordinator-current-project-panel {
+  flex: 0 0 240px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  align-self: flex-start;
+}
+
+.coordinator-current-project-panel h4 {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.coordinator-current-project-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.6rem;
+}
+
+.coordinator-current-project-card:last-child {
+  margin-bottom: 0;
+}
+
+.coordinator-current-project-card strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #111827;
+  margin-bottom: 0.35rem;
+}
+
+.coordinator-current-project-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  padding: 0.15rem 0;
+}
+
+.coordinator-current-project-row span:last-child {
+  color: #374151;
+  font-weight: 600;
+  text-align: right;
+}
+
 .coordinator-form-group {
   display: flex;
   flex-direction: column;
@@ -705,6 +890,7 @@
 
 .coordinator-modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.7rem;
   padding: 1rem 1.5rem;
@@ -721,21 +907,33 @@
 }
 
 .coordinator-primary-btn {
-  background: #009688;
+  background: linear-gradient(135deg, var(--primary-accent), var(--primary));
   color: white;
 }
 
 .coordinator-primary-btn:hover {
-  background: #00897B;
+  background: var(--primary-hover);
 }
 
 .coordinator-secondary-btn {
-  background: #f3f4f6;
-  color: #374151;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--primary-hover);
 }
 
 .coordinator-secondary-btn:hover {
-  background: #e5e7eb;
+  background: var(--primary-light);
+}
+
+/* Footer "Cancel" buttons also carry .coordinator-close-btn so openModal()
+   can bind them as closers. Undo that class's round 32px "×" sizing for them,
+   otherwise "Cancel" is squeezed to 32px and hidden behind the Save button. */
+.coordinator-close-btn.coordinator-secondary-btn,
+.coordinator-close-btn.coordinator-primary-btn {
+  width: auto;
+  height: auto;
+  font-size: revert;
+  flex-shrink: 0;
 }
 
 @media (max-width: 900px) {
@@ -787,11 +985,11 @@
 }
 
 .project-status.active {
-  background: #E0F2F1;
-  color: #009688;
+  background: var(--primary-light);
+  color: var(--primary-hover);
 }
 
 .project-status.completed {
-  background: var(--bg-main);
-  color: #16a34a;
+  background: var(--primary-light);
+  color: var(--primary-hover);
 }
