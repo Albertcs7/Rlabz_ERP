@@ -196,9 +196,15 @@ class PaymentController extends Controller
             return response()->json(['message' => $check['message']], $check['http_status']);
         }
 
+        $overheadCheck = $this->financeService->evaluateOverheadCeiling((int) $validated['project_finance_id'], (float) $validated['amount']);
+
         $charge = HostingCharge::create($validated);
 
-        return response()->json(['message' => 'Resource payment recorded successfully', 'charge' => $charge]);
+        return response()->json([
+            'message' => 'Resource payment recorded successfully',
+            'charge' => $charge,
+            'overhead_check' => $overheadCheck
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -225,9 +231,15 @@ class PaymentController extends Controller
             return response()->json(['message' => $check['message']], $check['http_status']);
         }
 
+        $overheadCheck = $this->financeService->evaluateOverheadCeiling((int) $validated['project_finance_id'], (float) $validated['amount']);
+
         $charge = MaintenanceSupportCharge::create($validated);
 
-        return response()->json(['message' => 'Maintenance record added successfully', 'charge' => $charge]);
+        return response()->json([
+            'message' => 'Maintenance record added successfully',
+            'charge' => $charge,
+            'overhead_check' => $overheadCheck
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -298,6 +310,9 @@ class PaymentController extends Controller
             'total_development_amount' => $totalDevAmount,
             'remaining_dev_billable'   => $remainingDevBillable,
             'total_project_budget'     => $totalProjectBudget,
+            'overhead_budget'          => (float) ($pf->overhead_budget ?? 0),
+            'consumed_overhead'        => $pf->consumed_overhead,
+            'remaining_overhead'       => $pf->remaining_overhead,
             'marketing_budget'         => (float) ($pf->marketing_budget ?? 0),
             'marketing_expenses'       => $pf->marketingExpenses,
             'hosting_charges'          => $pf->hostingCharges,

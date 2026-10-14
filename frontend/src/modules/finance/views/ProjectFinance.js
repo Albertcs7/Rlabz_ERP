@@ -67,7 +67,60 @@ export async function ProjectFinance(route, router) {
         const budgetPct = estCost > 0 ? Math.round((collected / estCost) * 100) : 0;
         const billedPct = totalBilled > 0 ? Math.round((collected / totalBilled) * 100) : 0;
         const devTotal = projectData.development_allocations ? (projectData.development_allocations.reduce((sum, a) => sum + parseFloat(a.amount), 0)) : 0;
-        const hostTotal = projectData.hosting_charges ? (projectData.hosting_charges.reduce((sum, h) => sum + parseFloat(h.amount), 0)) : 0;
+
+        // Overhead budget pool & consumed overhead
+        const overheadBudget = parseFloat(projectData.overhead_budget || 0);
+        const consumedOverhead = parseFloat(projectData.consumed_overhead !== undefined ? projectData.consumed_overhead : 0);
+        const remainingOverhead = projectData.remaining_overhead !== undefined ? parseFloat(projectData.remaining_overhead) : (overheadBudget - consumedOverhead);
+        const isOverheadExceeded = overheadBudget > 0 && consumedOverhead > overheadBudget;
+
+        const hostingChargesList = projectData.hosting_charges || [];
+        const maintenanceChargesList = projectData.maintenance_support_charges || [];
+        const hostingTotal = hostingChargesList.reduce((sum, h) => sum + parseFloat(h.amount || 0), 0);
+        const maintenanceTotal = maintenanceChargesList.reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
+
+        let sslRenewals = [];
+        try {
+          const allRenewals = await financeService._fetch('/finance/ssl-renewal-history');
+          if (allRenewals && Array.isArray(allRenewals)) {
+            sslRenewals = allRenewals.filter(r => r.project_id === project.id);
+          }
+        } catch (e) { }
+
+        // Combined itemized overhead transactions
+        const overheadTransactions = [
+          ...hostingChargesList.map(hc => ({
+            id: `HC-${hc.id}`,
+            date: hc.purchase_date,
+            category: (hc.charge_type || 'hosting').toUpperCase(),
+            badge: hc.charge_type === 'ssl' ? 'primary' : hc.charge_type === 'domain' ? 'info' : 'neutral',
+            details: hc.reference_details || hc.provider || (hc.domain_name ? `Domain: ${hc.domain_name}` : 'Hosting Resource'),
+            expiry: hc.expiry_date,
+            amount: parseFloat(hc.amount || 0),
+            source: 'hosting'
+          })),
+          ...sslRenewals.map(sr => ({
+            id: `SR-${sr.id}`,
+            date: sr.renewal_date,
+            category: 'SSL RENEWAL',
+            badge: 'warning',
+            details: `Renewal for HC-${sr.hosting_charge_id} (${sr.hosting_details || 'SSL'}) · Ref: ${sr.payment_reference || '—'}`,
+            expiry: sr.new_expiry_date,
+            amount: parseFloat(sr.renewal_amount || 0),
+            source: 'ssl_renewal'
+          })),
+          ...maintenanceChargesList.map(mc => ({
+            id: `MC-${mc.id}`,
+            date: mc.start_date,
+            category: 'MAINTENANCE',
+            badge: 'indigo',
+            details: mc.description || 'Annual Maintenance & Support',
+            expiry: mc.end_date,
+            amount: parseFloat(mc.amount || 0),
+            source: 'maintenance'
+          }))
+        ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
         const marketingBudget = parseFloat(projectData.marketing_budget || 0);
         const marketingExpenses = projectData.marketing_expenses || [];
         const marketingSpent = marketingExpenses.reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
@@ -151,9 +204,16 @@ export async function ProjectFinance(route, router) {
               </div>
 
               <div class="fin-cost-section" style="margin-top:0.75rem;">
-                <div class="fin-cost-section-title">Hosting Charges</div>
-                <div class="fin-cost-item"><span class="label">Total Hosting</span><span class="value">${fmt(hostTotal)}</span></div>
-                <div class="fin-cost-total" style="font-size:0.82rem;"><span>Hosting Subtotal</span><span>${fmt(hostTotal)}</span></div>
+                <div class="fin-cost-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>Overhead & Infrastructure Budget</span>
+                  ${isOverheadExceeded ? `<span class="fin-badge danger" style="font-size:0.68rem; padding:1px 6px;">Exceeded Pool</span>` : ''}
+                </div>
+                <div class="fin-cost-item"><span class="label">Overhead Budget Pool</span><span class="value" style="font-weight:600; color:#059669;">${fmt(overheadBudget)}</span></div>
+                <div class="fin-cost-item"><span class="label">Consumed Overhead</span><span class="value" style="font-weight:600; color:${isOverheadExceeded ? '#ef4444' : 'var(--text-color)'};">${fmt(consumedOverhead)}</span></div>
+                <div class="fin-cost-item"><span class="label">Remaining Pool</span><span class="value" style="font-weight:600; color:${remainingOverhead < 0 ? '#ef4444' : remainingOverhead > 0 ? '#10b981' : 'var(--text-muted)'};">${fmt(remainingOverhead)}</span></div>
+                <div class="fin-cost-total" style="font-size:0.78rem; color:var(--text-muted); font-weight:normal; margin-top:4px;">
+                  <span>Hosting: ${fmt(hostingTotal)} | Maint: ${fmt(maintenanceTotal)}</span>
+                </div>
               </div>
 
               <div class="fin-cost-section" style="margin-top:0.75rem;">
@@ -161,14 +221,6 @@ export async function ProjectFinance(route, router) {
                 <div class="fin-cost-item"><span class="label">Budget Allocated</span><span class="value" style="font-weight:600;">${fmt(marketingBudget)}</span></div>
                 <div class="fin-cost-item"><span class="label">Spent / Realized</span><span class="value" style="color:#ef4444;font-weight:600;">${fmt(marketingSpent)}</span></div>
                 <div class="fin-cost-item"><span class="label">Remaining Balance</span><span class="value" style="color:${marketingRemaining > 0 ? '#10b981' : (marketingBudget > 0 ? '#f59e0b' : 'var(--text-muted)')};font-weight:600;">${fmt(marketingRemaining)}</span></div>
-              </div>
-
-              <div class="fin-cost-section" style="margin-top:0.75rem;">
-                <div class="fin-cost-section-title">Maintenance & Support</div>
-                ${projectData.maintenance_support_charges?.length > 0
-            ? `<div class="fin-cost-item"><span class="label">Annual Support</span><span class="value">${fmt(projectData.maintenance_support_charges.reduce((s, c) => s + parseFloat(c.amount), 0))}</span></div>`
-            : `<div class="fin-cost-item"><span class="label" style="font-style:italic;">Not included</span><span class="value">–</span></div>`
-          }
               </div>
 
               <div style="margin-top: 1rem; border-top: 2px solid var(--border-color); padding-top: 0.75rem;">
@@ -214,6 +266,64 @@ export async function ProjectFinance(route, router) {
 
         <!-- SSL Information (Dynamically loaded) -->
         <div id="project-ssl-info-container"></div>
+
+        <!-- Dedicated Operational & Infrastructure Costs (Overhead Pool) Card -->
+        <div class="fin-panel" style="margin-bottom: 1.5rem;">
+          <div class="fin-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+              <div class="fin-panel-title">Operational & Infrastructure Expenses (Overhead Pool)</div>
+              <div class="fin-panel-subtitle" style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-top:2px;">
+                <span>Budget Pool: <strong style="color:#059669;">${fmt(overheadBudget)}</strong></span>
+                <span>•</span>
+                <span>Consumed: <strong style="color:${isOverheadExceeded ? '#ef4444' : 'var(--text-color)'};">${fmt(consumedOverhead)}</strong></span>
+                <span>•</span>
+                <span>Remaining: <strong style="color:${remainingOverhead < 0 ? '#ef4444' : remainingOverhead > 0 ? '#10b981' : 'var(--text-muted)'};">${fmt(remainingOverhead)}</strong></span>
+                ${isOverheadExceeded ? `<span class="fin-badge danger" style="font-size:0.7rem; padding:1px 6px;">⚠ Over Budget by ${fmt(consumedOverhead - overheadBudget)}</span>` : ''}
+              </div>
+            </div>
+            ${projectLock.locked ? '' : `
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button class="fin-btn outline sm" id="card-add-resource-btn" style="display:inline-flex; align-items:center; gap:4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  + Add Infrastructure
+                </button>
+                <button class="fin-btn outline sm" id="card-add-maintenance-btn" style="display:inline-flex; align-items:center; gap:4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  + Add Maintenance
+                </button>
+              </div>
+            `}
+          </div>
+          <div class="fin-table-wrap">
+            <table class="fin-table">
+              <thead>
+                <tr>
+                  <th>Ref ID</th>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Details / Provider</th>
+                  <th>Validity / Expiry</th>
+                  <th>Amount</th>
+                  <th>Pool Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${overheadTransactions.map(tx => `
+                  <tr>
+                    <td style="font-family:monospace; font-size:0.8rem; font-weight:600; color:var(--primary);">${tx.id}</td>
+                    <td style="white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${fmtDate(tx.date)}</td>
+                    <td><span class="fin-badge ${tx.badge}" style="font-size:0.72rem; text-transform:uppercase;">${tx.category}</span></td>
+                    <td style="font-size:0.875rem;">${tx.details}</td>
+                    <td style="white-space:nowrap; color:var(--text-muted); font-size:0.85rem;">${tx.expiry ? fmtDate(tx.expiry) : '—'}</td>
+                    <td style="font-weight:700; color:#ef4444;">${fmt(tx.amount)}</td>
+                    <td><span class="fin-badge neutral" style="font-size:0.7rem; color:var(--text-muted);">- ${fmt(tx.amount)} from pool</span></td>
+                  </tr>
+                `).join('')}
+                ${overheadTransactions.length === 0 ? '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.75rem;">No operational or infrastructure expenses recorded against this project yet. Overhead budget pool is fully available.</td></tr>' : ''}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         <!-- Resource Expenses -->
         <div class="fin-panel">
@@ -426,6 +536,217 @@ export async function ProjectFinance(route, router) {
           });
         };
 
+        // Unified Infrastructure / Resource Modal
+        const openInfrastructureModal = () => {
+          const modal = document.createElement('div');
+          modal.className = 'fin-modal-overlay';
+          modal.innerHTML = `
+          <div class="fin-modal" style="max-width:480px; width:95%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <h3 style="margin:0; font-size:1.15rem;">Record Infrastructure / Resource Charge</h3>
+              <button id="close-infra-x" style="background:none; border:none; cursor:pointer; font-size:1.25rem; color:var(--text-muted);">&times;</button>
+            </div>
+            <div style="font-size:0.825rem; color:var(--text-muted); margin-bottom:1rem; padding:0.5rem 0.75rem; background:var(--bg-light); border-radius:6px; line-height:1.5;">
+              Project: <strong>${project.title || 'Unknown'}</strong><br>
+              Overhead Budget Pool: <strong>${fmt(overheadBudget)}</strong> | Consumed: <span style="color:#ef4444;font-weight:600;">${fmt(consumedOverhead)}</span> | Remaining: <span style="color:#10b981;font-weight:600;">${fmt(remainingOverhead)}</span>
+            </div>
+            <div id="infra-error-msg" style="display:none; color:#ef4444; font-size:0.8rem; margin-bottom:0.75rem; padding:0.5rem; background:#fee2e2; border-radius:4px;"></div>
+            
+            <div class="fin-form-group">
+              <label style="font-weight:600;">Resource Type *</label>
+              <select class="fin-input" id="infra-type">
+                <option value="ssl">SSL Certificate</option>
+                <option value="domain">Domain Registration</option>
+                <option value="api">API Service / Cloud Addon</option>
+                <option value="hosting">Hosting / Server</option>
+              </select>
+            </div>
+
+            <div style="display:flex; gap:0.75rem;">
+              <div class="fin-form-group" style="flex:1;">
+                <label style="font-weight:600;">Amount (₹) *</label>
+                <input type="number" class="fin-input" id="infra-amount" placeholder="0.00" min="0" step="0.01" required>
+              </div>
+              <div class="fin-form-group" style="flex:1;">
+                <label style="font-weight:600;">Purchase Date *</label>
+                <input type="date" class="fin-input" id="infra-purchase" value="${new Date().toISOString().split('T')[0]}" required>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:0.75rem;">
+              <div class="fin-form-group" style="flex:1;">
+                <label>Expiry Date</label>
+                <input type="date" class="fin-input" id="infra-expiry">
+              </div>
+              <div class="fin-form-group" style="flex:1;">
+                <label>Provider / Reference</label>
+                <input type="text" class="fin-input" id="infra-ref" placeholder="e.g. AWS, GoDaddy, Hostinger">
+              </div>
+            </div>
+
+            <div class="fin-form-actions" style="margin-top:1.25rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+              <button class="fin-btn outline" id="cancel-infra">Cancel</button>
+              <button class="fin-btn primary" id="save-infra-btn">Save Resource</button>
+            </div>
+          </div>
+        `;
+          document.body.appendChild(modal);
+
+          const closeModal = () => modal.remove();
+          modal.querySelector('#cancel-infra').addEventListener('click', closeModal);
+          modal.querySelector('#close-infra-x').addEventListener('click', closeModal);
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+          });
+
+          modal.querySelector('#save-infra-btn').addEventListener('click', async () => {
+            const chargeType = modal.querySelector('#infra-type').value;
+            const amount = parseFloat(modal.querySelector('#infra-amount').value);
+            const purchaseDate = modal.querySelector('#infra-purchase').value;
+            const expiryDate = modal.querySelector('#infra-expiry').value || null;
+            const ref = modal.querySelector('#infra-ref').value.trim();
+            const errEl = modal.querySelector('#infra-error-msg');
+            const saveBtn = modal.querySelector('#save-infra-btn');
+
+            if (isNaN(amount) || amount < 0) {
+              errEl.textContent = 'Please enter a valid amount.';
+              errEl.style.display = 'block';
+              return;
+            }
+            if (!purchaseDate) {
+              errEl.textContent = 'Please select a purchase date.';
+              errEl.style.display = 'block';
+              return;
+            }
+
+            try {
+              saveBtn.disabled = true;
+              saveBtn.textContent = 'Saving...';
+              errEl.style.display = 'none';
+
+              const res = await financeService.addResourceCost({
+                project_finance_id: projectData.id,
+                charge_type: chargeType,
+                amount,
+                purchase_date: purchaseDate,
+                expiry_date: expiryDate,
+                reference_details: ref || null
+              });
+
+              if (res?.overhead_check?.is_over_budget && res.overhead_check.warning) {
+                alert(res.overhead_check.warning);
+              }
+
+              closeModal();
+              loadProjectDetails();
+            } catch (err) {
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Save Resource';
+              errEl.textContent = err.message || 'Failed to save resource record.';
+              errEl.style.display = 'block';
+            }
+          });
+        };
+
+        // Unified Maintenance Modal
+        const openMaintenanceModal = () => {
+          const modal = document.createElement('div');
+          modal.className = 'fin-modal-overlay';
+          modal.innerHTML = `
+          <div class="fin-modal" style="max-width:480px; width:95%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <h3 style="margin:0; font-size:1.15rem;">Record Maintenance & Support Charge</h3>
+              <button id="close-maint-x" style="background:none; border:none; cursor:pointer; font-size:1.25rem; color:var(--text-muted);">&times;</button>
+            </div>
+            <div style="font-size:0.825rem; color:var(--text-muted); margin-bottom:1rem; padding:0.5rem 0.75rem; background:var(--bg-light); border-radius:6px; line-height:1.5;">
+              Project: <strong>${project.title || 'Unknown'}</strong><br>
+              Overhead Budget Pool: <strong>${fmt(overheadBudget)}</strong> | Consumed: <span style="color:#ef4444;font-weight:600;">${fmt(consumedOverhead)}</span> | Remaining: <span style="color:#10b981;font-weight:600;">${fmt(remainingOverhead)}</span>
+            </div>
+            <div id="maint-error-msg" style="display:none; color:#ef4444; font-size:0.8rem; margin-bottom:0.75rem; padding:0.5rem; background:#fee2e2; border-radius:4px;"></div>
+            
+            <div class="fin-form-group">
+              <label style="font-weight:600;">Amount (₹) *</label>
+              <input type="number" class="fin-input" id="maint-amount" placeholder="0.00" min="0" step="0.01" required>
+            </div>
+
+            <div style="display:flex; gap:0.75rem;">
+              <div class="fin-form-group" style="flex:1;">
+                <label style="font-weight:600;">Start Date *</label>
+                <input type="date" class="fin-input" id="maint-start" value="${new Date().toISOString().split('T')[0]}" required>
+              </div>
+              <div class="fin-form-group" style="flex:1;">
+                <label>End Date</label>
+                <input type="date" class="fin-input" id="maint-end">
+              </div>
+            </div>
+
+            <div class="fin-form-group">
+              <label>Description / Scope of Support</label>
+              <textarea class="fin-input" id="maint-desc" rows="2" placeholder="e.g. Annual AMC, Server upkeep, Security patches"></textarea>
+            </div>
+
+            <div class="fin-form-actions" style="margin-top:1.25rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+              <button class="fin-btn outline" id="cancel-maint">Cancel</button>
+              <button class="fin-btn primary" id="save-maint-btn">Save Maintenance</button>
+            </div>
+          </div>
+        `;
+          document.body.appendChild(modal);
+
+          const closeModal = () => modal.remove();
+          modal.querySelector('#cancel-maint').addEventListener('click', closeModal);
+          modal.querySelector('#close-maint-x').addEventListener('click', closeModal);
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+          });
+
+          modal.querySelector('#save-maint-btn').addEventListener('click', async () => {
+            const amount = parseFloat(modal.querySelector('#maint-amount').value);
+            const startDate = modal.querySelector('#maint-start').value;
+            const endDate = modal.querySelector('#maint-end').value || null;
+            const desc = modal.querySelector('#maint-desc').value.trim();
+            const errEl = modal.querySelector('#maint-error-msg');
+            const saveBtn = modal.querySelector('#save-maint-btn');
+
+            if (isNaN(amount) || amount < 0) {
+              errEl.textContent = 'Please enter a valid amount.';
+              errEl.style.display = 'block';
+              return;
+            }
+            if (!startDate) {
+              errEl.textContent = 'Please select a start date.';
+              errEl.style.display = 'block';
+              return;
+            }
+
+            try {
+              saveBtn.disabled = true;
+              saveBtn.textContent = 'Saving...';
+              errEl.style.display = 'none';
+
+              const res = await financeService.addMaintenanceCost({
+                project_finance_id: projectData.id,
+                amount,
+                start_date: startDate,
+                end_date: endDate,
+                description: desc || null
+              });
+
+              if (res?.overhead_check?.is_over_budget && res.overhead_check.warning) {
+                alert(res.overhead_check.warning);
+              }
+
+              closeModal();
+              loadProjectDetails();
+            } catch (err) {
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Save Maintenance';
+              errEl.textContent = err.message || 'Failed to save maintenance record.';
+              errEl.style.display = 'block';
+            }
+          });
+        };
+
         const topAddMktBtn = container.querySelector('#top-add-marketing-expense-btn');
         if (topAddMktBtn) {
           topAddMktBtn.addEventListener('click', openMarketingModal);
@@ -433,6 +754,14 @@ export async function ProjectFinance(route, router) {
         const cardAddMktBtn = container.querySelector('#card-add-marketing-expense-btn');
         if (cardAddMktBtn) {
           cardAddMktBtn.addEventListener('click', openMarketingModal);
+        }
+        const cardAddResourceBtn = container.querySelector('#card-add-resource-btn');
+        if (cardAddResourceBtn) {
+          cardAddResourceBtn.addEventListener('click', openInfrastructureModal);
+        }
+        const cardAddMaintBtn = container.querySelector('#card-add-maintenance-btn');
+        if (cardAddMaintBtn) {
+          cardAddMaintBtn.addEventListener('click', openMaintenanceModal);
         }
 
         // Fetch and render SSL Information
@@ -674,7 +1003,10 @@ export async function ProjectFinance(route, router) {
               <label style="font-weight:600;">Marketing Budget (₹)</label>
               <input type="number" class="fin-input" id="new-p-marketing" placeholder="0" min="0">
             </div>
-            <div class="fin-form-subhead">Hosting Charges</div>
+            <div class="fin-form-subhead">Overhead Budget (Infrastructure & Maintenance)</div>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin:-0.25rem 0 0.5rem;">
+              Establishes the overhead budget pool for this project. Expenses will be realized dynamically when actual invoices or charges are recorded.
+            </p>
             <div class="fin-form-group">
               <label>SSL (₹)</label>
               <input type="number" class="fin-input" id="new-p-host-ssl" placeholder="0">
@@ -687,9 +1019,8 @@ export async function ProjectFinance(route, router) {
               <label>API (₹) — Optional</label>
               <input type="number" class="fin-input" id="new-p-host-api" placeholder="0 if not applicable">
             </div>
-            <div class="fin-form-subhead">Maintenance & Support</div>
             <div class="fin-form-group">
-              <label>Annual Support (₹)</label>
+              <label>Maintenance & Annual Support (₹)</label>
               <input type="number" class="fin-input" id="new-p-maint" placeholder="0 if not included">
             </div>
           </div>
@@ -714,6 +1045,7 @@ export async function ProjectFinance(route, router) {
                 <th>Project</th>
                 <th>Status</th>
                 <th>Est. Cost</th>
+                <th>Overhead Budget</th>
                 <th>Marketing Budget</th>
                 <th>Total Billing</th>
                 <th style="color:var(--primary)">Collected</th>
@@ -782,6 +1114,8 @@ export async function ProjectFinance(route, router) {
           const expenses = pf.total_expenses || 0;
           const profit = collected - expenses;
           const marketingBudget = pf.marketing_budget || 0;
+          const overheadBudget = pf.overhead_budget || 0;
+          const consumedOverhead = pf.consumed_overhead || 0;
 
           const lockLabel = lock.locked
             ? (lock.reason === 'status'
@@ -797,6 +1131,10 @@ export async function ProjectFinance(route, router) {
             </td>
             <td><span class="fin-badge ${statusBadgeClass(status)}">${formatStatus(status)}</span></td>
             <td>${fmt(p.budget || 0)}</td>
+            <td>
+              <div style="font-weight:600;color:#059669">${fmt(overheadBudget)}</div>
+              ${consumedOverhead > 0 ? `<div style="font-size:0.72rem;color:var(--text-muted)">Spent: ${fmt(consumedOverhead)}</div>` : ''}
+            </td>
             <td style="font-weight:600;color:#6366f1">${fmt(marketingBudget)}</td>
             <td style="font-weight:600">${fmt(billing)}</td>
             <td style="color:var(--primary);font-weight:700">${fmt(pf.total_collected || 0)}</td>
@@ -840,7 +1178,7 @@ export async function ProjectFinance(route, router) {
 
       if (tbody) {
         noResults.style.display = 'none';
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:3rem;color:var(--text-muted)"><span class="fin-spinner" style="margin-right:10px"></span> Loading projects...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:3rem;color:var(--text-muted)"><span class="fin-spinner" style="margin-right:10px"></span> Loading projects...</td></tr>`;
       }
 
       try {

@@ -420,8 +420,9 @@ export async function OperationalCosts(route, router) {
       confirmBtn.textContent = 'Saving...';
 
       try {
+        let res;
         if (isRenewal && hcid) {
-          await financeService.renewSsl(hcid, {
+          res = await financeService.renewSsl(hcid, {
             renewal_date: modal.querySelector('#rr-purchase').value,
             new_expiry_date: modal.querySelector('#rr-expiry').value,
             renewal_amount: amt,
@@ -429,7 +430,7 @@ export async function OperationalCosts(route, router) {
             remarks: 'Renewal'
           });
         } else {
-          await financeService.addResourceCost({
+          res = await financeService.addResourceCost({
             project_finance_id: pfid,
             charge_type: type,
             amount: amt,
@@ -437,6 +438,9 @@ export async function OperationalCosts(route, router) {
             expiry_date: modal.querySelector('#rr-expiry').value,
             reference_details: modal.querySelector('#rr-ref').value
           });
+        }
+        if (res?.overhead_check?.is_over_budget && res.overhead_check.warning) {
+          alert(res.overhead_check.warning);
         }
         modal.remove();
         loadData();
@@ -501,13 +505,16 @@ export async function OperationalCosts(route, router) {
       }
 
       try {
-        await financeService.addMaintenanceCost({
+        const res = await financeService.addMaintenanceCost({
           project_finance_id: pfid,
           amount: amt,
           start_date: modal.querySelector('#rm-start').value,
           end_date: modal.querySelector('#rm-end').value || null,
           description: modal.querySelector('#rm-desc').value
         });
+        if (res?.overhead_check?.is_over_budget && res.overhead_check.warning) {
+          alert(res.overhead_check.warning);
+        }
         modal.remove();
         loadData();
       } catch (err) {

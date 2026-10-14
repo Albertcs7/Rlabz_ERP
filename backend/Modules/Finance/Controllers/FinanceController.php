@@ -118,6 +118,7 @@ class FinanceController extends Controller
             'dev_faculty'        => 'nullable|numeric|min:0',
             'dev_rlabz'          => 'nullable|numeric|min:0',
             'marketing_budget'   => 'nullable|numeric|min:0',
+            'overhead_budget'    => 'nullable|numeric|min:0',
             'host_ssl'           => 'nullable|numeric|min:0',
             'host_domain'        => 'nullable|numeric|min:0',
             'host_api'           => 'nullable|numeric|min:0',
@@ -141,10 +142,20 @@ class FinanceController extends Controller
                   + ($validated['dev_faculty'] ?? 0)
                   + ($validated['dev_rlabz']   ?? 0);
 
+        $overheadBudget = isset($validated['overhead_budget']) && $validated['overhead_budget'] !== null
+            ? (float) $validated['overhead_budget']
+            : (
+                (float) ($validated['host_ssl'] ?? 0)
+              + (float) ($validated['host_domain'] ?? 0)
+              + (float) ($validated['host_api'] ?? 0)
+              + (float) ($validated['maintenance_support'] ?? 0)
+            );
+
         $pf = \Modules\Finance\Models\ProjectFinance::create([
             'project_id'               => $validated['project_id'],
             'total_development_amount' => $devTotal,
             'marketing_budget'         => $validated['marketing_budget'] ?? 0.00,
+            'overhead_budget'          => $overheadBudget,
             'created_by'               => $this->currentUserId($request),
         ]);
 
@@ -157,26 +168,6 @@ class FinanceController extends Controller
         }
         if (!empty($allocations)) {
             DB::table('development_allocations')->insert($allocations);
-        }
-
-        // Hosting charges
-        foreach (['ssl' => 'host_ssl', 'domain' => 'host_domain', 'api' => 'host_api'] as $type => $key) {
-            if (!empty($validated[$key])) {
-                \Modules\Finance\Models\HostingCharge::create([
-                    'project_finance_id' => $pf->id,
-                    'charge_type'        => $type,
-                    'amount'             => $validated[$key],
-                    'purchase_date'      => now()->toDateString(),
-                ]);
-            }
-        }
-
-        // Maintenance & support
-        if (!empty($validated['maintenance_support'])) {
-            \Modules\Finance\Models\MaintenanceSupportCharge::create([
-                'project_finance_id' => $pf->id,
-                'amount'             => $validated['maintenance_support'],
-            ]);
         }
 
         return response()->json(['message' => 'Project finance record created successfully', 'data' => $pf->load('developmentAllocations')], 201);
@@ -288,6 +279,8 @@ class FinanceController extends Controller
 
         $hostingCharge = \Modules\Finance\Models\HostingCharge::findOrFail($hostingChargeId);
 
+        $overheadCheck = $this->financeService->evaluateOverheadCeiling((int) $hostingCharge->project_finance_id, (float) $validated['renewal_amount']);
+
         \DB::table('ssl_renewal_history')->insert([
             'hosting_charge_id' => $hostingCharge->id,
             'renewal_date' => $validated['renewal_date'],
@@ -304,7 +297,11 @@ class FinanceController extends Controller
         $hostingCharge->expiry_date = $validated['new_expiry_date'];
         $hostingCharge->save();
 
-        return response()->json(['message' => 'SSL renewed successfully', 'data' => $hostingCharge]);
+        return response()->json([
+            'message' => 'SSL renewed successfully',
+            'data' => $hostingCharge,
+            'overhead_check' => $overheadCheck
+        ]);
     }
 
     public function getSslRenewalHistory()

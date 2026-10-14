@@ -11,6 +11,7 @@ class ProjectFinance extends Model
         'project_id',
         'total_development_amount',
         'marketing_budget',
+        'overhead_budget',
         'created_by',
         'approved_by',
         'approved_at',
@@ -19,6 +20,7 @@ class ProjectFinance extends Model
 
     protected $casts = [
         'marketing_budget' => 'decimal:2',
+        'overhead_budget' => 'decimal:2',
         'total_development_amount' => 'decimal:2',
     ];
 
@@ -67,19 +69,27 @@ class ProjectFinance extends Model
         return max(0, $this->total_invoiced - $this->total_collected);
     }
 
-    public function getTotalExpensesAttribute()
+    public function getConsumedOverheadAttribute()
     {
-        // hosting_charges.amount = original purchase cost (SSL, domain, etc.)
-        $hosting = $this->hostingCharges->sum('amount');
-        $maintenance = $this->maintenanceSupportCharges->sum('amount');
+        $hosting = $this->hostingCharges ? $this->hostingCharges->sum('amount') : 0;
+        $maintenance = $this->maintenanceSupportCharges ? $this->maintenanceSupportCharges->sum('amount') : 0;
 
-        // ssl_renewal_history.renewal_amount = subsequent renewal costs;
-        // these must be added to avoid under-reporting project expenses.
         $sslRenewals = \DB::table('ssl_renewal_history')
             ->join('hosting_charges', 'ssl_renewal_history.hosting_charge_id', '=', 'hosting_charges.id')
             ->where('hosting_charges.project_finance_id', $this->id)
             ->sum('ssl_renewal_history.renewal_amount');
 
+        return (float) ($hosting + $maintenance + $sslRenewals);
+    }
+
+    public function getRemainingOverheadAttribute()
+    {
+        $budget = (float) ($this->overhead_budget ?? 0);
+        return max(0, $budget - $this->consumed_overhead);
+    }
+
+    public function getTotalExpensesAttribute()
+    {
         $student = \DB::table('student_payments')
             ->join('project_student', 'student_payments.project_student_id', '=', 'project_student.id')
             ->where('project_student.project_id', $this->project_id)
@@ -90,8 +100,8 @@ class ProjectFinance extends Model
             ->where('project_faculty.project_id', $this->project_id)
             ->sum('faculty_payments.amount');
 
-        $marketing = $this->marketingExpenses->sum('amount');
+        $marketing = $this->marketingExpenses ? $this->marketingExpenses->sum('amount') : 0;
 
-        return $hosting + $sslRenewals + $maintenance + $student + $faculty + $marketing;
+        return $this->consumed_overhead + $student + $faculty + $marketing;
     }
 }

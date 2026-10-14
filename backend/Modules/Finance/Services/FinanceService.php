@@ -89,6 +89,50 @@ class FinanceService
         return $setting ? (float) $setting->student_hourly_rate : 0;
     }
 
+    public function getConsumedOverhead($projectFinanceId)
+    {
+        $pf = ProjectFinance::with(['hostingCharges', 'maintenanceSupportCharges'])->find($projectFinanceId);
+        if (!$pf) return 0.0;
+        return (float) $pf->consumed_overhead;
+    }
+
+    public function evaluateOverheadCeiling($projectFinanceId, $additionalAmount = 0)
+    {
+        $pf = ProjectFinance::with(['hostingCharges', 'maintenanceSupportCharges'])->find($projectFinanceId);
+        if (!$pf) {
+            return [
+                'valid'             => false,
+                'exceeded'          => false,
+                'overhead_budget'   => 0.0,
+                'consumed_overhead' => 0.0,
+                'new_total'         => 0.0,
+                'remaining'         => 0.0,
+                'overage'           => 0.0,
+                'warning'           => 'Project finance record not found.'
+            ];
+        }
+
+        $budget   = (float) ($pf->overhead_budget ?? 0);
+        $consumed = (float) $pf->consumed_overhead;
+        $newTotal = $consumed + (float) $additionalAmount;
+        $remaining = max(0, $budget - $consumed);
+        $exceeded  = ($budget > 0) && ($newTotal > $budget);
+        $overage   = $exceeded ? round($newTotal - $budget, 2) : 0.0;
+
+        return [
+            'valid'             => true,
+            'exceeded'          => $exceeded,
+            'overhead_budget'   => round($budget, 2),
+            'consumed_overhead' => round($consumed, 2),
+            'new_total'         => round($newTotal, 2),
+            'remaining'         => round($remaining, 2),
+            'overage'           => $overage,
+            'warning'           => $exceeded
+                ? "This expense exceeds the allocated overhead budget pool (₹" . number_format($budget, 2) . ") by ₹" . number_format($overage, 2) . "."
+                : null
+        ];
+    }
+
     public function getDashboardSummary()
     {
         $totalInvoiced = Invoice::all()->sum('grand_total');
@@ -441,7 +485,7 @@ class FinanceService
         $projects->each(function($project) use ($finances) {
             $pf = $finances->get($project->id);
             if ($pf) {
-                $pf->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses']);
+                $pf->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses', 'consumed_overhead', 'remaining_overhead']);
             }
             $project->project_finance = $pf;
 
@@ -460,7 +504,7 @@ class FinanceService
             return null;
         }
 
-        $projectFinance->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses']);
+        $projectFinance->append(['total_invoiced', 'total_collected', 'pending_amount', 'total_expenses', 'consumed_overhead', 'remaining_overhead']);
 
         // Fetch students via pivot, since we can't edit Project model
         $students = DB::table('project_student')

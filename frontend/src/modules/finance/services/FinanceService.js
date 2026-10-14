@@ -112,6 +112,11 @@ class FinanceService {
       total_development_amount: 0,
       remaining_dev_billable: 0,
       total_project_budget: 0,
+      overhead_budget: 0,
+      consumed_overhead: 0,
+      remaining_overhead: 0,
+      marketing_budget: 0,
+      marketing_expenses: [],
       hosting_charges: [],
       maintenance_charges: []
     };
