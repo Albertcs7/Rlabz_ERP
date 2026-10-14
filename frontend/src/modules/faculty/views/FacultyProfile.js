@@ -112,15 +112,10 @@ export function FacultyProfile() {
                                 <h2>${facultyData.name}</h2>
                                 <span class="simple-profile-badge">${facultyData.role}</span>
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                <button type="button" id="btn-change-password" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.85rem; background: #ffffff; border: 1px solid #0284c7; color: #0284c7; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                                    Change Password
-                                </button>
-                                <button type="button" id="btn-edit-profile" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.85rem; background: #ffffff; border: 1px solid #059669; color: #059669; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                    Edit Profile
-                                </button>
+                            <div>
+                                <a href="/profile" id="btn-profile-settings" class="btn btn-sm" style="font-size: 0.82rem; padding: 0.42rem 0.95rem; background: #ecfdf5; border: 1px solid #059669; color: #059669; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s ease;">
+                                    <span>Profile Settings & Change Password &rarr;</span>
+                                </a>
                             </div>
                         </div>
 
@@ -272,7 +267,7 @@ export function FacultyProfile() {
                 fileInput.click();
             });
 
-            fileInput.addEventListener('change', (e) => {
+            fileInput.addEventListener('change', async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
 
@@ -286,26 +281,74 @@ export function FacultyProfile() {
                     return;
                 }
 
-                const reader = new FileReader();
-                reader.onload = (readEvent) => {
-                    const dataUrl = readEvent.target.result;
-                    facultyPhoto = dataUrl;
-                    localStorage.setItem('faculty_profile_photo', dataUrl);
-                    if (storedUser) {
-                        storedUser.avatar = dataUrl;
-                        localStorage.setItem('user', JSON.stringify(storedUser));
+                // Show loading state
+                if (btnUpload) {
+                    btnUpload.disabled = true;
+                    btnUpload.innerHTML = 'Uploading...';
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('photo', file);
+                    if (storedUser?.email) {
+                        formData.append('email', storedUser.email);
                     }
-                    updateTopbarAvatar(dataUrl);
-                    showFacultySuccessPopup('Profile Photo Updated', 'Your profile photo has been updated successfully.');
-                    renderUI();
-                    setupListeners();
-                };
-                reader.readAsDataURL(file);
+
+                    const headers = {
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    };
+
+                    const res = await fetch(`${API_BASE}/faculty/profile/photo`, {
+                        method: 'POST',
+                        headers,
+                        body: formData
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && (data.status === 'success' || data.photo_url || data.photo)) {
+                        const finalPhotoUrl = data.photo_url || data.photo || (data.data && data.data.photo);
+                        facultyPhoto = finalPhotoUrl;
+                        localStorage.setItem('faculty_profile_photo', finalPhotoUrl);
+                        if (storedUser) {
+                            storedUser.avatar = finalPhotoUrl;
+                            localStorage.setItem('user', JSON.stringify(storedUser));
+                        }
+                        updateTopbarAvatar(finalPhotoUrl);
+                        showFacultySuccessPopup('Profile Photo Updated', 'Your profile photo has been uploaded and saved to your profile.');
+                        renderUI();
+                        setupListeners();
+                    } else {
+                        showFacultyErrorPopup('Upload Failed', data.message || data.error || 'Failed to upload profile photo to server.');
+                    }
+                } catch (err) {
+                    console.error('Photo upload error:', err);
+                    showFacultyErrorPopup('Network Error', 'Failed to connect to server to upload profile photo.');
+                } finally {
+                    if (btnUpload) {
+                        btnUpload.disabled = false;
+                        btnUpload.innerHTML = `
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                            ${facultyPhoto ? 'Change Photo' : 'Upload Photo'}
+                        `;
+                    }
+                }
             });
         }
 
         if (btnRemove) {
-            btnRemove.addEventListener('click', () => {
+            btnRemove.addEventListener('click', async () => {
+                try {
+                    const headers = {
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    };
+                    await fetch(`${API_BASE}/faculty/profile/photo`, {
+                        method: 'DELETE',
+                        headers
+                    });
+                } catch (err) {
+                    console.warn('Could not remove photo on server:', err);
+                }
                 facultyPhoto = null;
                 localStorage.removeItem('faculty_profile_photo');
                 if (storedUser) {
@@ -560,6 +603,16 @@ export function FacultyProfile() {
                         department: data.department || 'Department of Computer Applications',
                         designation: data.designation || 'Associate Professor'
                     };
+                    if (data.photo || data.avatar) {
+                        const fetchedPhoto = data.photo || data.avatar;
+                        facultyPhoto = fetchedPhoto;
+                        localStorage.setItem('faculty_profile_photo', fetchedPhoto);
+                        if (storedUser) {
+                            storedUser.avatar = fetchedPhoto;
+                            localStorage.setItem('user', JSON.stringify(storedUser));
+                        }
+                        updateTopbarAvatar(fetchedPhoto);
+                    }
                     renderUI();
                     setupListeners();
                 }

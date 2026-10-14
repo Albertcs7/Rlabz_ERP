@@ -83,7 +83,7 @@ class FacultyController extends Controller
         // Projects assigned to this faculty
         $projects = DB::table('projects')
             ->whereIn('id', $projectIds)
-            ->select('id', 'title', 'title as name', 'client_name', 'project_type', 'status', 'requirements')
+            ->select('id', 'title', 'title as name', 'client_name', 'project_type', 'status', 'deliverables', 'expected_timeline', 'budget', 'created_at')
             ->get();
 
         // Calculate overall progress for each project based on modules and completed modules
@@ -207,6 +207,8 @@ class FacultyController extends Controller
                 'phone' => ($user && $user->phone) ? $user->phone : '+91 484 2660605',
                 'department' => $profile ? $profile->department : 'Department of Computer Applications',
                 'designation' => $profile ? $profile->designation : 'Associate Professor',
+                'photo' => ($profile && !empty($profile->photo)) ? $profile->photo : ($user && !empty($user->avatar) ? $user->avatar : null),
+                'avatar' => ($profile && !empty($profile->photo)) ? $profile->photo : ($user && !empty($user->avatar) ? $user->avatar : null),
             ],
             'stats' => [
                 'projects_count' => $projects->count(),
@@ -231,7 +233,7 @@ class FacultyController extends Controller
 
         $user = DB::table('users')
             ->where('id', $facultyId)
-            ->select('id', 'name', 'email', 'phone', 'role', 'created_at')
+            ->select('id', 'name', 'email', 'phone', 'role', 'avatar', 'created_at')
             ->first();
 
         // Fallback to any faculty member if specific ID not found
@@ -247,6 +249,8 @@ class FacultyController extends Controller
                 ->first();
         }
 
+        $photo = ($profile && !empty($profile->photo)) ? $profile->photo : ($user && !empty($user->avatar) ? $user->avatar : null);
+
         return response()->json([
             'id' => $user ? $user->id : $facultyId,
             'name' => $user ? $user->name : 'Faculty Member',
@@ -255,6 +259,8 @@ class FacultyController extends Controller
             'role' => $user ? ucfirst($user->role) : 'Faculty',
             'department' => $profile ? $profile->department : 'Department of Computer Applications',
             'designation' => $profile ? $profile->designation : 'Associate Professor',
+            'photo' => $photo,
+            'avatar' => $photo,
             'created_at' => $user ? $user->created_at : null,
         ]);
     }
@@ -324,6 +330,108 @@ class FacultyController extends Controller
     }
 
     /**
+     * Upload or update faculty profile photo in faculty_profiles and users tables.
+     */
+    public function uploadProfilePhoto(Request $request)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $file = $request->file('photo') ?? $request->file('file') ?? $request->file('avatar');
+        
+        $photoUrl = null;
+        if ($file) {
+            $destinationDir = public_path('storage/faculty_photos');
+            if (!file_exists($destinationDir)) {
+                mkdir($destinationDir, 0777, true);
+            }
+            $filename = 'faculty_' . $facultyId . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($destinationDir, $filename);
+            $photoUrl = url('storage/faculty_photos/' . $filename);
+        } else if ($request->filled('photo')) {
+            $photoVal = $request->input('photo');
+            if (preg_match('/^data:image\/(\w+);base64,/', $photoVal, $type)) {
+                $data = substr($photoVal, strpos($photoVal, ',') + 1);
+                $type = strtolower($type[1]);
+                $data = base64_decode($data);
+                if ($data !== false) {
+                    $destinationDir = public_path('storage/faculty_photos');
+                    if (!file_exists($destinationDir)) {
+                        mkdir($destinationDir, 0777, true);
+                    }
+                    $filename = 'faculty_' . $facultyId . '_' . time() . '.' . $type;
+                    file_put_contents($destinationDir . '/' . $filename, $data);
+                    $photoUrl = url('storage/faculty_photos/' . $filename);
+                }
+            } else {
+                $photoUrl = $photoVal;
+            }
+        }
+
+        if (!$photoUrl) {
+            return response()->json(['status' => 'error', 'message' => 'No image file or photo URL provided'], 422);
+        }
+
+        if (Schema::hasTable('faculty_profiles')) {
+            $existing = DB::table('faculty_profiles')->where('faculty_id', $facultyId)->first();
+            if ($existing) {
+                DB::table('faculty_profiles')->where('faculty_id', $facultyId)->update([
+                    'photo' => $photoUrl,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('faculty_profiles')->insert([
+                    'faculty_id' => $facultyId,
+                    'department' => 'Department of Computer Applications',
+                    'designation' => 'Associate Professor',
+                    'photo' => $photoUrl,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        DB::table('users')->where('id', $facultyId)->update([
+            'avatar' => $photoUrl,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile photo updated successfully',
+            'photo_url' => $photoUrl,
+            'photo' => $photoUrl,
+            'data' => [
+                'photo' => $photoUrl
+            ]
+        ]);
+    }
+
+    /**
+     * Remove faculty profile photo from faculty_profiles and users tables.
+     */
+    public function deleteProfilePhoto(Request $request)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        if (Schema::hasTable('faculty_profiles')) {
+            DB::table('faculty_profiles')->where('faculty_id', $facultyId)->update([
+                'photo' => null,
+                'updated_at' => now(),
+            ]);
+        }
+
+        DB::table('users')->where('id', $facultyId)->update([
+            'avatar' => null,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile photo removed successfully'
+        ]);
+    }
+
+    /**
      * Get projects assigned to the currently logged in faculty.
      */
     public function getProjects(Request $request)
@@ -340,12 +448,12 @@ class FacultyController extends Controller
                 'projects.project_type',
                 'projects.source_type',
                 'projects.client_name',
-                'projects.requirements',
                 'projects.deliverables',
                 'projects.expected_timeline',
                 'projects.budget',
                 'projects.priority',
                 'projects.status',
+                'projects.created_at',
                 'project_faculty.assigned_date'
             )
             ->get();
@@ -360,12 +468,12 @@ class FacultyController extends Controller
                     'project_type',
                     'source_type',
                     'client_name',
-                    'requirements',
                     'deliverables',
                     'expected_timeline',
                     'budget',
                     'priority',
-                    'status'
+                    'status',
+                    'created_at'
                 )
                 ->get();
         }
@@ -690,7 +798,8 @@ class FacultyController extends Controller
         $validated = $request->validate([
             'status' => 'required|string|in:completed,cancelled',
             'minutes' => 'nullable|string',
-            'important_decisions' => 'nullable|string'
+            'important_decisions' => 'nullable|string',
+            'document' => 'nullable|file|max:20480'
         ]);
 
         $meeting = DB::table('meetings')->where('id', $id)->first();
@@ -703,10 +812,32 @@ class FacultyController extends Controller
         if ($newStatus === 'completed') {
             $minutes = trim($validated['minutes'] ?? '');
             $decisions = trim($validated['important_decisions'] ?? '');
-            if (empty($minutes) || empty($decisions)) {
+
+            // Handle optional document upload to insert into minutes field of meeting_notes table
+            $documentUrl = null;
+            if ($request->hasFile('document')) {
+                $file = $request->file('document');
+                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+                $path = $file->storeAs('meeting_documents', $filename, 'public');
+                $documentUrl = url('storage/' . $path);
+            }
+
+            if (!empty($documentUrl)) {
+                if (!empty($minutes)) {
+                    $minutes = $minutes . "\n\nAttached Document: " . $documentUrl;
+                } else {
+                    $minutes = "Attached Document: " . $documentUrl;
+                }
+            }
+
+            if (empty($minutes)) {
                 return response()->json([
-                    'error' => 'Please provide both minutes of meeting and important decisions to mark as completed.'
+                    'error' => 'Please provide minutes of meeting or upload a document.'
                 ], 422);
+            }
+
+            if (empty($decisions)) {
+                $decisions = 'Document attached for review and records.';
             }
 
             // Update status in meetings table
@@ -721,6 +852,7 @@ class FacultyController extends Controller
                     'meeting_id' => $id,
                     'minutes' => $minutes,
                     'important_decisions' => $decisions,
+                    'file' => $documentUrl,
                     'uploaded_by' => $facultyId,
                     'uploaded_on' => now()
                 ]);
@@ -731,7 +863,8 @@ class FacultyController extends Controller
                 'message' => "Meeting status updated to completed and notes saved.",
                 'status' => 'completed',
                 'minutes' => $minutes,
-                'important_decisions' => $decisions
+                'important_decisions' => $decisions,
+                'document_url' => $documentUrl
             ]);
         } else {
             // If cancelled is selected, DO NOT enter anything in meeting_notes table
@@ -2400,9 +2533,10 @@ class FacultyController extends Controller
     {
         $changes = [];
         if (Schema::hasTable('requirement_changes')) {
+            $userFk = Schema::hasColumn('requirement_changes', 'changed_by') ? 'changed_by' : 'requested_by';
             $query = DB::table('requirement_changes')
                 ->leftJoin('client_requirements', 'client_requirements.id', '=', 'requirement_changes.client_requirement_id')
-                ->leftJoin('users as requesters', 'requesters.id', '=', 'requirement_changes.requested_by')
+                ->leftJoin('users as requesters', "requesters.id", '=', "requirement_changes.{$userFk}")
                 ->where(function ($q) use ($id) {
                     if (Schema::hasColumn('requirement_changes', 'project_id')) {
                         $q->where('requirement_changes.project_id', $id)
@@ -2415,6 +2549,7 @@ class FacultyController extends Controller
             $changes = $query->select(
                 'requirement_changes.*',
                 'client_requirements.title as requirement_title',
+                'client_requirements.documents as requirement_documents',
                 'requesters.name as requested_by_name'
             )
             ->orderBy('requirement_changes.id', 'desc')
@@ -2478,6 +2613,419 @@ class FacultyController extends Controller
                 ]);
             }
         }
+    }
+
+    // =========================================================================
+    // FACULTY CHAT: GROUP & INDIVIDUAL (PROJECTS & STUDENTS)
+    // =========================================================================
+
+    /**
+     * Helper: Ensure a user is recorded in chat_participants
+     */
+    private function ensureChatParticipant($chatId, $userId)
+    {
+        if (!$chatId || !$userId) return;
+        $exists = DB::table('chat_participants')
+            ->where('chat_id', $chatId)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if (!$exists) {
+            DB::table('chat_participants')->insert([
+                'chat_id' => $chatId,
+                'user_id' => $userId,
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+    }
+
+    /**
+     * Helper: Format and fetch chat messages for a chat
+     */
+    private function fetchChatMessages($chatId, $currentUserId)
+    {
+        return DB::table('chat_messages')
+            ->join('users', 'users.id', '=', 'chat_messages.sender_id')
+            ->where('chat_messages.chat_id', $chatId)
+            ->select(
+                'chat_messages.id',
+                'chat_messages.message as text',
+                'users.id as sender_id',
+                'users.name as sender_name',
+                'users.role as sender_role',
+                'chat_messages.created_at as time'
+            )
+            ->orderBy('chat_messages.created_at', 'asc')
+            ->get()
+            ->map(function ($msg) use ($currentUserId) {
+                $raw = $msg->text;
+                $displayText = $raw;
+                $attachment = null;
+
+                if (is_string($raw) && (str_starts_with($raw, '{') || str_starts_with($raw, '{\\'))) {
+                    $dec = json_decode($raw, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) {
+                        $displayText = $dec['text'] ?? '';
+                        $attachment = $dec['attachment'] ?? null;
+                    }
+                }
+
+                return [
+                    'id' => $msg->id,
+                    'sender' => $msg->sender_id == $currentUserId ? 'faculty' : ($msg->sender_role === 'student' ? 'student' : 'other'),
+                    'senderId' => $msg->sender_id,
+                    'senderName' => $msg->sender_name,
+                    'senderRole' => $msg->sender_role,
+                    'isMe' => ($msg->sender_id == $currentUserId),
+                    'text' => $displayText,
+                    'attachment' => $attachment,
+                    'time' => $msg->time
+                ];
+            });
+    }
+
+    /**
+     * GET /api/faculty/chat/projects/{projectId}/group
+     * Retrieve group chat messages for all students in a project
+     */
+    public function getGroupChatMessages(Request $request, $projectId)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $chat = DB::table('chats')
+            ->where('project_id', $projectId)
+            ->where(function ($q) {
+                $q->where('title', 'Project Group Chat')
+                  ->orWhere('title', 'Project Chat')
+                  ->orWhereNull('title');
+            })
+            ->first();
+
+        if (!$chat) {
+            $chatId = DB::table('chats')->insertGetId([
+                'project_id' => $projectId,
+                'title' => 'Project Group Chat',
+                'created_by' => $facultyId,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        } else {
+            $chatId = $chat->id;
+        }
+
+        // Register faculty in chat_participants
+        $this->ensureChatParticipant($chatId, $facultyId);
+
+        // Register all assigned students for this project
+        $studentIds = DB::table('project_student')
+            ->where('project_id', $projectId)
+            ->pluck('student_id')
+            ->toArray();
+
+        foreach ($studentIds as $sId) {
+            $this->ensureChatParticipant($chatId, $sId);
+        }
+
+        $messages = $this->fetchChatMessages($chatId, $facultyId);
+        $project = DB::table('projects')->where('id', $projectId)->select('id', 'title', 'client_name', 'status')->first();
+
+        return response()->json([
+            'chat_id' => $chatId,
+            'project' => $project,
+            'participant_count' => count($studentIds) + 1,
+            'messages' => $messages
+        ]);
+    }
+
+    /**
+     * POST /api/faculty/chat/projects/{projectId}/group/messages
+     * Send a group message to all students in a project
+     */
+    public function saveGroupChatMessage(Request $request, $projectId)
+    {
+        $facultyId = $this->getFacultyId($request);
+        $text = trim($request->input('text', ''));
+
+        if (empty($text) && !$request->hasFile('file')) {
+            return response()->json(['error' => 'Message or attachment is required'], 422);
+        }
+
+        $chat = DB::table('chats')
+            ->where('project_id', $projectId)
+            ->where(function ($q) {
+                $q->where('title', 'Project Group Chat')
+                  ->orWhere('title', 'Project Chat')
+                  ->orWhereNull('title');
+            })
+            ->first();
+
+        if (!$chat) {
+            $chatId = DB::table('chats')->insertGetId([
+                'project_id' => $projectId,
+                'title' => 'Project Group Chat',
+                'created_by' => $facultyId,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        } else {
+            $chatId = $chat->id;
+        }
+
+        $this->ensureChatParticipant($chatId, $facultyId);
+
+        $attachment = null;
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $path = $file->store('chat_attachments', 'public');
+            $url = Storage::disk('public')->url($path);
+            $attachment = [
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'type' => $file->getMimeType(),
+                'url' => $url
+            ];
+        }
+
+        $messagePayload = $text;
+        if ($attachment) {
+            $messagePayload = json_encode([
+                'text' => $text,
+                'attachment' => $attachment
+            ]);
+        }
+
+        $messageId = DB::table('chat_messages')->insertGetId([
+            'chat_id' => $chatId,
+            'sender_id' => $facultyId,
+            'message' => $messagePayload,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message_id' => $messageId,
+            'message' => [
+                'id' => $messageId,
+                'sender' => 'faculty',
+                'senderId' => $facultyId,
+                'senderName' => DB::table('users')->where('id', $facultyId)->value('name') ?? 'Faculty',
+                'isMe' => true,
+                'text' => $text,
+                'attachment' => $attachment,
+                'time' => now()->toDateTimeString()
+            ]
+        ]);
+    }
+
+    /**
+     * GET /api/faculty/chat/projects/{projectId}/students
+     * List all students assigned to a project for 1-on-1 individual chat selection
+     */
+    public function getProjectChatStudents(Request $request, $projectId)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $students = DB::table('project_student')
+            ->join('users', 'users.id', '=', 'project_student.student_id')
+            ->where('project_student.project_id', $projectId)
+            ->select(
+                'users.id as student_id',
+                'users.name',
+                'users.email',
+                'users.avatar',
+                'project_student.role as project_role'
+            )
+            ->orderBy('users.name', 'asc')
+            ->get();
+
+        $studentList = $students->map(function ($s) use ($projectId, $facultyId) {
+            // Find existing individual chat
+            $chat = DB::table('chats')
+                ->join('chat_participants as p1', 'p1.chat_id', '=', 'chats.id')
+                ->join('chat_participants as p2', 'p2.chat_id', '=', 'chats.id')
+                ->where('chats.project_id', $projectId)
+                ->where('chats.title', 'like', 'Individual:%')
+                ->where('p1.user_id', $facultyId)
+                ->where('p2.user_id', $s->student_id)
+                ->select('chats.id')
+                ->first();
+
+            $lastMessage = null;
+            if ($chat) {
+                $lastMsgRow = DB::table('chat_messages')
+                    ->where('chat_id', $chat->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                if ($lastMsgRow) {
+                    $raw = $lastMsgRow->message;
+                    $txt = $raw;
+                    if (is_string($raw) && str_starts_with($raw, '{')) {
+                        $dec = json_decode($raw, true);
+                        $txt = $dec['text'] ?? '[Attachment]';
+                    }
+                    $lastMessage = [
+                        'text' => $txt,
+                        'time' => $lastMsgRow->created_at,
+                        'is_me' => ($lastMsgRow->sender_id == $facultyId)
+                    ];
+                }
+            }
+
+            return [
+                'id' => $s->student_id,
+                'name' => $s->name,
+                'email' => $s->email,
+                'avatar' => $s->avatar,
+                'role' => $s->project_role ? ucwords(str_replace('_', ' ', $s->project_role)) : 'Team Member',
+                'last_message' => $lastMessage
+            ];
+        });
+
+        $project = DB::table('projects')->where('id', $projectId)->select('id', 'title', 'client_name')->first();
+
+        return response()->json([
+            'project' => $project,
+            'students' => $studentList
+        ]);
+    }
+
+    /**
+     * GET /api/faculty/chat/projects/{projectId}/individual/{studentId}
+     * Retrieve 1-on-1 private chat messages with a specific student
+     */
+    public function getIndividualChatMessages(Request $request, $projectId, $studentId)
+    {
+        $facultyId = $this->getFacultyId($request);
+
+        $student = DB::table('users')->where('id', $studentId)->select('id', 'name', 'email', 'avatar')->first();
+        if (!$student) {
+            return response()->json(['error' => 'Student not found'], 404);
+        }
+
+        $chat = DB::table('chats')
+            ->join('chat_participants as p1', 'p1.chat_id', '=', 'chats.id')
+            ->join('chat_participants as p2', 'p2.chat_id', '=', 'chats.id')
+            ->where('chats.project_id', $projectId)
+            ->where('chats.title', 'like', 'Individual:%')
+            ->where('p1.user_id', $facultyId)
+            ->where('p2.user_id', $studentId)
+            ->select('chats.id')
+            ->first();
+
+        if (!$chat) {
+            $chatId = DB::table('chats')->insertGetId([
+                'project_id' => $projectId,
+                'title' => "Individual: Faculty-{$facultyId}_Student-{$studentId}",
+                'created_by' => $facultyId,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            $this->ensureChatParticipant($chatId, $facultyId);
+            $this->ensureChatParticipant($chatId, $studentId);
+        } else {
+            $chatId = $chat->id;
+        }
+
+        $messages = $this->fetchChatMessages($chatId, $facultyId);
+        $project = DB::table('projects')->where('id', $projectId)->select('id', 'title', 'client_name')->first();
+
+        return response()->json([
+            'chat_id' => $chatId,
+            'project' => $project,
+            'student' => $student,
+            'messages' => $messages
+        ]);
+    }
+
+    /**
+     * POST /api/faculty/chat/projects/{projectId}/individual/{studentId}/messages
+     * Send a 1-on-1 private message to a specific student
+     */
+    public function saveIndividualChatMessage(Request $request, $projectId, $studentId)
+    {
+        $facultyId = $this->getFacultyId($request);
+        $text = trim($request->input('text', ''));
+
+        if (empty($text) && !$request->hasFile('file')) {
+            return response()->json(['error' => 'Message or attachment is required'], 422);
+        }
+
+        $chat = DB::table('chats')
+            ->join('chat_participants as p1', 'p1.chat_id', '=', 'chats.id')
+            ->join('chat_participants as p2', 'p2.chat_id', '=', 'chats.id')
+            ->where('chats.project_id', $projectId)
+            ->where('chats.title', 'like', 'Individual:%')
+            ->where('p1.user_id', $facultyId)
+            ->where('p2.user_id', $studentId)
+            ->select('chats.id')
+            ->first();
+
+        if (!$chat) {
+            $chatId = DB::table('chats')->insertGetId([
+                'project_id' => $projectId,
+                'title' => "Individual: Faculty-{$facultyId}_Student-{$studentId}",
+                'created_by' => $facultyId,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            $this->ensureChatParticipant($chatId, $facultyId);
+            $this->ensureChatParticipant($chatId, $studentId);
+        } else {
+            $chatId = $chat->id;
+        }
+
+        $attachment = null;
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $path = $file->store('chat_attachments', 'public');
+            $url = Storage::disk('public')->url($path);
+            $attachment = [
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'type' => $file->getMimeType(),
+                'url' => $url
+            ];
+        }
+
+        $messagePayload = $text;
+        if ($attachment) {
+            $messagePayload = json_encode([
+                'text' => $text,
+                'attachment' => $attachment
+            ]);
+        }
+
+        $messageId = DB::table('chat_messages')->insertGetId([
+            'chat_id' => $chatId,
+            'sender_id' => $facultyId,
+            'message' => $messagePayload,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message_id' => $messageId,
+            'message' => [
+                'id' => $messageId,
+                'sender' => 'faculty',
+                'senderId' => $facultyId,
+                'senderName' => DB::table('users')->where('id', $facultyId)->value('name') ?? 'Faculty',
+                'isMe' => true,
+                'text' => $text,
+                'attachment' => $attachment,
+                'time' => now()->toDateTimeString()
+            ]
+        ]);
     }
 }
 

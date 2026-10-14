@@ -94,8 +94,8 @@ export async function UserProfile(route, router) {
     const isStudent = authStore.role === 'student' || window.location.pathname.startsWith('/student');
     const isFinancePath = window.location.pathname.startsWith('/finance');
     const isDesignPath = window.location.pathname.startsWith('/design');
-    const homeLabel = isStudent ? 'Student Portal' : (isFinancePath ? 'Finance Portal' : (isDesignPath ? 'Design Studio' : 'Homepage'));
-    const homeHref = isStudent ? '/student' : (isFinancePath ? '/finance' : (isDesignPath ? '/design' : '/'));
+    const homeLabel = isFinancePath ? 'Finance Portal' : (isDesignPath ? 'Design Studio' : 'Homepage');
+    const homeHref = isFinancePath ? '/finance' : (isDesignPath ? '/design' : '/');
 
     container.innerHTML = `
       <!-- Breadcrumb -->
@@ -109,19 +109,13 @@ export async function UserProfile(route, router) {
       <div class="profile-hero-card">
         <div class="profile-hero-top">
           <div class="profile-hero-user">
-            <div class="profile-avatar-container" style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
-              <div class="profile-avatar-wrap" id="user-avatar-wrap" title="Click to upload profile photo" style="cursor: pointer; width: 100%; height: 100%;">
-                ${profileUser.avatar
-                  ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
-                  : `<span class="profile-avatar-fallback">${initials}</span>`
-                }
-                <span class="profile-avatar-badge" title="Online & Active"></span>
-              </div>
-              <button type="button" class="profile-avatar-camera-btn" id="btn-hero-cam" title="Change Profile Photo" style="position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; border-radius: 50%; background: #059669; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.18); padding: 0; z-index: 2;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-              </button>
+            <div class="profile-avatar-wrap">
+              ${profileUser.avatar
+                ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
+                : `<span class="profile-avatar-fallback">${initials}</span>`
+              }
+              <span class="profile-avatar-badge" title="Online & Active"></span>
             </div>
-            <input type="file" id="hero-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
             <div class="profile-hero-details">
               <h1>${profileUser.name}</h1>
               <div class="profile-hero-sub">

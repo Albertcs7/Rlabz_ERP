@@ -48,13 +48,17 @@ function renderNotificationList(notifications) {
 function populateSidebarNav(sidebarNav, currentPath, authStore) {
   if (!sidebarNav) return;
 
-  const isStudent = authStore.role === 'student' || currentPath.startsWith('/student');
+  const isFaculty = authStore.role === 'faculty' || currentPath.startsWith('/faculty');
+  const isStudent = authStore.role === 'student';
+  const isStudentPortal = currentPath.startsWith('/student');
   const isDeveloper = authStore.role === 'developer' || currentPath.startsWith('/developer');
   const isDirector = authStore.role === 'director' || currentPath.startsWith('/director');
   const isDesignHead = authStore.role === 'design_head' || currentPath.startsWith('/design');
 
   let targetPortal = 'default';
-  if (isStudent) {
+  if (isFaculty) {
+    targetPortal = 'faculty';
+  } else if (isStudent && isStudentPortal) {
     targetPortal = 'student';
   } else if (isDeveloper) {
     targetPortal = 'developer';
@@ -237,6 +241,43 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           `).join('')}
         </ul>
       `;
+    } else if (targetPortal === 'faculty') {
+      const iconDashboard = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`;
+      const iconProfile = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+      const iconChat = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+      const iconStudents = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      const iconSprints = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
+      const iconVerifyTask = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`;
+      const iconMeetings = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+      const iconReport = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
+      const iconNotifications = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
+
+      const navItems = [
+        { title: 'Dashboard', path: '/faculty', icon: iconDashboard },
+        { title: 'Profile', path: '/faculty/profile', icon: iconProfile },
+        { title: 'My Project', path: '/faculty/projects', icon: iconProjects },
+        { title: 'Chat', path: '/faculty/chat', icon: iconChat },
+        { title: 'Students', path: '/faculty/students', icon: iconStudents },
+        { title: 'Assign Module & Task', path: '/faculty/sprints', icon: iconSprints },
+        { title: 'Verify Task', path: '/faculty/verify-tasks', icon: iconVerifyTask },
+        { title: 'Meetings', path: '/faculty/meetings', icon: iconMeetings },
+        { title: 'Report', path: '/faculty/reports', icon: iconReport },
+        { title: 'Notifications', path: '/faculty/notifications', icon: iconNotifications }
+      ];
+
+      sidebarNav.innerHTML = `
+        <ul>
+          ${navItems.map(item => `
+            <li>
+              <a href="${item.path}">
+                ${item.icon}
+                <span>${item.title}</span>
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      `;
     } else {
       const iconsMap = {
         IconDashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`,
@@ -282,8 +323,10 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
     const href = a.getAttribute('href');
     if (href) {
       let isActive = false;
-      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
+      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard' || href === '/faculty') {
         isActive = currentPath === href || currentPath === href + '/';
+      } else if (href === '/faculty/profile') {
+        isActive = currentPath === '/faculty/profile' || currentPath.startsWith('/faculty/profile/') || currentPath === '/profile' || currentPath.startsWith('/profile/');
       } else {
         isActive = currentPath === href || currentPath.startsWith(href + '/') ||
           (href.startsWith('/developer/') && currentPath.startsWith(href.replace('/developer', '/dashboard'))) ||
@@ -305,51 +348,25 @@ export function updateSidebar(currentPath) {
   populateSidebarNav(sidebarNav, currentPath, authStore);
 }
 
-export function updateTopBarAvatar(photoUrl, name) {
-  const authStore = useAuthStore();
-  const displayName = name || authStore.user?.name || authStore.user?.username || 'User';
-  const initial = displayName.charAt(0).toUpperCase() || 'U';
-
-  const avatarTargets = document.querySelectorAll('#user-profile-header .avatar, #finance-user-profile-header .avatar, .topbar .avatar, .user-profile .avatar');
-  avatarTargets.forEach(avatarEl => {
-    if (photoUrl) {
-      avatarEl.style.padding = '0';
-      avatarEl.style.overflow = 'hidden';
-      avatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      avatarEl.style.padding = '';
-      avatarEl.style.overflow = '';
-      avatarEl.textContent = initial;
-    }
-  });
-
-  const popoverAvatarTargets = document.querySelectorAll('#popover-avatar, #finance-popover-avatar, .profile-popover-avatar');
-  popoverAvatarTargets.forEach(popAvatarEl => {
-    if (photoUrl) {
-      popAvatarEl.style.padding = '0';
-      popAvatarEl.style.overflow = 'hidden';
-      popAvatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
-    } else {
-      popAvatarEl.style.padding = '';
-      popAvatarEl.style.overflow = '';
-      popAvatarEl.textContent = initial;
-    }
-  });
-}
-
 export async function DashboardLayout(contentChild, route, router) {
   const authStore = useAuthStore();
   const currentPath = window.location.pathname;
 
+  const wrapper = document.createElement('div');
+  const isStudentPortal = currentPath.startsWith('/student');
+  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
+
   const user = authStore.user;
   const isStudent = authStore.role === 'student';
-  const isStudentPortal = isStudent || currentPath.startsWith('/student');
-  const wrapper = document.createElement('div');
-  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
+  const isFacultyUser = authStore.role === 'faculty' || currentPath.startsWith('/faculty');
   const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
-  const topbarUserPhoto = (isStudent && studentIdentifier)
+  const studentPhoto = (isStudent && studentIdentifier)
     ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
-    : (user?.avatar || null);
+    : null;
+  const facultyPhoto = isFacultyUser
+    ? (localStorage.getItem('faculty_profile_photo') || user?.photo || user?.avatar || null)
+    : null;
+  const userPhoto = studentPhoto || facultyPhoto || user?.avatar || user?.photo || null;
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
@@ -410,8 +427,8 @@ export async function DashboardLayout(contentChild, route, router) {
           ` : ''}
 
         <div class="user-profile" id="user-profile-header">
-          <div class="avatar" style="${topbarUserPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-            ${topbarUserPhoto ? `<img src="${topbarUserPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+          <div class="avatar" style="${userPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+            ${userPhoto ? `<img src="${userPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
           <div class="user-details">
             <span class="user-name">${displayName}</span>
@@ -421,8 +438,8 @@ export async function DashboardLayout(contentChild, route, router) {
           <!-- Floating Profile Popover -->
           <div class="profile-popover" id="profile-popover">
             <div class="profile-popover-header">
-              <div class="profile-popover-avatar" id="popover-avatar" style="${topbarUserPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-                ${topbarUserPhoto ? `<img src="${topbarUserPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+              <div class="profile-popover-avatar" id="popover-avatar" style="${userPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+                ${userPhoto ? `<img src="${userPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
               </div>
               <div class="profile-popover-meta">
                 <span class="profile-popover-name" id="popover-name">${displayName}</span>
@@ -663,4 +680,11 @@ export async function DashboardLayout(contentChild, route, router) {
   }
 
   return wrapper;
+}
+
+export function updateTopBarAvatar(avatarUrl) {
+    const avatarImg = document.querySelector('.user-avatar, .topbar-avatar, #topbar-user-avatar');
+    if (avatarImg && avatarUrl) {
+        avatarImg.src = avatarUrl;
+    }
 }

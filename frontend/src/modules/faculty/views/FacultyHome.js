@@ -109,7 +109,7 @@ export function FacultyHome(route, router) {
                     <span style="color: var(--primary, var(--primary)); font-size: 1rem; opacity: 0.7;">→</span>
                 </div>
 
-                <div class="faculty-card-panel faculty-kpi-card-clickable" data-route="/github" role="button" tabindex="0" title="Click to view Linked Repositories" style="display: flex; align-items: center; gap: 1.1rem; padding: 1.4rem; background: var(--surface-card); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.22s ease;">
+                <div class="faculty-card-panel" style="display: flex; align-items: center; gap: 1.1rem; padding: 1.4rem; background: var(--surface-card); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                     <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--bg-canvas-light); border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; color: #334155; flex-shrink: 0;">
                         ${iconGit}
                     </div>
@@ -117,7 +117,6 @@ export function FacultyHome(route, router) {
                         <h3 style="margin: 0 0 2px; font-size: 1.6rem; font-weight: 700; color: var(--text-main, var(--text-primary)); line-height: 1.2;">${stats.github_repos_count}</h3>
                         <p style="margin: 0; font-size: 0.84rem; color: var(--text-muted, var(--text-muted)); font-weight: 500;">Linked Repositories</p>
                     </div>
-                    <span style="color: var(--primary, var(--primary)); font-size: 1rem; opacity: 0.7;">→</span>
                 </div>
 
             </div>

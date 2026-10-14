@@ -559,12 +559,15 @@ class CoordinatorController extends Controller
 
         $userId = $this->currentUserId($request) ?? $request->user()?->id ?? 1;
 
-        $change = RequirementChange::create([
+        $changeData = [
             'client_requirement_id' => $requirement->id,
-            'previous_value' => json_encode($requirement),
             'updated_value' => json_encode($validated),
             'changed_by' => $userId,
-        ]);
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('requirement_changes', 'project_id')) {
+            $changeData['project_id'] = $project->id;
+        }
+        $change = RequirementChange::create($changeData);
 
         return response()->json([
             'message' => 'Requirement change recorded successfully',

@@ -360,7 +360,7 @@ class DirectorController extends Controller
         }
 
         $requirements = DB::table('projects')
-            ->select('id', 'title', 'client_name', 'contact_email', 'contact_phone', 'source_type', 'brought_by', 'budget', 'expected_timeline', 'requirements', 'deliverables', 'created_at')
+            ->select('id', 'title', 'client_name', 'contact_email', 'contact_phone', 'source_type', 'brought_by', 'budget', 'expected_timeline', 'deliverables', 'created_at')
             ->orderBy('id', 'desc')
             ->get()
             ->map(function ($req) {
