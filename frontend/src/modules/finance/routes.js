@@ -54,6 +54,12 @@ const routes = [
         path: 'reports',
         name: 'finance-reports',
         component: () => import('./views/FinancialReports.js')
+      },
+      {
+        path: 'profile',
+        name: 'finance-profile',
+        title: 'USER PROFILE & SECURITY',
+        component: () => import('@/modules/auth/views/UserProfile.js')
       }
     ]
   }

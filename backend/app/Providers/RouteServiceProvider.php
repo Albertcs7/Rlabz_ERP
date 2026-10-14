@@ -34,7 +34,11 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/api.php'));
             
             // Dynamically load all Module API routes
-            foreach (glob(base_path('Modules/*/Routes/api.php')) as $file) {
+            $moduleRouteFiles = array_unique(array_merge(
+                glob(base_path('Modules/*/Routes/api.php')) ?: [],
+                glob(base_path('Modules/*/routes/api.php')) ?: []
+            ));
+            foreach ($moduleRouteFiles as $file) {
                 Route::middleware('api')
                     ->prefix('api')
                     ->group($file);

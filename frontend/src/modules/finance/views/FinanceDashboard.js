@@ -277,12 +277,12 @@ export async function FinanceDashboard(route, router) {
 
     <!-- KPI Strip -->
     <div class="fin-kpi-strip">
-      <div class="fin-kpi-card primary">
+      <div class="fin-kpi-card blue">
         <div class="kpi-label">Project Billing</div>
         <div class="kpi-value">${fmt(summary.totalBilling)}</div>
         <div class="kpi-sub">Total revenue billed across projects</div>
       </div>
-      <div class="fin-kpi-card ${overallProfit >= 0 ? 'teal' : 'danger'}">
+      <div class="fin-kpi-card ${overallProfit >= 0 ? 'dark-green' : 'danger'}">
         <div class="kpi-label">Overall Profit</div>
         <div class="kpi-value">${fmt(overallProfit)}</div>
         <div class="kpi-sub">Collected - Total Expenses</div>
