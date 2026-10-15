@@ -36,18 +36,57 @@ async function fetchNotifications() {
 
 function renderNotificationList(notifications) {
   if (!notifications.length) {
-    return `<p class="noti-empty">No notifications.</p>`;
+    return `<div style="text-align:center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.9rem;">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔔</div>
+      <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">No notifications</div>
+      <div style="font-size: 0.78rem;">All pending updates and system alerts will appear here.</div>
+    </div>`;
   }
 
   return notifications.map((n) => {
     const unread = !n.is_read;
+    const isUrgent = n.urgency === 'urgent' || n.urgency === 'high';
+    const rawType = (n.type || (n.category || 'general')).toLowerCase();
+    
+    let catBadgeClass = 'fin-cat-info';
+    let catLabel = 'General';
+    if (rawType.includes('ssl')) {
+      catBadgeClass = 'fin-cat-ssl';
+      catLabel = 'SSL';
+    } else if (rawType.includes('domain')) {
+      catBadgeClass = 'fin-cat-domain';
+      catLabel = 'Domain';
+    } else if (rawType.includes('bill') || rawType.includes('invoice') || rawType.includes('finance')) {
+      catBadgeClass = 'fin-cat-billing';
+      catLabel = 'Billing';
+    } else if (rawType.includes('proj')) {
+      catBadgeClass = 'fin-cat-project';
+      catLabel = 'Project';
+    } else if (rawType.includes('task') || rawType.includes('sprint')) {
+      catBadgeClass = 'fin-cat-task';
+      catLabel = 'Task';
+    }
+
+    const countdownTag = isUrgent 
+      ? `<span class="fin-countdown-tag tag-red">Urgent Action</span>`
+      : (unread 
+        ? `<span class="fin-countdown-tag tag-amber">Unread</span>`
+        : `<span class="fin-countdown-tag tag-slate">Info</span>`);
+
     return `
-      <div class="noti-item" data-id="${n.id}" data-unread="${unread ? '1' : '0'}" data-urgency="${n.urgency || ''}">
-        <span class="noti-item-dot"></span>
-        <span>
-          <span class="noti-item-message">${n.message}</span>
-          <span class="noti-item-meta">${n.project?.title ? `${n.project.title} &bull; ` : ''}${formatNotificationTime(n.created_at)}</span>
-        </span>
+      <div class="fin-action-card ${isUrgent ? 'card-overdue' : (unread ? 'card-upcoming' : 'card-info')}" data-id="${n.id}" data-unread="${unread ? '1' : '0'}" role="button" tabindex="0">
+        <div class="fin-card-header-row">
+          <span class="fin-cat-badge ${catBadgeClass}">${n.category || catLabel}</span>
+          ${countdownTag}
+        </div>
+        <div class="fin-card-msg">${n.message}</div>
+        <div class="fin-card-meta">
+          <span class="fin-project-name">${n.project?.title || 'Academic ERP'}</span>
+          <span class="fin-card-time" style="display: flex; align-items: center; gap: 5px;">
+            ${unread ? '<span style="width: 7px; height: 7px; border-radius: 50%; background: #00897B; display: inline-block;"></span>' : ''}
+            ${formatNotificationTime(n.created_at)}
+          </span>
+        </div>
       </div>
     `;
   }).join('');
@@ -412,23 +451,7 @@ export async function DashboardLayout(contentChild, route, router) {
       <header class="topbar">
         <div class="topbar-title">${topbarTitle}</div>
         <div style="display:flex; align-items:center; gap:0.85rem;">
-          ${!isStudentPortal ? `
-          <div class="notification-container">
-            <button id="noti-bell-btn" class="noti-bell-btn" title="Notifications" aria-label="Notifications">
-              ${BELL_ICON}
-              <span id="noti-badge" class="noti-badge"></span>
-            </button>
-
-            <div id="noti-dropdown" class="noti-dropdown">
-              <div class="noti-dropdown-header">
-                <h4>Notifications</h4>
-              </div>
-              <div id="noti-list-container" class="noti-list-container"><p class="noti-empty">Loading...</p></div>
-            </div>
-          </div>
-          ` : ''}
-
-        <div class="user-profile" id="user-profile-header">
+          <div class="user-profile" id="user-profile-header">
           <div class="avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
             ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
@@ -492,45 +515,94 @@ export async function DashboardLayout(contentChild, route, router) {
 
       <main class="content-outlet${isStudentPortal ? ' student-content-outlet' : ''}" id="layout-outlet"></main>
     </div>
+
+    <!-- Native Right Floating Bell & Slide-Out Drawer (Exact UI as Finance Dashboard) -->
+    <button class="fin-bell-trigger" id="fin-bell-btn" title="View Action Items & Notifications">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      <span class="fin-bell-badge" id="fin-bell-badge" style="display: none;"></span>
+    </button>
+
+    <!-- Drawer Backdrop -->
+    <div class="fin-drawer-backdrop" id="fin-drawer-backdrop"></div>
+
+    <!-- Notification Drawer -->
+    <div class="fin-notification-drawer" id="fin-notification-drawer">
+      <div class="fin-drawer-header">
+        <div class="fin-drawer-title-wrap">
+          <span class="fin-drawer-title">Action Items & Notifications</span>
+          <span class="fin-drawer-count" id="fin-drawer-count" style="display: none;">0</span>
+        </div>
+        <button class="fin-drawer-close" id="fin-drawer-close" title="Close Drawer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="fin-drawer-body" id="fin-drawer-body">
+        <div style="text-align:center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem;">Loading notifications...</div>
+      </div>
+    </div>
   `;
 
   // Populate sidebar navigation
   const sidebarNav = wrapper.querySelector('.sidebar-nav');
   populateSidebarNav(sidebarNav, currentPath, authStore);
 
-  // Notification bell — role-agnostic, reused across every dashboard layout.
-  const bellBtn = wrapper.querySelector('#noti-bell-btn');
-  const notiDropdown = wrapper.querySelector('#noti-dropdown');
-  const notiListContainer = wrapper.querySelector('#noti-list-container');
-  const notiBadge = wrapper.querySelector('#noti-badge');
+  // Native Notification Drawer Controls (Matching Finance Dashboard)
+  const bellBtn = wrapper.querySelector('#fin-bell-btn');
+  const drawer = wrapper.querySelector('#fin-notification-drawer');
+  const backdrop = wrapper.querySelector('#fin-drawer-backdrop');
+  const closeBtn = wrapper.querySelector('#fin-drawer-close');
+  const drawerBody = wrapper.querySelector('#fin-drawer-body');
+  const bellBadge = wrapper.querySelector('#fin-bell-badge');
+  const drawerCount = wrapper.querySelector('#fin-drawer-count');
+
+  const openDrawer = () => {
+    if (drawer) drawer.classList.add('open');
+    if (backdrop) backdrop.classList.add('open');
+    if (bellBtn) bellBtn.classList.add('drawer-open');
+  };
+
+  const closeDrawer = () => {
+    if (drawer) drawer.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+    if (bellBtn) bellBtn.classList.remove('drawer-open');
+  };
+
+  if (bellBtn) bellBtn.addEventListener('click', openDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeDrawer);
 
   function updateBadge(notifications) {
     const unreadCount = notifications.filter((n) => !n.is_read).length;
-    if (unreadCount > 0) {
-      notiBadge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-      notiBadge.style.display = 'flex';
-    } else {
-      notiBadge.style.display = 'none';
+    if (bellBadge && drawerCount) {
+      if (unreadCount > 0) {
+        const text = unreadCount > 99 ? '99+' : String(unreadCount);
+        bellBadge.textContent = text;
+        bellBadge.style.display = 'block';
+        drawerCount.textContent = `${text} Unread`;
+        drawerCount.style.display = 'inline-block';
+        if (bellBtn) bellBtn.classList.add('fin-bell-shake');
+      } else {
+        bellBadge.style.display = 'none';
+        if (notifications.length > 0) {
+          drawerCount.textContent = `${notifications.length} Total`;
+          drawerCount.style.display = 'inline-block';
+        } else {
+          drawerCount.style.display = 'none';
+        }
+        if (bellBtn) bellBtn.classList.remove('fin-bell-shake');
+      }
     }
   }
 
-  function positionDropdown() {
-    const rect = bellBtn.getBoundingClientRect();
-    const dropdownWidth = notiDropdown.offsetWidth || 360;
-    // Anchor under the bell, right-aligned to it, clamped so it never runs off
-    // either edge of the viewport (important on narrow screens).
-    let left = rect.right - dropdownWidth;
-    left = Math.max(12, Math.min(left, window.innerWidth - dropdownWidth - 12));
-    notiDropdown.style.top = `${rect.bottom + 8}px`;
-    notiDropdown.style.left = `${left}px`;
-  }
-
-  function closeDropdown() {
-    notiDropdown.style.display = 'none';
-  }
-
   function bindNotificationItems(notifications) {
-    notiListContainer.querySelectorAll('.noti-item[data-unread="1"]').forEach((item) => {
+    if (!drawerBody) return;
+    drawerBody.querySelectorAll('.fin-action-card[data-unread="1"]').forEach((item) => {
       item.addEventListener('click', async () => {
         const id = item.dataset.id;
         const token = localStorage.getItem('token');
@@ -540,48 +612,23 @@ export async function DashboardLayout(contentChild, route, router) {
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', Authorization: `Bearer ${token}` },
           });
         } catch (e) {
-          // ignore — visual state still updates locally below
+          // ignore
         }
         const notification = notifications.find((n) => String(n.id) === String(id));
         if (notification) notification.is_read = true;
-        notiListContainer.innerHTML = renderNotificationList(notifications);
+        drawerBody.innerHTML = renderNotificationList(notifications);
         bindNotificationItems(notifications);
         updateBadge(notifications);
       });
     });
   }
 
-  if (bellBtn && notiDropdown) {
+  if (bellBtn && drawer) {
     fetchNotifications().then((notifications) => {
       updateBadge(notifications);
-      notiListContainer.innerHTML = renderNotificationList(notifications);
-      bindNotificationItems(notifications);
-    });
-
-    bellBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      closeDropdown();
-      const notiRoute = (currentPath.startsWith('/faculty') || authStore.role === 'faculty')
-        ? '/faculty/notifications'
-        : `/${authStore.role || 'faculty'}/notifications`;
-      if (router && typeof router.push === 'function') {
-        router.push(notiRoute);
-      } else {
-        window.location.href = notiRoute;
-      }
-    });
-
-    notiDropdown.addEventListener('click', (e) => e.stopPropagation());
-
-    // Bell position is static while the dropdown is open (the app shell doesn't
-    // scroll as a whole — only #layout-outlet does), so closing on resize avoids
-    // a stale, misplaced dropdown rather than needing continuous repositioning.
-    window.addEventListener('resize', closeDropdown);
-
-    document.addEventListener('click', (e) => {
-      if (notiDropdown.style.display === 'block' && !notiDropdown.contains(e.target) && e.target !== bellBtn) {
-        closeDropdown();
+      if (drawerBody) {
+        drawerBody.innerHTML = renderNotificationList(notifications);
+        bindNotificationItems(notifications);
       }
     });
   }
