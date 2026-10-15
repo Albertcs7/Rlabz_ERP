@@ -3040,4 +3040,53 @@ class StudentController extends Controller
 
         return response()->json($events);
     }
+
+    /**
+     * Retrieve Design tickets assigned to the authenticated student
+     * Enforces student-level access scoping (assigned_to = auth_user.id)
+     */
+    public function getDesignTickets(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if (!Schema::hasTable('design_tickets')) {
+            return response()->json(['status' => 'success', 'data' => []]);
+        }
+
+        $tickets = DB::table('design_tickets')
+            ->leftJoin('users as requesters', 'design_tickets.requester_id', '=', 'requesters.id')
+            ->leftJoin('projects', 'design_tickets.project_id', '=', 'projects.id')
+            ->leftJoin('design_versions', 'design_tickets.current_version_id', '=', 'design_versions.id')
+            ->where('design_tickets.assigned_to', $studentId)
+            ->select(
+                'design_tickets.id',
+                'design_tickets.ticket_number',
+                'design_tickets.title',
+                'design_tickets.work_type',
+                'design_tickets.priority',
+                'design_tickets.status',
+                'design_tickets.ball_is_with',
+                'design_tickets.committed_delivery_date',
+                'design_tickets.required_by',
+                'design_tickets.requesting_division',
+                'design_tickets.brand_kit_name',
+                'design_tickets.estimated_hours',
+                'design_tickets.actual_hours_logged',
+                'design_tickets.created_at',
+                'requesters.name as requester_name',
+                'projects.title as project_title',
+                'design_versions.version_number as current_version_number',
+                'design_versions.file_url as current_preview_url'
+            )
+            ->orderBy('design_tickets.committed_delivery_date', 'asc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $tickets
+        ]);
+    }
 }
