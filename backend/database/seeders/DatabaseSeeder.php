@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ProjectSeeder::class,
             FullDatabaseDemoSeeder::class,
             ProjectDummyFinanceAndTaskSeeder::class,
+            DesignModuleSeeder::class,
         ]);
     }
 }

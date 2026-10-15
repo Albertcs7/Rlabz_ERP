@@ -61,25 +61,42 @@ class ProfilePhotoController extends Controller
             return $this->columnMissingResponse();
         }
 
-        // mimes is checked against the file's detected content type, not just
-        // its extension. SVG is deliberately not allowed (it can carry script).
-        $request->validate([
-            'photo' => 'required|file|mimes:jpg,jpeg,png,webp|max:2048',
-        ], [
-            'photo.required' => 'Please choose an image to upload.',
-            'photo.uploaded' => 'The image could not be uploaded. It may be larger than 2 MB.',
-            'photo.mimes' => 'The photo must be a JPG, PNG or WebP image.',
-            'photo.max' => 'The photo must not be larger than 2 MB.',
-        ]);
+        $photoUrl = $request->input('photo_url') ?? $request->input('url');
+        $hasFile = $request->hasFile('photo');
+
+        if (!$hasFile && (empty($photoUrl) || !is_string($photoUrl))) {
+            return response()->json([
+                'error' => 'Please choose an image file to upload or enter an image link URL.',
+            ], 422);
+        }
+
+        if ($hasFile) {
+            // mimes is checked against the file's detected content type, not just
+            // its extension. SVG is deliberately not allowed (it can carry script).
+            $request->validate([
+                'photo' => 'required|file|mimes:jpg,jpeg,png,webp|max:2048',
+            ], [
+                'photo.required' => 'Please choose an image to upload.',
+                'photo.uploaded' => 'The image could not be uploaded. It may be larger than 2 MB.',
+                'photo.mimes' => 'The photo must be a JPG, PNG or WebP image.',
+                'photo.max' => 'The photo must not be larger than 2 MB.',
+            ]);
+
+            $newPath = $request->file('photo')->store(self::DIRECTORY, 'public');
+            if (!$newPath) {
+                return response()->json(['error' => 'The photo could not be saved. Please try again.'], 500);
+            }
+        } else {
+            $cleanUrl = trim((string) $photoUrl);
+            if (!filter_var($cleanUrl, FILTER_VALIDATE_URL) && !str_starts_with($cleanUrl, 'data:image/')) {
+                return response()->json(['error' => 'Please enter a valid HTTP, HTTPS, or image URL link.'], 422);
+            }
+            $newPath = $cleanUrl;
+        }
 
         $user = DB::table('users')->where('id', $userId)->first();
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
-        }
-
-        $newPath = $request->file('photo')->store(self::DIRECTORY, 'public');
-        if (!$newPath) {
-            return response()->json(['error' => 'The photo could not be saved. Please try again.'], 500);
         }
 
         DB::table('users')->where('id', $userId)->update([
@@ -87,7 +104,9 @@ class ProfilePhotoController extends Controller
             'updated_at' => now(),
         ]);
 
-        $this->deleteStoredPhoto($user->profile_photo_path);
+        if ($user->profile_photo_path && $user->profile_photo_path !== $newPath) {
+            $this->deleteStoredPhoto($user->profile_photo_path);
+        }
 
         return response()->json([
             'message' => 'Profile photo updated.',

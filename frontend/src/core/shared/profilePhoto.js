@@ -8,9 +8,15 @@ import { STORAGE_BASE } from '@/core/config/api.js';
  * (from its /auth/profile sync), ProfilePhotoEditor and the shared /profile page.
  */
 
-/** Public URL for a stored relative path such as "profile_photos/abc.jpg". */
+/** Public URL for a stored relative path such as "profile_photos/abc.jpg" or direct image link URL. */
 export function profilePhotoUrl(path) {
-  return path ? `${STORAGE_BASE}/${String(path).replace(/^\/+/, '')}` : null;
+  if (!path) return null;
+  const str = String(path).trim();
+  if (!str) return null;
+  if (str.startsWith('http://') || str.startsWith('https://') || str.startsWith('data:')) {
+    return str;
+  }
+  return `${STORAGE_BASE}/${str.replace(/^\/+/, '')}`;
 }
 
 function escapeHtml(value) {
@@ -22,15 +28,17 @@ function escapeHtml(value) {
 /** Header markup for an avatar: the photo, or the name's initial (default). */
 export function headerAvatarContent(url, displayName) {
   return url
-    ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(displayName || 'Profile')}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`
+    ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(displayName || 'Profile')}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" onerror="this.onerror=null; this.parentNode.innerHTML='${escapeHtml(String(displayName || 'User').charAt(0).toUpperCase())}';" />`
     : escapeHtml(String(displayName || 'User').charAt(0).toUpperCase());
 }
 
-// Every header avatar spot: the DashboardLayout topbar/popover and the
-// Finance layout's own header.
+// Every header avatar spot: DashboardLayout, Finance layout, Design layout, etc.
 const HEADER_AVATAR_SELECTORS = [
   '#user-profile-header .avatar',
   '#finance-user-profile-header .avatar',
+  '#design-user-profile-header .avatar',
+  '#design-topbar-avatar',
+  '#design-popover-avatar',
   '.topbar .avatar',
   '.user-profile .avatar',
   '#popover-avatar',

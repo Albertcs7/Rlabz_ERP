@@ -11,13 +11,21 @@ return new class extends Migration
     {
         Schema::table('student_reports', function (Blueprint $table) {
             if (!Schema::hasColumn('student_reports', 'tasks_completed')) {
-                $table->text('tasks_completed')->nullable()->after('work_done');
+                if (Schema::hasColumn('student_reports', 'work_done')) {
+                    $table->text('tasks_completed')->nullable()->after('work_done');
+                } else {
+                    $table->text('tasks_completed')->nullable();
+                }
             }
             if (!Schema::hasColumn('student_reports', 'hours_worked')) {
-                $table->decimal('hours_worked', 5, 2)->nullable()->after('tasks_completed');
+                $table->decimal('hours_worked', 5, 2)->nullable();
             }
             if (!Schema::hasColumn('student_reports', 'remarks')) {
-                $table->text('remarks')->nullable()->after('challenges');
+                if (Schema::hasColumn('student_reports', 'challenges')) {
+                    $table->text('remarks')->nullable()->after('challenges');
+                } else {
+                    $table->text('remarks')->nullable();
+                }
             }
         });
 

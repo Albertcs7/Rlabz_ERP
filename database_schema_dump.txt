@@ -1,0 +1,760 @@
+DATABASE: rlabz_erp
+TOTAL TABLES: 49
+
+================================================================================
+TABLE: audit_logs
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+action                         | varchar(100)              | NO       |        | NULL                
+description                    | text                      | YES      |        | NULL                
+created_at                     | timestamp                 | NO       |        | current_timestamp() 
+
+================================================================================
+TABLE: certificates
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+module_id                      | bigint(20) unsigned       | YES      | MUL    | NULL                
+student_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+certificate_number             | varchar(50)               | NO       | UNI    | NULL                
+description                    | text                      | NO       |        | NULL                
+issue_date                     | date                      | NO       |        | NULL                
+certificate_file               | varchar(500)              | YES      |        | NULL                
+issued_by                      | bigint(20) unsigned       | NO       | MUL    | NULL                
+
+================================================================================
+TABLE: chat_messages
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+chat_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+sender_id                      | bigint(20) unsigned       | NO       | MUL    | NULL                
+message                        | text                      | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: chat_participants
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+chat_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+joined_at                      | timestamp                 | NO       |        | current_timestamp() 
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: chats
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+title                          | varchar(255)              | YES      |        | NULL                
+created_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+is_active                      | tinyint(1)                | NO       |        | 1                   
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: client_payments
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+invoice_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+amount                         | decimal(12,2)             | NO       |        | NULL                
+payment_date                   | date                      | YES      |        | NULL                
+payment_method                 | varchar(50)               | YES      |        | NULL                
+payment_reference              | varchar(255)              | YES      |        | NULL                
+remarks                        | text                      | YES      |        | NULL                
+recorded_by                    | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: client_requirements
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+task_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+description                    | text                      | NO       |        | NULL                
+document_path                  | varchar(500)              | YES      |        | NULL                
+uploaded_by                    | bigint(20) unsigned       | NO       | MUL    | NULL                
+uploaded_on                    | datetime                  | NO       |        | NULL                
+
+================================================================================
+TABLE: design_assets
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+title                          | varchar(191)              | NO       |        | NULL                
+campaign                       | varchar(191)              | YES      |        | NULL                
+division                       | varchar(100)              | YES      |        | NULL                
+work_type                      | varchar(50)               | NO       |        | NULL                
+source_ticket_id               | bigint(20) unsigned       | YES      | MUL    | NULL                
+designer_id                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+preview_url                    | varchar(191)              | YES      |        | NULL                
+deliverable_url                | varchar(191)              | YES      |        | NULL                
+source_file_url                | varchar(191)              | YES      |        | NULL                
+packaged_formats               | longtext                  | YES      |        | NULL                
+tags                           | longtext                  | YES      |        | NULL                
+usage_count                    | int(10) unsigned          | NO       |        | 0                   
+metadata                       | longtext                  | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: design_audit_logs
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+ticket_id                      | bigint(20) unsigned       | YES      | MUL    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+action                         | varchar(100)              | NO       |        | NULL                
+previous_value                 | text                      | YES      |        | NULL                
+new_value                      | text                      | YES      |        | NULL                
+reason                         | text                      | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: design_comments
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+ticket_id                      | bigint(20) unsigned       | NO       | MUL    | NULL                
+version_id                     | bigint(20) unsigned       | YES      | MUL    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+parent_id                      | bigint(20) unsigned       | YES      |        | NULL                
+comment                        | text                      | NO       |        | NULL                
+status                         | enum('open','resolved')   | NO       |        | open                
+resolved_by                    | bigint(20) unsigned       | YES      |        | NULL                
+resolved_at                    | datetime                  | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: design_notifications
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+ticket_id                      | bigint(20) unsigned       | YES      | MUL    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+event                          | varchar(100)              | NO       |        | NULL                
+title                          | varchar(191)              | NO       |        | NULL                
+message                        | text                      | NO       |        | NULL                
+channel                        | varchar(50)               | NO       |        | in-app              
+is_read                        | tinyint(1)                | NO       |        | 0                   
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: design_tickets
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+ticket_number                  | varchar(50)               | NO       | UNI    | NULL                
+work_type                      | varchar(50)               | NO       |        | NULL                
+title                          | varchar(191)              | NO       |        | NULL                
+purpose                        | text                      | YES      |        | NULL                
+requester_id                   | bigint(20) unsigned       | NO       | MUL    | NULL                
+requesting_division            | varchar(100)              | NO       |        | NULL                
+target_audience                | varchar(191)              | YES      |        | NULL                
+publishing_channel             | varchar(191)              | YES      |        | NULL                
+required_by                    | datetime                  | NO       |        | NULL                
+committed_delivery_date        | datetime                  | YES      |        | NULL                
+priority                       | enum('normal','high','urgent') | NO       |        | normal              
+final_copy                     | longtext                  | YES      |        | NULL                
+reference_links                | text                      | YES      |        | NULL                
+attachments                    | longtext                  | YES      |        | NULL                
+brand_constraints              | text                      | YES      |        | NULL                
+type_specific_fields           | longtext                  | YES      |        | NULL                
+status                         | varchar(30)               | NO       |        | New                 
+ball_is_with                   | varchar(50)               | NO       |        | Design Lead         
+assigned_to                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+collaborators                  | longtext                  | YES      |        | NULL                
+estimated_hours                | decimal(6,2)              | NO       |        | 0.00                
+actual_hours_logged            | decimal(6,2)              | NO       |        | 0.00                
+on_hold_reason                 | text                      | YES      |        | NULL                
+cancellation_reason            | text                      | YES      |        | NULL                
+revision_count                 | int(10) unsigned          | NO       |        | 0                   
+current_version_id             | bigint(20) unsigned       | YES      |        | NULL                
+approved_by                    | bigint(20) unsigned       | YES      |        | NULL                
+approved_at                    | datetime                  | YES      |        | NULL                
+second_level_approved_by       | bigint(20) unsigned       | YES      |        | NULL                
+second_level_approved_at       | datetime                  | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: design_user_profiles
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | UNI    | NULL                
+division                       | varchar(100)              | NO       |        | Design              
+skill_tags                     | longtext                  | YES      |        | NULL                
+weekly_capacity_hours          | int(10) unsigned          | NO       |        | 20                  
+is_active                      | tinyint(1)                | NO       |        | 1                   
+notification_preferences       | longtext                  | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: design_versions
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+ticket_id                      | bigint(20) unsigned       | NO       | MUL    | NULL                
+version_number                 | int(10) unsigned          | NO       |        | NULL                
+uploader_id                    | bigint(20) unsigned       | NO       | MUL    | NULL                
+file_url                       | varchar(191)              | NO       |        | NULL                
+file_name                      | varchar(191)              | YES      |        | NULL                
+file_type                      | varchar(50)               | NO       |        | image               
+file_size_kb                   | bigint(20) unsigned       | NO       |        | 0                   
+change_notes                   | text                      | YES      |        | NULL                
+is_current                     | tinyint(1)                | NO       |        | 1                   
+is_approved                    | tinyint(1)                | NO       |        | 0                   
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: development_allocations
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_finance_id             | bigint(20) unsigned       | NO       | MUL    | NULL                
+category                       | enum('student','faculty','rlabz') | NO       |        | NULL                
+amount                         | decimal(12,2)             | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: faculty_payments
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_faculty_id             | bigint(20) unsigned       | NO       | MUL    | NULL                
+amount                         | decimal(12,2)             | NO       |        | NULL                
+payment_date                   | date                      | YES      |        | NULL                
+status                         | enum('calculated','approved','processing','paid','failed') | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: faculty_profiles
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+faculty_id                     | bigint(20) unsigned       | NO       | UNI    | NULL                
+department                     | varchar(150)              | NO       |        | NULL                
+designation                    | varchar(100)              | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: feedback
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+faculty_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+student_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+comments                       | text                      | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: final_project_documents
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | UNI    | NULL                
+final_report                   | varchar(500)              | YES      |        | NULL                
+code_handover                  | varchar(500)              | YES      |        | NULL                
+closure_notes                  | text                      | YES      |        | NULL                
+uploaded_on                    | datetime                  | NO       |        | NULL                
+
+================================================================================
+TABLE: finance_settings
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+student_hourly_rate            | decimal(10,2)             | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: github_repositories
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+student_id                     | bigint(20) unsigned       | YES      | MUL    | NULL                
+link_type                      | enum('main','branch')     | NO       |        | main                
+repository_name                | varchar(255)              | NO       |        | NULL                
+branch_name                    | varchar(255)              | YES      |        | NULL                
+repository_url                 | varchar(500)              | NO       |        | NULL                
+branch_url                     | varchar(500)              | YES      |        | NULL                
+submitted_date                 | date                      | NO       |        | NULL                
+is_verified                    | tinyint(1)                | NO       |        | 0                   
+verified_by                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+verified_at                    | timestamp                 | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: hosting_charges
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_finance_id             | bigint(20) unsigned       | NO       | MUL    | NULL                
+charge_type                    | enum('ssl','domain','api','hosting') | NO       |        | NULL                
+amount                         | decimal(12,2)             | NO       |        | NULL                
+purchase_date                  | date                      | YES      |        | NULL                
+expiry_date                    | date                      | YES      |        | NULL                
+domain_name                    | varchar(191)              | YES      |        | NULL                
+reference_details              | text                      | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: invoice_items
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+invoice_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+description                    | varchar(191)              | NO       |        | NULL                
+rate                           | decimal(12,2)             | NO       |        | NULL                
+quantity                       | int(11)                   | NO       |        | 1                   
+amount                         | decimal(12,2)             | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: invoices
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_finance_id             | bigint(20) unsigned       | NO       | MUL    | NULL                
+invoice_number                 | varchar(191)              | NO       | UNI    | NULL                
+invoice_date                   | date                      | NO       |        | NULL                
+due_date                       | date                      | YES      |        | NULL                
+amount_before_gst              | decimal(12,2)             | NO       |        | NULL                
+gst_percentage                 | decimal(5,2)              | NO       |        | 18.00               
+description                    | text                      | YES      |        | NULL                
+created_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: maintenance_support_charges
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_finance_id             | bigint(20) unsigned       | NO       | MUL    | NULL                
+amount                         | decimal(12,2)             | NO       |        | NULL                
+start_date                     | date                      | YES      |        | NULL                
+end_date                       | date                      | YES      |        | NULL                
+description                    | text                      | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: meeting_notes
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+meeting_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+minutes                        | text                      | NO       |        | NULL                
+important_decisions            | text                      | NO       |        | NULL                
+uploaded_by                    | bigint(20) unsigned       | NO       | MUL    | NULL                
+uploaded_on                    | datetime                  | NO       |        | NULL                
+
+================================================================================
+TABLE: meeting_participants
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+meeting_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+attendance_status              | enum('invited','attended','absent') | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: meetings
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+title                          | varchar(255)              | NO       |        | NULL                
+scheduled_at                   | datetime                  | NO       |        | NULL                
+location                       | varchar(255)              | YES      |        | NULL                
+meeting_link                   | varchar(500)              | YES      |        | NULL                
+agenda                         | text                      | YES      |        | NULL                
+status                         | enum('scheduled','completed','cancelled') | NO       |        | NULL                
+created_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: migrations
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | int(10) unsigned          | NO       | PRI    | NULL                
+migration                      | varchar(191)              | NO       |        | NULL                
+batch                          | int(11)                   | NO       |        | NULL                
+
+================================================================================
+TABLE: module_student
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+module_id                      | bigint(20) unsigned       | NO       | MUL    | NULL                
+student_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+assigned_date                  | date                      | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: modules
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+weight_percentage              | decimal(5,2)              | YES      |        | NULL                
+module_name                    | varchar(150)              | NO       |        | NULL                
+description                    | text                      | YES      |        | NULL                
+status                         | enum('not_started','in_progress','completed') | NO       |        | NULL                
+created_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: notifications
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+user_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+project_id                     | bigint(20) unsigned       | YES      | MUL    | NULL                
+type                           | varchar(100)              | NO       |        | NULL                
+urgency                        | varchar(20)               | YES      |        | NULL                
+message                        | text                      | NO       |        | NULL                
+is_read                        | tinyint(1)                | NO       |        | 0                   
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: personal_access_tokens
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+tokenable_type                 | varchar(191)              | NO       | MUL    | NULL                
+tokenable_id                   | bigint(20) unsigned       | NO       |        | NULL                
+name                           | varchar(191)              | NO       |        | NULL                
+token                          | varchar(64)               | NO       | UNI    | NULL                
+abilities                      | text                      | YES      |        | NULL                
+last_used_at                   | timestamp                 | YES      |        | NULL                
+expires_at                     | timestamp                 | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: project_closures
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | UNI    | NULL                
+closed_by                      | bigint(20) unsigned       | NO       | MUL    | NULL                
+closure_date                   | datetime                  | NO       |        | NULL                
+final_status                   | varchar(50)               | NO       |        | NULL                
+remarks                        | text                      | YES      |        | NULL                
+
+================================================================================
+TABLE: project_faculty
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+faculty_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+assigned_date                  | date                      | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: project_finances
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | UNI    | NULL                
+total_development_amount       | decimal(12,2)             | YES      |        | NULL                
+created_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+approved_by                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+approved_at                    | timestamp                 | YES      |        | NULL                
+status                         | enum('draft','pending_approval','approved','rejected') | NO       |        | draft               
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: project_reports
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+report_title                   | varchar(200)              | NO       |        | NULL                
+report_file                    | varchar(500)              | NO       |        | NULL                
+uploaded_by                    | bigint(20) unsigned       | NO       | MUL    | NULL                
+upload_date                    | datetime                  | NO       |        | NULL                
+
+================================================================================
+TABLE: project_student
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+student_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+role                           | enum('project_lead','developer','designer','tester','other') | NO       |        | NULL                
+assigned_date                  | date                      | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: projects
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+title                          | varchar(255)              | NO       |        | NULL                
+project_type                   | varchar(100)              | YES      |        | NULL                
+source_type                    | enum('faculty','student','alumni','institution','external','other') | YES      |        | NULL                
+brought_by                     | varchar(150)              | YES      |        | NULL                
+client_name                    | varchar(150)              | YES      |        | NULL                
+contact_email                  | varchar(255)              | YES      |        | NULL                
+contact_phone                  | varchar(30)               | YES      |        | NULL                
+requirements                   | text                      | YES      |        | NULL                
+deliverables                   | text                      | YES      |        | NULL                
+expected_timeline              | date                      | YES      |        | NULL                
+budget                         | decimal(12,2)             | YES      |        | NULL                
+priority                       | enum('normal','urgent')   | NO       |        | normal              
+status                         | enum('proposed','accepted','rejected','in_progress','closed') | NO       |        | NULL                
+created_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: requirement_changes
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+client_requirement_id          | bigint(20) unsigned       | NO       | MUL    | NULL                
+project_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+previous_description           | text                      | YES      |        | NULL                
+new_description                | text                      | YES      |        | NULL                
+change_description             | text                      | NO       |        | NULL                
+reason                         | text                      | YES      |        | NULL                
+previous_document_path         | varchar(500)              | YES      |        | NULL                
+new_document_path              | varchar(500)              | YES      |        | NULL                
+requested_by                   | bigint(20) unsigned       | NO       | MUL    | NULL                
+status                         | enum('pending','approved','rejected') | NO       |        | NULL                
+approved_by                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+approved_at                    | timestamp                 | YES      |        | NULL                
+changed_on                     | datetime                  | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+previous_value                 | text                      | YES      |        | NULL                
+updated_value                  | text                      | YES      |        | NULL                
+changed_by                     | bigint(20) unsigned       | YES      | MUL    | NULL                
+
+================================================================================
+TABLE: ssl_renewal_history
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+hosting_charge_id              | bigint(20) unsigned       | NO       | MUL    | NULL                
+renewal_date                   | date                      | NO       |        | NULL                
+previous_expiry_date           | date                      | YES      |        | NULL                
+new_expiry_date                | date                      | NO       |        | NULL                
+renewal_amount                 | decimal(12,2)             | NO       |        | NULL                
+payment_reference              | varchar(191)              | YES      |        | NULL                
+remarks                        | text                      | YES      |        | NULL                
+renewed_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: student_hourly_rate_history
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+old_rate                       | decimal(10,2)             | NO       |        | NULL                
+new_rate                       | decimal(10,2)             | NO       |        | NULL                
+updated_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: student_payments
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_student_id             | bigint(20) unsigned       | NO       | MUL    | NULL                
+designation                    | enum('nova','orbit','spark') | NO       |        | NULL                
+approved_hours                 | decimal(7,2)              | YES      |        | NULL                
+hourly_rate                    | decimal(10,2)             | YES      |        | NULL                
+amount                         | decimal(12,2)             | NO       |        | NULL                
+payment_date                   | date                      | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: student_profiles
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+student_id                     | bigint(20) unsigned       | NO       | UNI    | NULL                
+course                         | varchar(100)              | NO       |        | NULL                
+batch                          | varchar(50)               | NO       |        | NULL                
+semester                       | tinyint(4)                | NO       |        | NULL                
+designation                    | enum('nova','orbit','spark') | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: student_reports
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+student_id                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+project_id                     | bigint(20) unsigned       | YES      | MUL    | NULL                
+task_id                        | bigint(20) unsigned       | YES      | MUL    | NULL                
+report_type                    | enum('daily','weekly')    | NO       |        | NULL                
+report_date                    | date                      | NO       |        | NULL                
+week_start                     | date                      | YES      |        | NULL                
+week_end                       | date                      | YES      |        | NULL                
+weekly_key                     | varchar(120)              | YES      | UNI    | NULL                
+work_done                      | text                      | NO       |        | NULL                
+report_file                    | varchar(255)              | YES      |        | NULL                
+approval_status                | enum('pending','approved','rejected') | NO       |        | pending             
+feedback                       | text                      | YES      |        | NULL                
+submitted_at                   | timestamp                 | NO       |        | current_timestamp() 
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: student_roles
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+student_id                     | bigint(20) unsigned       | NO       | UNI    | NULL                
+role                           | enum('project_lead','developer','designer','tester','other') | NO       |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: student_work_logs
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+project_student_id             | bigint(20) unsigned       | NO       | MUL    | NULL                
+task_id                        | bigint(20) unsigned       | NO       | MUL    | NULL                
+work_date                      | date                      | NO       |        | NULL                
+hours_worked                   | decimal(5,2)              | NO       |        | NULL                
+description                    | text                      | YES      |        | NULL                
+rating                         | tinyint(3) unsigned       | YES      |        | NULL                
+approval_status                | enum('pending','approved','rejected') | NO       |        | pending             
+approved_by                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+approved_at                    | timestamp                 | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: tasks
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+module_id                      | bigint(20) unsigned       | NO       | MUL    | NULL                
+title                          | varchar(255)              | NO       |        | NULL                
+description                    | text                      | YES      |        | NULL                
+assigned_to                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+github_repository_id           | bigint(20) unsigned       | YES      | MUL    | NULL                
+github_pr_url                  | varchar(500)              | YES      |        | NULL                
+status                         | enum('todo','in_progress','completed','blocked','rework') | NO       |        | todo                
+rating                         | decimal(3,2) unsigned     | YES      |        | NULL                
+due_date                       | date                      | YES      |        | NULL                
+reviewed_by                    | bigint(20) unsigned       | YES      | MUL    | NULL                
+reviewed_at                    | timestamp                 | YES      |        | NULL                
+created_by                     | bigint(20) unsigned       | NO       | MUL    | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
+================================================================================
+TABLE: users
+================================================================================
+Field                          | Type                      | Null     | Key    | Default             
+----------------------------------------------------------------------------------------------------
+id                             | bigint(20) unsigned       | NO       | PRI    | NULL                
+name                           | varchar(150)              | NO       |        | NULL                
+email                          | varchar(255)              | NO       | UNI    | NULL                
+password                       | varchar(255)              | NO       |        | NULL                
+phone                          | varchar(20)               | YES      |        | NULL                
+bio                            | text                      | YES      |        | NULL                
+location                       | varchar(150)              | YES      |        | Kochi, India        
+avatar                         | varchar(500)              | YES      |        | NULL                
+department                     | varchar(150)              | YES      |        | Creative Design & Innovation
+role                           | enum('director','coordinator','finance','faculty','student','developer','design_head') | NO       |        | NULL                
+permissions                    | longtext                  | YES      |        | NULL                
+created_at                     | timestamp                 | YES      |        | NULL                
+updated_at                     | timestamp                 | YES      |        | NULL                
+
