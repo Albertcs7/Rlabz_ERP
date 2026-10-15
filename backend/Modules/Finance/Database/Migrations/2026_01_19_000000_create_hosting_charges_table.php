@@ -17,6 +17,9 @@ return new class extends Migration
             $table->date('expiry_date')->nullable();
             $table->text('reference_details')->nullable();
             $table->timestamps();
+
+            $table->index(['charge_type', 'expiry_date'], 'idx_hostchg_type_expiry');
+            $table->index('expiry_date', 'idx_hostchg_expiry_date');
         });
     }
 

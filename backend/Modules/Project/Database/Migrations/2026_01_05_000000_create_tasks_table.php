@@ -21,6 +21,12 @@ return new class extends Migration
             $table->timestamp('reviewed_at')->nullable();
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
+
+            $table->index(['module_id', 'status'], 'idx_tasks_module_status');
+            $table->index(['assigned_to', 'status'], 'idx_tasks_assigned_status');
+            $table->index('status', 'idx_tasks_status');
+            $table->index(['status', 'due_date'], 'idx_tasks_status_due_date');
+            $table->index('due_date', 'idx_tasks_due_date');
         });
     }
 

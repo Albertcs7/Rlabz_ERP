@@ -14,6 +14,8 @@ return new class extends Migration
             $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
             $table->date('assigned_date');
             $table->timestamps();
+
+            $table->index(['module_id', 'student_id'], 'idx_modstu_module_student');
         });
     }
 

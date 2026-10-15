@@ -16,6 +16,11 @@ return new class extends Migration
             $table->tinyInteger('semester');
             $table->enum('designation', ['nova', 'orbit', 'spark'])->nullable();
             $table->timestamps();
+
+            $table->index('course', 'idx_studprof_course');
+            $table->index('batch', 'idx_studprof_batch');
+            $table->index('semester', 'idx_studprof_semester');
+            $table->index('designation', 'idx_studprof_designation');
         });
     }
 

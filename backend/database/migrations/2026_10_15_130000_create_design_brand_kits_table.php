@@ -31,6 +31,10 @@ return new class extends Migration
                 $table->boolean('is_active')->default(true);
                 $table->unsignedBigInteger('created_by')->nullable();
                 $table->timestamps();
+
+                $table->index('is_active', 'idx_dsnbkt_is_active');
+                $table->index('name', 'idx_dsnbkt_name');
+                $table->index('created_by', 'idx_dsnbkt_created_by');
             });
 
             // Seed initial 4 brand kits

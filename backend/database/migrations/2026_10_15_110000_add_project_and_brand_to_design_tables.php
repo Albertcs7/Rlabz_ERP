@@ -31,6 +31,7 @@ return new class extends Migration
                 }
                 if (!Schema::hasColumn('design_assets', 'brand_kit_name')) {
                     $table->string('brand_kit_name', 150)->nullable()->default('RLabZ Core Platform')->after('campaign');
+                    $table->index('brand_kit_name', 'idx_dsnast_brand_kit');
                 }
             });
         }
@@ -60,6 +61,7 @@ return new class extends Migration
                     $table->dropColumn('project_id');
                 }
                 if (Schema::hasColumn('design_assets', 'brand_kit_name')) {
+                    $table->dropIndex('idx_dsnast_brand_kit');
                     $table->dropColumn('brand_kit_name');
                 }
             });

@@ -19,6 +19,10 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
+
+            $table->index(['project_finance_id', 'invoice_date'], 'idx_invoices_projfin_date');
+            $table->index('invoice_date', 'idx_invoices_invoice_date');
+            $table->index('due_date', 'idx_invoices_due_date');
         });
     }
 

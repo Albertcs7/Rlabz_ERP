@@ -23,6 +23,13 @@ const initialData = {
   auditLogs: []
 };
 
+function extractList(result) {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.data?.data)) return result.data.data;
+  return [];
+}
+
 function loadState() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) {
@@ -177,11 +184,12 @@ export class DirectorService {
       }
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data) {
+        const list = extractList(result);
+        if (list.length >= 0) {
           const data = loadState();
-          data.projects = result.data;
+          data.projects = list;
           saveState(data);
-          return result.data;
+          return list;
         }
       }
     } catch (e) {}
@@ -208,11 +216,12 @@ export class DirectorService {
       }
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data) {
+        const list = extractList(result);
+        if (list.length >= 0) {
           const data = loadState();
-          data.proposals = result.data;
+          data.proposals = list;
           saveState(data);
-          return result.data;
+          return list;
         }
       }
     } catch (e) {}
@@ -386,8 +395,9 @@ export class DirectorService {
       clearTimeout(timeoutId);
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data && result.data.length > 0) {
-          const facultiesList = result.data.map(f => ({
+        const rawFaculties = extractList(result);
+        if (rawFaculties.length > 0) {
+          const facultiesList = rawFaculties.map(f => ({
             id: String(f.id),
             name: f.name,
             email: f.email || 'faculty@rajagiri.edu',
@@ -454,8 +464,9 @@ export class DirectorService {
       clearTimeout(timeoutId);
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data) {
-          const logs = result.data.map(l => ({
+        const rawLogs = extractList(result);
+        if (rawLogs.length >= 0) {
+          const logs = rawLogs.map(l => ({
             id: typeof l.id === 'string' && l.id.startsWith('LOG-') ? l.id : `LOG-${l.id}`,
             timestamp: l.timestamp || (l.created_at ? String(l.created_at).slice(0, 16) : new Date().toISOString().slice(0, 16)),
             user: l.user || 'Director',
@@ -542,8 +553,9 @@ export class DirectorService {
       clearTimeout(timeoutId);
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data && result.data.length > 0) {
-          const students = result.data.map(s => ({
+        const rawStudents = extractList(result);
+        if (rawStudents.length > 0) {
+          const students = rawStudents.map(s => ({
             id: s.id,
             raw_id: s.raw_id,
             name: s.name,

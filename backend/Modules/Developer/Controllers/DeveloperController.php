@@ -204,73 +204,116 @@ class DeveloperController extends Controller
             return response()->json(['status' => 'success', 'data' => []]);
         }
 
-        $projects = DB::table('projects')
+        $perPage = (int) request()->input('per_page', 20);
+        $paginator = DB::table('projects')
             ->whereNotIn('status', ['proposed', 'pending'])
             ->orderBy('id', 'desc')
-            ->get()
-            ->map(function ($p) {
-                $facultyName = 'Unassigned';
-                $facultyId = $p->faculty_id ?? null;
+            ->paginate($perPage);
 
-                if (!$facultyId && Schema::hasTable('project_faculty')) {
-                    $facultyId = DB::table('project_faculty')->where('project_id', $p->id)->value('faculty_id');
-                }
+        $projectIds = collect($paginator->items())->pluck('id')->toArray();
 
-                if ($facultyId) {
-                    $facultyName = DB::table('users')->where('id', $facultyId)->value('name') ?: 'Faculty Member';
-                }
-
-                $students = [];
-                if (Schema::hasTable('project_student')) {
-                    $students = DB::table('project_student')
-                        ->join('users', 'project_student.student_id', '=', 'users.id')
-                        ->where('project_student.project_id', $p->id)
-                        ->select('users.id', 'users.name', 'project_student.role')
-                        ->get()
-                        ->map(function($s) {
-                            return [
-                                'id' => (string) $s->id,
-                                'name' => $s->name,
-                                'track' => stripos($s->name, 'nova') !== false ? 'Nova' : (stripos($s->name, 'spark') !== false ? 'Spark' : 'Orbit'),
-                                'role' => ucfirst($s->role ?: 'Member')
-                            ];
-                        })
-                        ->toArray();
-                }
-
-                $progress = $this->calculateProjectProgress($p->id, $p->status, $p->priority ?? 'normal');
-
-                $deliverablesArray = array_filter(array_map('trim', explode(',', $p->deliverables ?: '')));
-                if (empty($deliverablesArray)) {
-                    $deliverablesArray = [$p->deliverables ?: 'Core System Module & Handover Documentation'];
-                }
-
-                return [
-                    'id' => 'PROJ-' . str_pad($p->id, 3, '0', STR_PAD_LEFT),
-                    'raw_id' => $p->id,
-                    'title' => $p->title,
-                    'type' => $p->project_type ?: 'Web Application',
-                    'source' => ucfirst($p->source_type ?: 'External'),
-                    'sourceName' => $p->brought_by ?: ($p->client_name ?: 'Rajagiri Sponsor'),
-                    'clientName' => $p->client_name ?: 'Rajagiri Department',
-                    'clientContact' => ($p->contact_email ?: 'contact@rajagiri.edu') . ($p->contact_phone ? ' • ' . $p->contact_phone : ''),
-                    'status' => $p->status ?: 'in_progress',
-                    'priority' => $p->priority ?: 'normal',
-                    'progress' => $progress,
-                    'timeline' => $p->expected_timeline ?: 'TBD',
-                    'budget' => (float) ($p->budget ?: 0),
-                    'spent' => (float) (Schema::hasColumn('projects', 'spent') ? ($p->spent ?? 0) : 0),
-                    'facultyId' => (string) ($facultyId ?: ''),
-                    'facultyName' => $facultyName,
-                    'assignedStudents' => $students,
-                    'deliverables' => array_values($deliverablesArray),
-                    'requirementDocs' => [strtolower(str_replace(' ', '_', $p->title)) . '_specifications.pdf']
+        // 1. Bulk pre-fetch faculty assignments for these projects
+        $facultyMap = [];
+        if (!empty($projectIds) && Schema::hasTable('project_faculty')) {
+            $facultyRows = DB::table('project_faculty')
+                ->join('users', 'project_faculty.faculty_id', '=', 'users.id')
+                ->whereIn('project_faculty.project_id', $projectIds)
+                ->select('project_faculty.project_id', 'project_faculty.faculty_id', 'users.name')
+                ->get();
+            foreach ($facultyRows as $f) {
+                $facultyMap[$f->project_id] = [
+                    'id' => (string) $f->faculty_id,
+                    'name' => $f->name
                 ];
-            });
+            }
+        }
+
+        // 2. Bulk pre-fetch student assignments for these projects
+        $studentsMap = [];
+        if (!empty($projectIds) && Schema::hasTable('project_student')) {
+            $studentRows = DB::table('project_student')
+                ->join('users', 'project_student.student_id', '=', 'users.id')
+                ->whereIn('project_student.project_id', $projectIds)
+                ->select('project_student.project_id', 'users.id', 'users.name', 'project_student.role')
+                ->get();
+            foreach ($studentRows as $s) {
+                $studentsMap[$s->project_id][] = [
+                    'id' => (string) $s->id,
+                    'name' => $s->name,
+                    'track' => stripos($s->name, 'nova') !== false ? 'Nova' : (stripos($s->name, 'spark') !== false ? 'Spark' : 'Orbit'),
+                    'role' => ucfirst($s->role ?: 'Member')
+                ];
+            }
+        }
+
+        // 3. Bulk pre-fetch task progress for these projects
+        $progressMap = [];
+        if (!empty($projectIds) && Schema::hasTable('modules') && Schema::hasTable('tasks')) {
+            $taskCounts = DB::table('modules')
+                ->join('tasks', 'modules.id', '=', 'tasks.module_id')
+                ->whereIn('modules.project_id', $projectIds)
+                ->select(
+                    'modules.project_id',
+                    DB::raw('count(*) as total_tasks'),
+                    DB::raw('count(CASE WHEN LOWER(tasks.status) IN ("completed", "done") THEN 1 END) as completed_tasks')
+                )
+                ->groupBy('modules.project_id')
+                ->get();
+            foreach ($taskCounts as $tc) {
+                $progressMap[$tc->project_id] = $tc->total_tasks > 0 
+                    ? (int) round(($tc->completed_tasks / $tc->total_tasks) * 100) 
+                    : 0;
+            }
+        }
+
+        $projects = collect($paginator->items())->map(function ($p) use ($facultyMap, $studentsMap, $progressMap) {
+            $facultyId = $p->faculty_id ?? ($facultyMap[$p->id]['id'] ?? '');
+            $facultyName = $facultyMap[$p->id]['name'] ?? ($facultyId ? (DB::table('users')->where('id', $facultyId)->value('name') ?: 'Faculty Member') : 'Unassigned');
+            $students = $studentsMap[$p->id] ?? [];
+
+            if (in_array($p->status, ['closed', 'completed'], true)) {
+                $progress = 100;
+            } else {
+                $progress = $progressMap[$p->id] ?? 0;
+            }
+
+            $deliverablesArray = array_filter(array_map('trim', explode(',', $p->deliverables ?: '')));
+            if (empty($deliverablesArray)) {
+                $deliverablesArray = [$p->deliverables ?: 'Core System Module & Handover Documentation'];
+            }
+
+            return [
+                'id' => 'PROJ-' . str_pad($p->id, 3, '0', STR_PAD_LEFT),
+                'raw_id' => $p->id,
+                'title' => $p->title,
+                'type' => $p->project_type ?: 'Web Application',
+                'source' => ucfirst($p->source_type ?: 'External'),
+                'sourceName' => $p->brought_by ?: ($p->client_name ?: 'Rajagiri Sponsor'),
+                'clientName' => $p->client_name ?: 'Rajagiri Department',
+                'clientContact' => ($p->contact_email ?: 'contact@rajagiri.edu') . ($p->contact_phone ? ' • ' . $p->contact_phone : ''),
+                'status' => $p->status ?: 'in_progress',
+                'priority' => $p->priority ?: 'normal',
+                'progress' => $progress,
+                'timeline' => $p->expected_timeline ?: 'TBD',
+                'budget' => (float) ($p->budget ?: 0),
+                'spent' => (float) (Schema::hasColumn('projects', 'spent') ? ($p->spent ?? 0) : 0),
+                'facultyId' => (string) ($facultyId ?: ''),
+                'facultyName' => $facultyName,
+                'assignedStudents' => $students,
+                'deliverables' => array_values($deliverablesArray),
+                'requirementDocs' => [strtolower(str_replace(' ', '_', $p->title)) . '_specifications.pdf']
+            ];
+        });
 
         return response()->json([
             'status' => 'success',
-            'data' => $projects
+            'data' => $projects,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
         ]);
     }
 
@@ -283,39 +326,47 @@ class DeveloperController extends Controller
             return response()->json(['status' => 'success', 'data' => []]);
         }
 
-        $proposals = DB::table('projects')
+        $perPage = (int) request()->input('per_page', 20);
+        $paginator = DB::table('projects')
             ->whereIn('status', ['proposed', 'pending'])
             ->orderBy('id', 'desc')
-            ->get()
-            ->map(function ($prop) {
-                $deliverablesArray = array_filter(array_map('trim', explode(',', $prop->deliverables ?: '')));
-                if (empty($deliverablesArray)) {
-                    $deliverablesArray = ['System Architecture Proposal', 'Project Timeline & Milestones'];
-                }
+            ->paginate($perPage);
 
-                return [
-                    'id' => 'PROP-' . str_pad($prop->id, 3, '0', STR_PAD_LEFT),
-                    'raw_id' => $prop->id,
-                    'title' => $prop->title,
-                    'type' => $prop->project_type ?: 'Web Application',
-                    'source' => ucfirst($prop->source_type ?: 'Faculty'),
-                    'sourceName' => $prop->brought_by ?: 'Faculty Sponsor',
-                    'clientName' => $prop->client_name ?: 'Rajagiri Department',
-                    'contactEmail' => $prop->contact_email ?: 'proposal@rajagiri.edu',
-                    'priority' => $prop->priority ?: 'normal',
-                    'estimatedBudget' => (float) ($prop->budget ?: 50000),
-                    'expectedTimeline' => $prop->expected_timeline ?: '3 Months',
-                    'submittedDate' => $prop->created_at ? date('Y-m-d', strtotime($prop->created_at)) : date('Y-m-d'),
-                    'description' => $prop->requirements ?: 'Project proposal awaiting review.',
-                    'deliverables' => array_values($deliverablesArray),
-                    'status' => $prop->status,
-                    'suggestedFaculty' => 'FAC-01'
-                ];
-            });
+        $proposals = collect($paginator->items())->map(function ($prop) {
+            $deliverablesArray = array_filter(array_map('trim', explode(',', $prop->deliverables ?: '')));
+            if (empty($deliverablesArray)) {
+                $deliverablesArray = ['System Architecture Proposal', 'Project Timeline & Milestones'];
+            }
+
+            return [
+                'id' => 'PROP-' . str_pad($prop->id, 3, '0', STR_PAD_LEFT),
+                'raw_id' => $prop->id,
+                'title' => $prop->title,
+                'type' => $prop->project_type ?: 'Web Application',
+                'source' => ucfirst($prop->source_type ?: 'Faculty'),
+                'sourceName' => $prop->brought_by ?: 'Faculty Sponsor',
+                'clientName' => $prop->client_name ?: 'Rajagiri Department',
+                'contactEmail' => $prop->contact_email ?: 'proposal@rajagiri.edu',
+                'priority' => $prop->priority ?: 'normal',
+                'estimatedBudget' => (float) ($prop->budget ?: 50000),
+                'expectedTimeline' => $prop->expected_timeline ?: '3 Months',
+                'submittedDate' => $prop->created_at ? date('Y-m-d', strtotime($prop->created_at)) : date('Y-m-d'),
+                'description' => $prop->requirements ?: 'Project proposal awaiting review.',
+                'deliverables' => array_values($deliverablesArray),
+                'status' => $prop->status,
+                'suggestedFaculty' => 'FAC-01'
+            ];
+        });
 
         return response()->json([
             'status' => 'success',
-            'data' => $proposals
+            'data' => $proposals,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
         ]);
     }
 
@@ -457,9 +508,45 @@ class DeveloperController extends Controller
             $query->whereRaw('LOWER(student_profiles.designation) = ?', [strtolower($trackFilter)]);
         }
 
-        $users = $query->get();
+        $perPage = (int) request()->input('per_page', 20);
+        $paginator = $query->paginate($perPage);
+        $users = collect($paginator->items());
+        $userIds = $users->pluck('id')->toArray();
 
-        $students = $users->map(function ($user) {
+        // Bulk pre-fetch assigned projects for these students
+        $assignedProjectsMap = [];
+        if (!empty($userIds) && Schema::hasTable('project_student')) {
+            $rows = DB::table('project_student')
+                ->join('projects', 'project_student.project_id', '=', 'projects.id')
+                ->whereIn('project_student.student_id', $userIds)
+                ->select('project_student.student_id', 'projects.title')
+                ->get();
+            foreach ($rows as $r) {
+                $assignedProjectsMap[$r->student_id][] = $r->title;
+            }
+        }
+
+        // Bulk pre-fetch task counts for these students
+        $taskCountsMap = [];
+        if (!empty($userIds) && Schema::hasTable('tasks')) {
+            $taskRows = DB::table('tasks')
+                ->whereIn('assigned_to', $userIds)
+                ->select(
+                    'assigned_to',
+                    DB::raw('count(*) as total'),
+                    DB::raw('count(CASE WHEN LOWER(status) IN ("completed", "done") THEN 1 END) as completed')
+                )
+                ->groupBy('assigned_to')
+                ->get();
+            foreach ($taskRows as $tr) {
+                $taskCountsMap[$tr->assigned_to] = [
+                    'total' => (int) $tr->total,
+                    'completed' => (int) $tr->completed
+                ];
+            }
+        }
+
+        $students = $users->map(function ($user) use ($assignedProjectsMap, $taskCountsMap) {
             $designation = strtolower($user->designation ?: '');
             if ($designation === 'nova' || stripos($user->name, 'nova') !== false) {
                 $track = 'Nova';
@@ -469,24 +556,9 @@ class DeveloperController extends Controller
                 $track = 'Orbit';
             }
 
-            $assignedProjects = [];
-            if (Schema::hasTable('project_student')) {
-                $assignedProjects = DB::table('project_student')
-                    ->join('projects', 'project_student.project_id', '=', 'projects.id')
-                    ->where('project_student.student_id', $user->id)
-                    ->pluck('projects.title')
-                    ->toArray();
-            }
-
-            $completedTasks = 0;
-            $totalTasks = 0;
-            if (Schema::hasTable('tasks')) {
-                $totalTasks = DB::table('tasks')->where('assigned_to', $user->id)->count();
-                $completedTasks = DB::table('tasks')
-                    ->where('assigned_to', $user->id)
-                    ->whereIn(DB::raw('LOWER(status)'), ['completed', 'done'])
-                    ->count();
-            }
+            $assignedProjects = $assignedProjectsMap[$user->id] ?? [];
+            $completedTasks = $taskCountsMap[$user->id]['completed'] ?? 0;
+            $totalTasks = $taskCountsMap[$user->id]['total'] ?? 0;
 
             $gpa = (isset($user->gpa) && $user->gpa) ? $user->gpa : (8.0 + (($user->id % 15) / 10));
             $attendance = (isset($user->attendance) && $user->attendance) ? $user->attendance : (85 + ($user->id % 12));
@@ -509,7 +581,13 @@ class DeveloperController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $students
+            'data' => $students,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
         ]);
     }
 
@@ -787,7 +865,8 @@ class DeveloperController extends Controller
             return response()->json(['status' => 'success', 'data' => []]);
         }
 
-        $query = DB::table('audit_logs')
+        $perPage = (int) request()->input('per_page', 20);
+        $paginator = DB::table('audit_logs')
             ->leftJoin('users', 'audit_logs.user_id', '=', 'users.id')
             ->select(
                 'audit_logs.id',
@@ -798,9 +877,9 @@ class DeveloperController extends Controller
                 DB::raw('COALESCE(users.role, "developer") as user_role')
             )
             ->orderBy('audit_logs.created_at', 'desc')
-            ->take(50);
+            ->paginate($perPage);
 
-        $logs = $query->get()->map(function ($log) {
+        $logs = collect($paginator->items())->map(function ($log) {
             $type = 'info';
             $actionLower = strtolower($log->action);
             if (str_contains($actionLower, 'fail') || str_contains($actionLower, 'reject') || str_contains($actionLower, 'denied') || str_contains($actionLower, 'warning')) {
@@ -822,7 +901,13 @@ class DeveloperController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $logs
+            'data' => $logs,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
         ]);
     }
 

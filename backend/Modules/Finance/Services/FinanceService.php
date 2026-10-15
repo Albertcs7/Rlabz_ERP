@@ -260,33 +260,61 @@ class FinanceService
         }
 
         $students = $query->get();
-            
-        foreach ($students as $student) {
-            $hours = DB::table('student_work_logs')
-                ->join('tasks', 'student_work_logs.task_id', '=', 'tasks.id')
-                ->where('student_work_logs.project_student_id', $student->project_student_id)
-                ->where('student_work_logs.approval_status', 'approved')
-                ->where('tasks.status', 'completed')
-                ->sum('student_work_logs.hours_worked');
+        $projectStudentIds = $students->pluck('project_student_id')->filter()->toArray();
 
-            $completedTasks = DB::table('student_work_logs')
+        // Batch pre-fetch work logs
+        $workLogsMap = [];
+        if (!empty($projectStudentIds)) {
+            $workLogRows = DB::table('student_work_logs')
                 ->join('tasks', 'student_work_logs.task_id', '=', 'tasks.id')
-                ->where('student_work_logs.project_student_id', $student->project_student_id)
+                ->whereIn('student_work_logs.project_student_id', $projectStudentIds)
                 ->where('student_work_logs.approval_status', 'approved')
                 ->where('tasks.status', 'completed')
-                ->distinct('tasks.id')
-                ->count('tasks.id');
-            
-            $rate = $this->getApprovedHourlyRate($student->project_student_id);
-            
+                ->select(
+                    'student_work_logs.project_student_id',
+                    DB::raw('SUM(student_work_logs.hours_worked) as total_hours'),
+                    DB::raw('COUNT(DISTINCT tasks.id) as completed_tasks')
+                )
+                ->groupBy('student_work_logs.project_student_id')
+                ->get();
+            foreach ($workLogRows as $wlr) {
+                $workLogsMap[$wlr->project_student_id] = [
+                    'hours' => (float) $wlr->total_hours,
+                    'completed_tasks' => (int) $wlr->completed_tasks,
+                ];
+            }
+        }
+
+        // Batch pre-fetch student payments
+        $paymentsMap = [];
+        if (!empty($projectStudentIds)) {
+            $paymentRows = DB::table('student_payments')
+                ->whereIn('project_student_id', $projectStudentIds)
+                ->select('project_student_id', DB::raw('SUM(amount) as total_paid'))
+                ->groupBy('project_student_id')
+                ->get();
+            foreach ($paymentRows as $pr) {
+                $paymentsMap[$pr->project_student_id] = (float) $pr->total_paid;
+            }
+        }
+
+        $defaultRate = $this->getApprovedHourlyRate();
+
+        foreach ($students as $student) {
+            $psId = $student->project_student_id;
+            $hours = $workLogsMap[$psId]['hours'] ?? 0;
+            $completedTasks = $workLogsMap[$psId]['completed_tasks'] ?? 0;
+            $rate = $defaultRate;
+            $amountPaid = $paymentsMap[$psId] ?? 0;
+
             $student->designation = ucfirst($student->designation ?? 'None');
             $student->completed_tasks = $completedTasks;
             $student->approved_hours = $hours;
             $student->hourly_rate = $rate;
             $student->gross_amount = $hours * $rate;
-            $student->amount_paid = DB::table('student_payments')->where('project_student_id', $student->project_student_id)->sum('amount');
+            $student->amount_paid = $amountPaid;
             $student->remaining_payable = max(0, $student->gross_amount - $student->amount_paid);
-            
+
             if ($student->gross_amount == 0 || $student->amount_paid == 0) {
                 $student->status = 'Pending';
             } elseif ($student->remaining_payable == 0) {
@@ -295,7 +323,7 @@ class FinanceService
                 $student->status = 'Partially Paid';
             }
         }
-        
+
         return $students;
     }
 
@@ -306,13 +334,34 @@ class FinanceService
             ->join('projects', 'project_faculty.project_id', '=', 'projects.id')
             ->select('users.name as faculty_name', 'projects.title as project_name', 'projects.id as project_id', 'project_faculty.id as project_faculty_id')
             ->get();
-            
+
+        $projectFacultyIds = $faculties->pluck('project_faculty_id')->filter()->toArray();
+        $facultyPaymentsMap = [];
+        if (!empty($projectFacultyIds)) {
+            $fPayRows = DB::table('faculty_payments')
+                ->whereIn('project_faculty_id', $projectFacultyIds)
+                ->select(
+                    'project_faculty_id',
+                    DB::raw('SUM(amount) as total_amount'),
+                    DB::raw('MAX(payment_date) as max_date')
+                )
+                ->groupBy('project_faculty_id')
+                ->get();
+            foreach ($fPayRows as $fpr) {
+                $facultyPaymentsMap[$fpr->project_faculty_id] = [
+                    'amount' => (float) $fpr->total_amount,
+                    'payment_date' => $fpr->max_date,
+                ];
+            }
+        }
+
         foreach ($faculties as $faculty) {
-            $faculty->amount = DB::table('faculty_payments')->where('project_faculty_id', $faculty->project_faculty_id)->sum('amount');
-            $faculty->payment_date = DB::table('faculty_payments')->where('project_faculty_id', $faculty->project_faculty_id)->max('payment_date');
+            $pfId = $faculty->project_faculty_id;
+            $faculty->amount = $facultyPaymentsMap[$pfId]['amount'] ?? 0;
+            $faculty->payment_date = $facultyPaymentsMap[$pfId]['payment_date'] ?? null;
             $faculty->status = $faculty->amount > 0 ? 'Paid' : 'Pending';
         }
-        
+
         return $faculties;
     }
 
@@ -552,21 +601,38 @@ class FinanceService
             ->select('users.name as resource_name', 'student_profiles.designation as designation', 'project_student.id as project_student_id')
             ->get();
             
-        foreach ($students as $student) {
-            $student->type = 'Student';
-            // Calc amount from work logs
-            $hours = DB::table('student_work_logs')
+        $studentPsIds = $students->pluck('project_student_id')->filter()->toArray();
+        $studentWorkMap = [];
+        $studentPaidMap = [];
+        if (!empty($studentPsIds)) {
+            $swRows = DB::table('student_work_logs')
                 ->join('tasks', 'student_work_logs.task_id', '=', 'tasks.id')
-                ->where('student_work_logs.project_student_id', $student->project_student_id)
+                ->whereIn('student_work_logs.project_student_id', $studentPsIds)
                 ->where('student_work_logs.approval_status', 'approved')
                 ->where('tasks.status', 'completed')
-                ->sum('student_work_logs.hours_worked');
-            
-            $rate = $this->getApprovedHourlyRate($student->project_student_id);
-            $student->amount = $hours * $rate;
-            
-            // Get paid
-            $paid = DB::table('student_payments')->where('project_student_id', $student->project_student_id)->sum('amount');
+                ->select('student_work_logs.project_student_id', DB::raw('SUM(student_work_logs.hours_worked) as total_hours'))
+                ->groupBy('student_work_logs.project_student_id')
+                ->get();
+            foreach ($swRows as $sw) {
+                $studentWorkMap[$sw->project_student_id] = (float) $sw->total_hours;
+            }
+
+            $spRows = DB::table('student_payments')
+                ->whereIn('project_student_id', $studentPsIds)
+                ->select('project_student_id', DB::raw('SUM(amount) as total_paid'))
+                ->groupBy('project_student_id')
+                ->get();
+            foreach ($spRows as $sp) {
+                $studentPaidMap[$sp->project_student_id] = (float) $sp->total_paid;
+            }
+        }
+
+        $defaultRate = $this->getApprovedHourlyRate();
+        foreach ($students as $student) {
+            $student->type = 'Student';
+            $hours = $studentWorkMap[$student->project_student_id] ?? 0;
+            $student->amount = $hours * $defaultRate;
+            $paid = $studentPaidMap[$student->project_student_id] ?? 0;
 
             if ($student->amount == 0) {
                 $student->status = 'No Work';
@@ -585,11 +651,24 @@ class FinanceService
             ->where('project_faculty.project_id', $id)
             ->select('users.name as resource_name', 'project_faculty.id as project_faculty_id')
             ->get();
-            
+
+        $pfFacultyIds = $faculties->pluck('project_faculty_id')->filter()->toArray();
+        $facultyPaidMap = [];
+        if (!empty($pfFacultyIds)) {
+            $fpRows = DB::table('faculty_payments')
+                ->whereIn('project_faculty_id', $pfFacultyIds)
+                ->select('project_faculty_id', DB::raw('SUM(amount) as total_paid'))
+                ->groupBy('project_faculty_id')
+                ->get();
+            foreach ($fpRows as $fp) {
+                $facultyPaidMap[$fp->project_faculty_id] = (float) $fp->total_paid;
+            }
+        }
+
         foreach ($faculties as $faculty) {
             $faculty->designation = 'Faculty Guide';
             $faculty->type = 'Faculty';
-            $paid = DB::table('faculty_payments')->where('project_faculty_id', $faculty->project_faculty_id)->sum('amount');
+            $paid = $facultyPaidMap[$faculty->project_faculty_id] ?? 0;
             $faculty->amount = $paid;
             $faculty->status = $paid > 0 ? 'Paid' : 'Pending';
         }

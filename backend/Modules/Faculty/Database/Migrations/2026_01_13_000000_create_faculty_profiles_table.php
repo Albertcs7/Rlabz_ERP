@@ -14,6 +14,8 @@ return new class extends Migration
             $table->string('department', 150);
             $table->string('designation', 100)->nullable();
             $table->timestamps();
+
+            $table->index('department', 'idx_facprof_department');
         });
     }
 

@@ -60,10 +60,13 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
   const isDeveloper = authStore.role === 'developer' || currentPath.startsWith('/developer');
   const isDirector = authStore.role === 'director' || currentPath.startsWith('/director');
   const isDesignHead = authStore.role === 'design_head' || currentPath.startsWith('/design');
+  const isAdmin = authStore.role === 'admin' || currentPath.startsWith('/admin');
 
   let targetPortal = 'default';
   if (isStudent) {
     targetPortal = 'student';
+  } else if (isAdmin) {
+    targetPortal = 'admin';
   } else if (isDeveloper) {
     targetPortal = 'developer';
   } else if (isDirector) {
@@ -245,8 +248,35 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           `).join('')}
         </ul>
       `;
+    } else if (targetPortal === 'admin') {
+      const iconUsers = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+      const iconStudents = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>`;
+
+      const navItems = [
+        { title: 'User Management', path: '/admin', icon: iconUsers },
+        { title: 'Projects', path: '/projects', icon: iconProjects },
+        { title: 'Students', path: '/admin/students', icon: iconStudents }
+      ];
+
+      sidebarNav.innerHTML = `
+        <div class="sidebar-section-title" style="padding: 0.75rem 1.25rem 0.25rem; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">
+          System Administration
+        </div>
+        <ul>
+          ${navItems.map(item => `
+            <li>
+              <a href="${item.path}">
+                ${item.icon}
+                <span>${item.title}</span>
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      `;
     } else {
       const iconsMap = {
+        IconAdmin: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
         IconDashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`,
         IconCoordinator: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
         IconFaculty: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
@@ -290,10 +320,12 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
     const href = a.getAttribute('href');
     if (href) {
       let isActive = false;
-      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
+      if (href === '/admin' || href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
         isActive = currentPath === href || currentPath === href + '/';
       } else {
         isActive = currentPath === href || currentPath.startsWith(href + '/') ||
+          (href === '/projects' && (currentPath.startsWith('/projects') || currentPath.startsWith('/admin/projects'))) ||
+          (href === '/admin/students' && (currentPath.startsWith('/admin/students') || currentPath.startsWith('/director/students'))) ||
           (href.startsWith('/developer/') && currentPath.startsWith(href.replace('/developer', '/dashboard'))) ||
           (href.startsWith('/director/') && currentPath.startsWith(href.replace('/director', '/dashboard')));
       }

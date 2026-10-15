@@ -42,8 +42,16 @@ class FinanceService {
     };
   }
 
+  _extractArray(res) {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.data?.data)) return res.data.data;
+    return [];
+  }
+
   async getProjectFinances() {
-    return await this._fetch('/finance/projects') || [];
+    const res = await this._fetch('/finance/projects');
+    return this._extractArray(res);
   }
 
   async getProjectDetails(projectId) {
@@ -52,7 +60,8 @@ class FinanceService {
 
   async getStudentPayroll(projectId = null) {
     const url = projectId ? `/finance/student-payments?project_id=${projectId}` : '/finance/student-payments';
-    return await this._fetch(url) || [];
+    const res = await this._fetch(url);
+    return this._extractArray(res);
   }
 
   async getStudentPayrollByProject(projectId) {
@@ -64,11 +73,13 @@ class FinanceService {
   }
 
   async getFacultyCosts() {
-    return await this._fetch('/finance/faculty-payments') || [];
+    const res = await this._fetch('/finance/faculty-payments');
+    return this._extractArray(res);
   }
 
   async getInvoices() {
-    return await this._fetch('/finance/invoices') || [];
+    const res = await this._fetch('/finance/invoices');
+    return this._extractArray(res);
   }
 
   async getTransactions(params = {}) {
@@ -83,7 +94,8 @@ class FinanceService {
       const qs = sp.toString();
       if (qs) query = `?${qs}`;
     }
-    return await this._fetch(`/finance/transactions${query}`) || [];
+    const res = await this._fetch(`/finance/transactions${query}`);
+    return this._extractArray(res);
   }
   
   async addProjectFinance(data) {

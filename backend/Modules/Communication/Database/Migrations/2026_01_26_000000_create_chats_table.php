@@ -15,6 +15,8 @@ return new class extends Migration
             $table->foreignId('created_by')->constrained('users');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index(['project_id', 'is_active'], 'idx_chats_project_active');
         });
     }
 

@@ -14,6 +14,7 @@ return new class extends Migration
             }
             if (!Schema::hasColumn('github_repositories', 'link_type')) {
                 $table->enum('link_type', ['main', 'branch'])->default('main')->after('student_id');
+                $table->index(['project_id', 'link_type'], 'idx_ghrepos_project_link');
             }
             if (!Schema::hasColumn('github_repositories', 'branch_name')) {
                 $table->string('branch_name', 255)->nullable()->after('repository_name');
@@ -32,6 +33,7 @@ return new class extends Migration
                 $table->dropColumn('student_id');
             }
             if (Schema::hasColumn('github_repositories', 'link_type')) {
+                $table->dropIndex('idx_ghrepos_project_link');
                 $table->dropColumn('link_type');
             }
             if (Schema::hasColumn('github_repositories', 'branch_name')) {

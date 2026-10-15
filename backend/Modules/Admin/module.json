@@ -1,0 +1,8 @@
+{
+    "name": "Admin",
+    "alias": "admin",
+    "description": "User management, role and per-user permission administration",
+    "keywords": ["admin", "users", "permissions", "rbac"],
+    "priority": 1,
+    "providers": []
+}

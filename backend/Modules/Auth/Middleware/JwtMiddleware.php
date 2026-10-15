@@ -1,8 +1,11 @@
 <?php
 
 namespace Modules\Auth\Middleware;
+
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class JwtMiddleware
 {
@@ -29,6 +32,26 @@ class JwtMiddleware
                 $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1])), true);
                 
                 if (isset($payload['exp']) && $payload['exp'] >= time()) {
+                    $userId = $payload['sub'] ?? null;
+                    if ($userId && Schema::hasTable('users')) {
+                        $freshUser = DB::table('users')->where('id', $userId)->first();
+
+                        if (!$freshUser) {
+                            return response()->json(['status' => 'User no longer exists', 'error' => 'Unauthorized'], 401);
+                        }
+
+                        if (isset($freshUser->status) && $freshUser->status === 'suspended') {
+                            return response()->json(['status' => 'Account is suspended', 'error' => 'Account is suspended. Please contact administrator.'], 403);
+                        }
+
+                        // Ensure changes to permissions, role, and status take effect immediately
+                        $payload['role'] = $freshUser->role ?? ($payload['role'] ?? null);
+                        $payload['status'] = $freshUser->status ?? 'active';
+                        $payload['permissions'] = is_string($freshUser->permissions)
+                            ? (json_decode($freshUser->permissions, true) ?: [])
+                            : (is_array($freshUser->permissions) ? $freshUser->permissions : []);
+                    }
+
                     $request->merge([
                         'auth_user' => $payload
                     ]);

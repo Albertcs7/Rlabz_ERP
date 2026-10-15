@@ -24,6 +24,10 @@ return new class extends Migration
                 $table->string('vendor')->nullable();
                 $table->foreignId('recorded_by')->nullable()->constrained('users')->onDelete('set null');
                 $table->timestamps();
+
+                $table->index(['project_finance_id', 'expense_date'], 'idx_mktexp_projfin_date');
+                $table->index('expense_date', 'idx_mktexp_expense_date');
+                $table->index('category', 'idx_mktexp_category');
             });
         }
     }
