@@ -51,7 +51,7 @@ async function fetchFinalDocuments() {
   const token = getAuthToken();
   if (!token) return [];
 
-  const resp = await fetch('http://127.0.0.1:8000/api/certificates/final-documents', {
+  const resp = await fetch(`${API_BASE}/certificates/final-documents`, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -68,7 +68,7 @@ async function saveFinalDocument(projectId, payload) {
   const token = getAuthToken();
   if (!token) throw new Error('Authentication required. Please log in.');
 
-  const resp = await fetch(`http://127.0.0.1:8000/api/certificates/projects/${projectId}/final-document`, {
+  const resp = await fetch(`${API_BASE}/certificates/projects/${projectId}/final-document`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -58,7 +58,7 @@ async function fetchFinanceSummary() {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/finance/dashboard', {
+    const response = await fetch(`${API_BASE}/finance/dashboard`, {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

@@ -63,7 +63,7 @@ export function LoginView(route, router) {
     e.preventDefault();
     
     submitBtn.disabled = true;
-    btnText.innerHTML = `<div class="spinner"></div> Authenticating...`;
+    btnText.innerHTML = `<span style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">Authenticating... <div class="spinner"></div></span>`;
     errorBox.style.display = 'none';
 
     const email = emailInput.value.trim();

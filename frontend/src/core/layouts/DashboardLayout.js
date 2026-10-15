@@ -1,4 +1,4 @@
-﻿import { useAuthStore } from '../stores/auth.js';
+import { useAuthStore } from '../stores/auth.js';
 import { modules } from '../../module-manifest.js';
 import { API_BASE } from '../config/api.js';
 import { profilePhotoUrl, applyHeaderAvatar, rememberProfilePhoto } from '../shared/profilePhoto.js';
@@ -478,23 +478,7 @@ export async function DashboardLayout(contentChild, route, router) {
       <header class="topbar">
         <div class="topbar-title">${topbarTitle}</div>
         <div style="display:flex; align-items:center; gap:0.85rem;">
-          ${!isStudentPortal ? `
-          <div class="notification-container">
-            <button id="noti-bell-btn" class="noti-bell-btn" title="Notifications" aria-label="Notifications">
-              ${BELL_ICON}
-              <span id="noti-badge" class="noti-badge"></span>
-            </button>
-
-            <div id="noti-dropdown" class="noti-dropdown">
-              <div class="noti-dropdown-header">
-                <h4>Notifications</h4>
-              </div>
-              <div id="noti-list-container" class="noti-list-container"><p class="noti-empty">Loading...</p></div>
-            </div>
-          </div>
-          ` : ''}
-
-        <div class="user-profile" id="user-profile-header">
+          <div class="user-profile" id="user-profile-header">
           <div class="avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
             ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
