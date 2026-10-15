@@ -23,6 +23,13 @@ export async function ProjectDetails(route, router) {
         <p style="color: var(--text-muted);">View detailed project information and manage assignments.</p>
       </div>
       <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <a id="btn-project-drive-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline shadow-hover" style="display: none; align-items: center; gap: 0.45rem; border-color: #2563eb; color: #2563eb; font-weight: 600; padding: 0.45rem 0.95rem; text-decoration: none; border-radius: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Open Project Drive</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        </a>
         ${permissions.includes('project.close') && role !== 'director' ? '<button class="btn btn-warning shadow-hover" id="btn-close-project" style="display:none;"><i class="fa fa-times-circle" style="margin-right: 0.5rem;"></i>Close Project</button>' : ''}
         <button id="btn-back" class="btn-back-nav" title="Return to Projects">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -117,6 +124,24 @@ export async function ProjectDetails(route, router) {
               <div class="project-info-text">
                 <span class="project-info-label">Budget</span>
                 <span class="project-info-val">₹<span id="val-budget">0.00</span></span>
+              </div>
+            </div>
+
+            <div class="project-info-tile" id="tile-drive-link">
+              <div class="project-info-icon-box" style="background: rgba(37, 99, 235, 0.1); color: #2563eb;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div class="project-info-text">
+                <span class="project-info-label">Project Drive Folder</span>
+                <span class="project-info-val">
+                  <a id="val-drive-anchor" href="#" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 4px;">
+                    <span>Open Drive</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                  <span id="val-drive-none" style="display: none; color: var(--text-muted); font-size: 0.88rem;">Not configured</span>
+                </span>
               </div>
             </div>
           </div>
@@ -744,6 +769,30 @@ export async function ProjectDetails(route, router) {
         const facultyEl = container.querySelector('#val-faculty');
         if (facultyEl) {
           facultyEl.textContent = (p.faculty && p.faculty.length > 0) ? p.faculty.map(f => f.name).join(', ') : 'Unassigned';
+        }
+
+        // Drive Link binding
+        const driveLink = p.drive_link || p.driveLink;
+        const btnDrive = container.querySelector('#btn-project-drive-link');
+        const driveAnchor = container.querySelector('#val-drive-anchor');
+        const driveNone = container.querySelector('#val-drive-none');
+
+        if (driveLink) {
+          if (btnDrive) {
+            btnDrive.href = driveLink;
+            btnDrive.style.display = 'inline-flex';
+          }
+          if (driveAnchor) {
+            driveAnchor.href = driveLink;
+            driveAnchor.style.display = 'inline-flex';
+          }
+          if (driveNone) {
+            driveNone.style.display = 'none';
+          }
+        } else {
+          if (btnDrive) btnDrive.style.display = 'none';
+          if (driveAnchor) driveAnchor.style.display = 'none';
+          if (driveNone) driveNone.style.display = 'inline';
         }
 
         loadOverviewRequirements(p);

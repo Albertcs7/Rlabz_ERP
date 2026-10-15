@@ -100,7 +100,15 @@ function renderRows(data) {
           </span>
         </td>
         <td>
-          <button class="coord-btn coord-btn-secondary" data-id="${project.id}">View details</button>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            ${project.drive_link ? `
+              <a href="${project.drive_link}" target="_blank" rel="noopener noreferrer" class="coord-btn coord-btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.6rem; color:#2563eb;" title="Open Project Drive" onclick="event.stopPropagation();">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <span>Drive</span>
+              </a>
+            ` : ''}
+            <button class="coord-btn coord-btn-secondary" data-id="${project.id}">View details</button>
+          </div>
         </td>
       </tr>
     `;
@@ -330,6 +338,11 @@ export async function CoordinatorProjects(route, router) {
                     <option value="normal">Normal</option>
                     <option value="urgent">Urgent</option>
                   </select>
+                </div>
+
+                <div class="coordinator-form-group full-width">
+                  <label>Project Drive Link (Google Drive / Cloud Folder)</label>
+                  <input type="url" name="drive_link" placeholder="https://drive.google.com/drive/folders/..." />
                 </div>
               </div>
 

@@ -230,15 +230,23 @@ export function DirectorProjects(route, router) {
                     ₹${formatMoney(p.spent)} / ₹${formatMoney(p.budget)}
                   </td>
                   <td>
-                    ${isDirector ? `
-                      <button class="btn-director btn-director-outline" disabled style="opacity:0.5; cursor:not-allowed;" title="Director has read-only access to faculty assignment">
-                        Reassign Faculty
-                      </button>
-                    ` : `
-                      <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
-                        Reassign Faculty
-                      </button>
-                    `}
+                    <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                      ${p.drive_link || p.driveLink ? `
+                        <a href="${p.drive_link || p.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director btn-director-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.65rem; color:#2563eb; border-color:#93c5fd;" title="Open Project Drive" onclick="event.stopPropagation();">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                          <span>Drive</span>
+                        </a>
+                      ` : ''}
+                      ${isDirector ? `
+                        <button class="btn-director btn-director-outline" disabled style="opacity:0.5; cursor:not-allowed;" title="Director has read-only access to faculty assignment">
+                          Reassign Faculty
+                        </button>
+                      ` : `
+                        <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
+                          Reassign Faculty
+                        </button>
+                      `}
+                    </div>
                   </td>
                 </tr>
               `).join('')}
@@ -271,6 +279,7 @@ export function DirectorProjects(route, router) {
                   <th>Faculty Lead</th>
                   <th>Progress</th>
                   <th>Budget</th>
+                  <th>Drive</th>
                 </tr>
               </thead>
               <tbody>
@@ -282,6 +291,14 @@ export function DirectorProjects(route, router) {
                     <td>${p.facultyName || 'Unassigned'}</td>
                     <td>${p.progress ?? 0}%</td>
                     <td>₹${formatMoney(p.budget)}</td>
+                    <td>
+                      ${p.drive_link || p.driveLink ? `
+                        <a href="${p.drive_link || p.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director btn-director-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; padding:0.25rem 0.6rem; font-size:0.75rem; color:#2563eb; border-color:#93c5fd;" title="Open Project Drive" onclick="event.stopPropagation();">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                          <span>Drive</span>
+                        </a>
+                      ` : '<span style="color:#9ca3af; font-size:0.78rem;">—</span>'}
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -342,6 +359,30 @@ export function DirectorProjects(route, router) {
               <div class="director-progress-bar-bg" style="height:8px;">
                 <div class="director-progress-bar-fill" style="width: ${project.progress ?? 0}%"></div>
               </div>
+            </div>
+
+            <div style="background:${project.drive_link || project.driveLink ? '#eff6ff' : '#f9fafb'}; border:1px solid ${project.drive_link || project.driveLink ? '#bfdbfe' : '#e5e7eb'}; border-radius:8px; padding:0.75rem 0.9rem; display:flex; align-items:center; justify-content:space-between; gap:0.75rem;">
+              <div style="display:flex; align-items:center; gap:0.6rem; min-width:0;">
+                <div style="width:32px; height:32px; border-radius:6px; background:${project.drive_link || project.driveLink ? '#dbeafe' : '#f3f4f6'}; display:flex; align-items:center; justify-content:center; color:${project.drive_link || project.driveLink ? '#1d4ed8' : '#9ca3af'}; flex-shrink:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>
+                <div style="min-width:0;">
+                  <strong style="color:${project.drive_link || project.driveLink ? '#1e40af' : '#4b5563'}; font-size:0.85rem; display:block;">Project Drive Folder</strong>
+                  <span style="color:${project.drive_link || project.driveLink ? '#3b82f6' : '#9ca3af'}; font-size:0.75rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px;">
+                    ${project.drive_link || project.driveLink || 'No drive or cloud folder linked to this project'}
+                  </span>
+                </div>
+              </div>
+              ${project.drive_link || project.driveLink ? `
+                <a href="${project.drive_link || project.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director" style="background:#2563eb; color:#ffffff; padding:0.4rem 0.85rem; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; border-radius:6px; font-weight:600; white-space:nowrap;">
+                  <span>Open Drive</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+              ` : `
+                <span style="font-size:0.75rem; color:#9ca3af; font-weight:500; background:#f3f4f6; padding:0.3rem 0.65rem; border-radius:5px; border:1px solid #e5e7eb; white-space:nowrap;">Not Linked</span>
+              `}
             </div>
 
             ${project.description ? `
@@ -545,6 +586,19 @@ export function DirectorProjects(route, router) {
           <div class="director-modal-body">
             <p style="margin-bottom:0.5rem;"><strong>Description:</strong> ${proposal.description}</p>
             <p style="margin-bottom:1rem;"><strong>Source:</strong> ${proposal.source} (${proposal.sourceName}) | <strong>Client:</strong> ${proposal.clientName} | <strong>Est. Budget:</strong> ₹${proposal.estimatedBudget.toLocaleString()}</p>
+            
+            ${proposal.drive_link || proposal.driveLink ? `
+              <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.6rem 0.85rem; margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem; min-width:0;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  <span style="font-size:0.82rem; color:#1e40af; font-weight:600;">Proposal Documents / Drive Folder</span>
+                </div>
+                <a href="${proposal.drive_link || proposal.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director" style="background:#2563eb; color:#ffffff; padding:0.3rem 0.75rem; font-size:0.78rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; border-radius:5px; font-weight:600;">
+                  <span>Open Drive</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+              </div>
+            ` : ''}
             
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
               <label style="font-weight:600; font-size:0.875rem; margin:0; display:block;">Assign Lead Faculty:</label>

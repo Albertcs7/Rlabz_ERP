@@ -190,6 +190,7 @@ class CoordinatorController extends Controller
             'expected_timeline' => 'nullable|date',
             'budget' => 'nullable|numeric|min:0',
             'priority' => 'required|in:normal,urgent',
+            'drive_link' => 'nullable|string|max:2048',
         ]);
 
         $validated['created_by'] = $this->currentUserId($request) ?? $request->user()?->id;

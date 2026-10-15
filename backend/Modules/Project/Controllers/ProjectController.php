@@ -127,7 +127,8 @@ class ProjectController extends Controller
             'budget' => 'nullable|numeric',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
-            'status' => 'nullable|string'
+            'status' => 'nullable|string',
+            'drive_link' => 'nullable|string|max:2048'
         ]);
 
         $validated['created_by'] = $this->getUserId($request) ?? 1;

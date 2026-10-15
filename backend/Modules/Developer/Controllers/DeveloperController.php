@@ -301,6 +301,8 @@ class DeveloperController extends Controller
                 'facultyName' => $facultyName,
                 'assignedStudents' => $students,
                 'deliverables' => array_values($deliverablesArray),
+                'drive_link' => $p->drive_link ?? null,
+                'driveLink' => $p->drive_link ?? null,
                 'requirementDocs' => [strtolower(str_replace(' ', '_', $p->title)) . '_specifications.pdf']
             ];
         });
@@ -353,6 +355,8 @@ class DeveloperController extends Controller
                 'submittedDate' => $prop->created_at ? date('Y-m-d', strtotime($prop->created_at)) : date('Y-m-d'),
                 'description' => $prop->requirements ?: 'Project proposal awaiting review.',
                 'deliverables' => array_values($deliverablesArray),
+                'drive_link' => $prop->drive_link ?? null,
+                'driveLink' => $prop->drive_link ?? null,
                 'status' => $prop->status,
                 'suggestedFaculty' => 'FAC-01'
             ];
