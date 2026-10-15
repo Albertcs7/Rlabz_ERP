@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::table('project_finances', function (Blueprint $table) {
             if (!Schema::hasColumn('project_finances', 'marketing_budget')) {
-                $table->decimal('marketing_budget', 12, 2)->default(0.00)->nullable()->after('total_development_amount');
+                $table->decimal('marketing_budget', 12, 2)->default(0.00)->nullable()->after('total_amount');
             }
         });
     }

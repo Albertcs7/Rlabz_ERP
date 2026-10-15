@@ -13,9 +13,11 @@ return new class extends Migration
      */
 public function up()
 {
-    Schema::table('tasks', function (Blueprint $table) {
-        $table->integer('weight')->default(1)->after('description');
-    });
+    if (!Schema::hasColumn('tasks', 'weight')) {
+        Schema::table('tasks', function (Blueprint $table) {
+            $table->integer('weight')->default(1)->after('description');
+        });
+    }
 }
 
 public function down()

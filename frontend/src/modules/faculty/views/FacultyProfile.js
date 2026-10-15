@@ -18,6 +18,7 @@ export function FacultyProfile() {
 
     const token = localStorage.getItem('token');
     let isEditing = false;
+    let facultyPhoto = localStorage.getItem('faculty_profile_photo') || null;
 
     // Default state derived from logged in user if available
     let facultyData = {
@@ -92,15 +93,10 @@ export function FacultyProfile() {
                                 <h2>${facultyData.name}</h2>
                                 <span class="simple-profile-badge">${facultyData.role}</span>
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                <button type="button" id="btn-change-password" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.85rem; background: #ffffff; border: 1px solid #0284c7; color: #0284c7; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                                    Change Password
-                                </button>
-                                <button type="button" id="btn-edit-profile" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.85rem; background: #ffffff; border: 1px solid #059669; color: #059669; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600;">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                    Edit Profile
-                                </button>
+                            <div>
+                                <a href="/profile" id="btn-profile-settings" class="btn btn-sm" style="font-size: 0.82rem; padding: 0.42rem 0.95rem; background: #ecfdf5; border: 1px solid #059669; color: #059669; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s ease;">
+                                    <span>Profile Settings & Change Password &rarr;</span>
+                                </a>
                             </div>
                         </div>
 
@@ -513,6 +509,16 @@ export function FacultyProfile() {
                         department: data.department || 'Department of Computer Applications',
                         designation: data.designation || 'Associate Professor'
                     };
+                    if (data.photo || data.avatar) {
+                        const fetchedPhoto = data.photo || data.avatar;
+                        facultyPhoto = fetchedPhoto;
+                        localStorage.setItem('faculty_profile_photo', fetchedPhoto);
+                        if (storedUser) {
+                            storedUser.avatar = fetchedPhoto;
+                            localStorage.setItem('user', JSON.stringify(storedUser));
+                        }
+                        updateTopbarAvatar(fetchedPhoto);
+                    }
                     renderUI();
                     setupListeners();
                 }

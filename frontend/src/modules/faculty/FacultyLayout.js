@@ -35,11 +35,13 @@ export async function FacultyLayout(contentChild, route, router) {
     const iconNotifications = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
     const iconStudents = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
     const iconVerifyTask = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`;
+    const iconChat = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
     
     const menuItems = [
         { title: 'Dashboard', path: '/faculty', icon: iconDashboard },
         { title: 'Profile', path: '/faculty/profile', icon: iconProfile },
         { title: 'My Project', path: '/faculty/projects', icon: iconProjects },
+        { title: 'Chat', path: '/faculty/chat', icon: iconChat },
         { title: 'Students', path: '/faculty/students', icon: iconStudents },
         { title: 'Assign Module & Task', path: '/faculty/sprints', icon: iconSprints },
         { title: 'Verify Task', path: '/faculty/verify-tasks', icon: iconVerifyTask },

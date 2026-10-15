@@ -28,6 +28,16 @@ export function FacultyMeetings() {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
+    function linkifyMinutes(text) {
+        if (!text) return 'None recorded';
+        const urlRegex = /((?:https?:\/\/|www\.)[^\s<>"'\)]+)/gi;
+        return String(text).replace(urlRegex, url => {
+            let href = url;
+            if (url.toLowerCase().startsWith('www.')) href = 'http://' + url;
+            return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 600; word-break: break-all;">${url}</a>`;
+        });
+    }
+
     function renderUI() {
         const now = new Date();
 
@@ -36,14 +46,14 @@ export function FacultyMeetings() {
             const dateStr = (m.scheduled_at || '').replace(' ', 'T');
             const dateObj = new Date(dateStr);
             const isDateOver = m.is_date_over || (!isNaN(dateObj) && dateObj <= now);
-            const hasNoNotes = !m.notes || !m.notes.minutes || !m.notes.important_decisions;
+            const hasNoNotes = !m.notes || !m.notes.minutes;
             const isNotCancelled = m.status !== 'cancelled';
             return isDateOver && hasNoNotes && isNotCancelled;
         });
 
         // Filter completed meetings that have recorded notes
         const completedMeetings = meetings.filter(m => {
-            return m.status === 'completed' && m.notes && m.notes.minutes && m.notes.important_decisions;
+            return m.status === 'completed' && m.notes && m.notes.minutes;
         });
 
         container.innerHTML = `
@@ -302,25 +312,38 @@ export function FacultyMeetings() {
                                                     <form class="inline-complete-form" data-id="${m.id}">
                                                         <div class="form-group" style="margin-bottom: 0.75rem;">
                                                             <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #1e293b; margin-bottom: 0.35rem;">
-                                                                Minutes of Meeting *
+                                                                Minutes of Meeting
                                                             </label>
                                                             <textarea
                                                                 class="premium-input input-meeting-minutes"
                                                                 style="height: 85px; resize: vertical; background: var(--surface-card);"
                                                                 placeholder="Discussion summary, topics covered, student presentations reviewed..."
-                                                                required
                                                             ></textarea>
+                                                        </div>
+
+                                                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                                                            <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #1e293b; margin-bottom: 0.35rem;">
+                                                                Upload Document / Minutes File (Optional)
+                                                            </label>
+                                                            <input
+                                                                type="file"
+                                                                class="premium-input input-meeting-doc"
+                                                                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                                                                style="padding: 0.45rem; background: var(--surface-card); width: 100%; border: 1px dashed #cbd5e1; border-radius: 6px; font-size: 0.82rem;"
+                                                            >
+                                                            <span style="font-size: 0.75rem; color: var(--text-muted, #64748b); display: block; margin-top: 0.25rem;">
+                                                                Uploaded document will be stored and inserted directly into the <strong>minutes</strong> field of <strong>meeting_notes</strong>.
+                                                            </span>
                                                         </div>
 
                                                         <div class="form-group" style="margin-bottom: 1rem;">
                                                             <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #1e293b; margin-bottom: 0.35rem;">
-                                                                Important Decisions *
+                                                                Important Decisions
                                                             </label>
                                                             <textarea
                                                                 class="premium-input input-meeting-decisions"
                                                                 style="height: 75px; resize: vertical; background: var(--surface-card);"
                                                                 placeholder="Agreed deliverables, task allocations, deadlines, architecture approvals..."
-                                                                required
                                                             ></textarea>
                                                         </div>
 
@@ -368,11 +391,11 @@ export function FacultyMeetings() {
                                         </div>
                                     </div>
                                     <div style="margin-top: 0.65rem; padding: 0.65rem 0.85rem; background: var(--bg-main, var(--bg-canvas-light)); border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 6px; font-size: 0.82rem;">
-                                        <div style="margin-bottom: 0.35rem; color: var(--text-main, #1e293b);">
-                                            <strong>Minutes:</strong> ${m.notes.minutes}
+                                        <div style="margin-bottom: 0.35rem; color: var(--text-main, #1e293b); word-break: break-all;">
+                                            <strong>Minutes:</strong> ${linkifyMinutes(m.notes.minutes)}
                                         </div>
                                         <div style="color: var(--text-main, #1e293b);">
-                                            <strong>Important Decisions:</strong> ${m.notes.important_decisions}
+                                            <strong>Important Decisions:</strong> ${m.notes.important_decisions || 'None recorded'}
                                         </div>
                                     </div>
                                 </div>
@@ -523,12 +546,14 @@ export function FacultyMeetings() {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const meetingId = parseInt(form.getAttribute('data-id'));
-                const minutes = form.querySelector('.input-meeting-minutes').value.trim();
-                const decisions = form.querySelector('.input-meeting-decisions').value.trim();
+                const minutes = form.querySelector('.input-meeting-minutes')?.value.trim() || '';
+                const decisions = form.querySelector('.input-meeting-decisions')?.value.trim() || '';
+                const fileInput = form.querySelector('.input-meeting-doc');
+                const file = fileInput && fileInput.files ? fileInput.files[0] : null;
                 const submitBtn = form.querySelector('button[type="submit"]');
 
-                if (!minutes || !decisions) {
-                    alert('Please provide both minutes of meeting and important decisions.');
+                if (!minutes && !file) {
+                    alert('Please provide meeting minutes or attach a document.');
                     return;
                 }
 
@@ -536,20 +561,35 @@ export function FacultyMeetings() {
                 submitBtn.textContent = 'Saving...';
 
                 try {
-                    const headers = {
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                    };
+                    let res;
+                    if (file) {
+                        const formData = new FormData();
+                        formData.append('status', 'completed');
+                        formData.append('minutes', minutes);
+                        formData.append('important_decisions', decisions || 'Document attached for records.');
+                        formData.append('document', file);
 
-                    const res = await fetch(`${apiBase}/faculty/meetings/${meetingId}/status`, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify({
-                            status: 'completed',
-                            minutes: minutes,
-                            important_decisions: decisions
-                        })
-                    });
+                        res = await fetch(`${apiBase}/faculty/meetings/${meetingId}/status`, {
+                            method: 'POST',
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                            body: formData
+                        });
+                    } else {
+                        const headers = {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        };
+
+                        res = await fetch(`${apiBase}/faculty/meetings/${meetingId}/status`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({
+                                status: 'completed',
+                                minutes: minutes,
+                                important_decisions: decisions || 'Meeting completed.'
+                            })
+                        });
+                    }
 
                     const data = await res.json();
 
@@ -557,7 +597,7 @@ export function FacultyMeetings() {
                         expandedMeetingId = null;
                         showFacultySuccessPopup(
                             'Meeting Notes Saved',
-                            'Meeting marked as completed and minutes saved to meeting notes.'
+                            'Meeting marked as completed and minutes saved to meeting_notes table.'
                         );
                         if (msgContainer) {
                             msgContainer.innerHTML = `

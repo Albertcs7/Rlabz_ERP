@@ -105,8 +105,8 @@ export async function UserProfile(route, router) {
     const isStudent = authStore.role === 'student' || window.location.pathname.startsWith('/student');
     const isFinancePath = window.location.pathname.startsWith('/finance');
     const isDesignPath = window.location.pathname.startsWith('/design');
-    const homeLabel = isStudent ? 'Student Portal' : (isFinancePath ? 'Finance Portal' : (isDesignPath ? 'Design Studio' : 'Homepage'));
-    const homeHref = isStudent ? '/student' : (isFinancePath ? '/finance' : (isDesignPath ? '/design' : '/'));
+    const homeLabel = isFinancePath ? 'Finance Portal' : (isDesignPath ? 'Design Studio' : 'Homepage');
+    const homeHref = isFinancePath ? '/finance' : (isDesignPath ? '/design' : '/');
 
     container.innerHTML = `
       <!-- Breadcrumb -->
@@ -132,7 +132,6 @@ export async function UserProfile(route, router) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
               </button>
             </div>
-            <input type="file" id="hero-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
             <div class="profile-hero-details">
               <h1>${profileUser.name}</h1>
               <div class="profile-hero-sub">

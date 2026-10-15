@@ -85,23 +85,32 @@ export async function ProjectDetails(route, router) {
         <div id="project-info" style="display: none;">
           <!-- 6 Info Tiles -->
           <div class="project-info-grid">
-            <div class="project-info-tile">
-              <div class="project-info-icon-box emerald">
+            <div class="project-info-tile" style="align-items: flex-start;">
+              <div class="project-info-icon-box emerald" style="margin-top: 2px;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
               </div>
-              <div class="project-info-text">
-                <span class="project-info-label">Client / Sponsor Agency</span>
-                <span class="project-info-val" id="val-client">-</span>
+              <div class="project-info-text" style="flex: 1; min-width: 0;">
+                <span class="project-info-label">Client</span>
+                <span class="project-info-val" id="val-client" style="white-space: normal; overflow: visible; text-overflow: clip; word-break: break-word; line-height: 1.35; font-size: 0.98rem;">-</span>
               </div>
             </div>
 
-            <div class="project-info-tile">
-              <div class="project-info-icon-box blue">
+            <div class="project-info-tile" style="align-items: flex-start;">
+              <div class="project-info-icon-box blue" style="margin-top: 2px;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               </div>
-              <div class="project-info-text">
-                <span class="project-info-label">Project Timeline</span>
-                <span class="project-info-val"><span id="val-start">-</span> to <span id="val-end">-</span></span>
+              <div class="project-info-text" style="flex: 1; min-width: 0;">
+                <span class="project-info-label" style="margin-bottom: 5px;">Project Timeline</span>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.03em;">Start:</span>
+                    <span id="val-start" style="font-size: 0.88rem; font-weight: 700; color: var(--text-main, #0f172a); white-space: nowrap;">-</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; letter-spacing: 0.03em;">Target:</span>
+                    <span id="val-end" style="font-size: 0.88rem; font-weight: 700; color: #0284c7; white-space: nowrap;">-</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -146,35 +155,32 @@ export async function ProjectDetails(route, router) {
             </div>
           </div>
 
-          <!-- Two-column horizontal layout: Project Requirements & Requirement Changes -->
-          <div class="project-requirements-grid">
-            <!-- Card 1: Project Requirements (client_requirements) -->
-            <div class="project-section-card" style="text-align: left;">
-              <div class="project-section-header" style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #2563eb; flex-shrink: 0;"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-                <span style="text-align: left;">Project Requirements</span>
+          <!-- Container 1: Project Requirements -->
+          <div class="project-section-card" style="text-align: left; margin-bottom: 1.5rem;">
+            <div class="project-section-header" style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left; margin-bottom: 1rem;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #2563eb; flex-shrink: 0;"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              <span style="font-size: 1.05rem; font-weight: 700; color: var(--text-main, #0f172a); text-align: left;">Project Requirements</span>
+            </div>
+            <div id="overview-client-requirements-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem;">
+              <p id="val-project-requirements" class="project-section-text" style="white-space: pre-wrap; margin: 0; color: var(--text-muted, var(--text-muted)); text-align: left;">Loading requirements...</p>
+            </div>
+          </div>
+
+          <!-- Container 2: Updated Requirements (Outside Container 1) -->
+          <div class="project-section-card" id="overview-requirement-changes-card" style="text-align: left; margin-bottom: 1.5rem;">
+            <div class="project-section-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; text-align: left; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #ea580c; flex-shrink: 0;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <span style="font-size: 1.05rem; font-weight: 700; color: var(--text-main, #0f172a); text-align: left;">Updated Requirements</span>
               </div>
-              <div id="overview-client-requirements-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
-                <p id="val-project-requirements" class="project-section-text" style="white-space: pre-wrap; margin: 0; color: var(--text-muted, var(--text-muted)); text-align: left;">Loading requirements...</p>
+              <div id="req-changes-badge-wrapper" style="display: none; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; background: #fff1f2; border: 1px solid #fecdd3; color: #e11d48; font-size: 0.78rem; font-weight: 700;">
+                <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e11d48; box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);"></span>
+                <span>🔔</span>
+                <span id="req-changes-count-text">0 Updates</span>
               </div>
             </div>
-
-            <!-- Card 2: Requirement Changes & Updates (requirement_changes with notification symbol) -->
-            <div class="project-section-card" style="text-align: left;">
-              <div class="project-section-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; text-align: left;">
-                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; text-align: left;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #d97706; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                  <span style="text-align: left;">Requirement Changes</span>
-                </div>
-                <div id="req-changes-badge-wrapper" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: #fff1f2; border: 1px solid #fecdd3; color: #e11d48; font-size: 0.78rem; font-weight: 700;">
-                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e11d48; box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);"></span>
-                  <span>🔔</span>
-                  <span id="req-changes-count-text">0 Updates</span>
-                </div>
-              </div>
-              <div id="overview-requirement-changes-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
-                <p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes recorded for this project.</p>
-              </div>
+            <div id="overview-requirement-changes-list" style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem;">
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0; font-style: italic;">No updated requirements recorded.</p>
             </div>
           </div>
 
@@ -409,8 +415,8 @@ export async function ProjectDetails(route, router) {
         <div class="card-panel">
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
             <div style="padding: 1rem 1.25rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
-              <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Client / Sponsor Agency</span>
-              <strong id="client-tab-name" style="display: block; font-size: 1.15rem; margin-top: 0.4rem; color: var(--text-main);">-</strong>
+              <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Client</span>
+              <strong id="client-tab-name" style="display: block; font-size: 1.15rem; margin-top: 0.4rem; color: var(--text-main); white-space: normal; word-break: break-word;">-</strong>
             </div>
             <div style="padding: 1rem 1.25rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface);">
               <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Contact Email</span>
@@ -752,16 +758,36 @@ export async function ProjectDetails(route, router) {
         const cleanTitle = rawTitle.replace(/\s*-\s*(student portal|modules\s*&\s*tasks)/gi, '').trim();
         container.querySelector('#project-title').textContent = cleanTitle || rawTitle;
         const typeEl = container.querySelector('#val-type');
-        if (typeEl) typeEl.textContent = p.project_type || 'N/A';
-        container.querySelector('#val-client').textContent = p.client_name || 'N/A';
+        const clientEl = container.querySelector('#val-client');
+        if (clientEl) {
+          const clientName = p.client_name || (p.client && typeof p.client === 'object' ? p.client.name : p.client) || 'N/A';
+          clientEl.textContent = clientName;
+          clientEl.title = clientName;
+        }
         
         const statusSpan = container.querySelector('#val-status');
         statusSpan.textContent = p.status || 'N/A';
         statusSpan.className = `status-badge ${p.status || 'active'}`;
         
         container.querySelector('#val-budget').textContent = p.budget || '0.00';
-        container.querySelector('#val-start').textContent = p.start_date || 'N/A';
-        container.querySelector('#val-end').textContent = p.end_date || 'N/A';
+
+        const formatTimelineDate = (val) => {
+          if (!val) return 'N/A';
+          try {
+            const d = new Date(val);
+            if (isNaN(d.getTime())) return String(val).split('T')[0];
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          } catch (e) {
+            return String(val);
+          }
+        };
+
+        const startDateFormatted = formatTimelineDate(p.created_at || p.start_date);
+        const endDateFormatted = formatTimelineDate(p.expected_timeline || p.end_date);
+        const startEl = container.querySelector('#val-start');
+        const endEl = container.querySelector('#val-end');
+        if (startEl) startEl.textContent = startDateFormatted;
+        if (endEl) endEl.textContent = endDateFormatted;
         
         const descEl = container.querySelector('#val-desc');
         if (descEl) descEl.textContent = p.deliverables || p.description || 'No deliverables provided.';
@@ -1050,13 +1076,8 @@ export async function ProjectDetails(route, router) {
                     <span class="student-badge ${statusClass}" style="font-size: 0.8rem; padding: 0.35rem 0.85rem; ${isModRework ? 'background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5;' : ''}">${statusDisplay}</span>
                     ${canCreateTask ? `
                       <button class="btn btn-sm btn-primary btn-add-task shadow-hover" data-module-id="${selectedModule.id}" data-module-title="${modTitle}" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.8rem; font-size: 0.8rem;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="12" y2="12"></line></svg>
                         <span>Add Task</span>
-                      </button>
-                    ` : ''}
-                    ${canBlock && isModCompleted ? `
-                      <button class="btn btn-sm btn-outline btn-rework-module" data-module-id="${selectedModule.id}" title="Assign Rework" style="font-size: 0.75rem; padding: 0.3rem 0.75rem; border-color: #ea580c; color: #ea580c; font-weight: 600;">
-                        Rework
                       </button>
                     ` : ''}
                     ${canBlock ? `
@@ -1188,42 +1209,6 @@ export async function ProjectDetails(route, router) {
                     console.error(err);
                     alert('Error updating module status.');
                     buttonEl.disabled = false;
-                  }
-                });
-              });
-
-              root.querySelectorAll('.btn-rework-module').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                  e.stopPropagation();
-                  const moduleId = btn.getAttribute('data-module-id');
-                  if (!confirm('Are you sure you want to mark this completed module for Rework?')) return;
-
-                  btn.disabled = true;
-                  try {
-                    const token = localStorage.getItem('token');
-                    const res = await fetch(`${API_BASE}/projects/modules/${moduleId}/status`, {
-                      method: 'PATCH',
-                      headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({ status: 'rework' })
-                    });
-                    const resData = await res.json();
-                    if (res.ok) {
-                      showFacultySuccessPopup(
-                        'Module Marked for Rework',
-                        'Module has been updated to Rework status.'
-                      );
-                      loadProject();
-                    } else {
-                      alert(resData.error || resData.message || 'Failed to update module status.');
-                      btn.disabled = false;
-                    }
-                  } catch (err) {
-                    console.error(err);
-                    alert('Error updating module status.');
-                    btn.disabled = false;
                   }
                 });
               });
@@ -1827,6 +1812,76 @@ export async function ProjectDetails(route, router) {
     btnDownloadWorkLog.addEventListener('click', downloadWorkLogsPDF);
   }
 
+  // URL Check helper
+  const isUrl = (text) => {
+    if (!text || typeof text !== 'string') return false;
+    const t = text.trim();
+    return t.startsWith('http://') || t.startsWith('https://') || t.startsWith('www.');
+  };
+
+  // URL Linkifier helper - makes URLs active and redirects faculty on click
+  const linkify = (text) => {
+    if (!text) return '';
+    const str = String(text);
+    const urlRegex = /((?:https?:\/\/|www\.)[^\s<>"'\)]+)/gi;
+    return str.replace(urlRegex, (url) => {
+      let href = url;
+      if (url.toLowerCase().startsWith('www.')) {
+        href = 'http://' + url;
+      }
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 600; word-break: break-all; display: inline-flex; align-items: center; gap: 4px;" onclick="event.stopPropagation();">
+        <span>${url}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </a>`;
+    });
+  };
+
+  // Helper to extract latest requirement updates from updated_value / updated_values
+  const extractUpdateDetails = (c) => {
+    let raw = c.updated_value || c.updated_values || '';
+    let changeDesc = '';
+    let docUrl = '';
+    let reason = c.reason || '';
+
+    if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          changeDesc = parsed.change_description || parsed.new_description || parsed.description || parsed.documents || parsed.text || '';
+          docUrl = parsed.new_document_path || parsed.document_url || parsed.documents || parsed.document || parsed.url || '';
+          if (!reason && parsed.reason) reason = parsed.reason;
+          if (!changeDesc) {
+            const fields = [];
+            for (const [k, v] of Object.entries(parsed)) {
+              if (v && typeof v === 'string' && k !== 'client_requirement_id') {
+                fields.push(`${k.replace(/_/g, ' ')}: ${v}`);
+              }
+            }
+            changeDesc = fields.join('\n');
+          }
+        } else {
+          changeDesc = String(raw);
+        }
+      } catch (e) {
+        changeDesc = String(raw);
+      }
+    } else if (typeof raw === 'object' && raw !== null) {
+      changeDesc = raw.change_description || raw.new_description || raw.description || raw.documents || '';
+      docUrl = raw.new_document_path || raw.document_url || raw.documents || raw.document || raw.url || '';
+      if (!reason && raw.reason) reason = raw.reason;
+    }
+
+    if (!docUrl && typeof raw === 'string' && (raw.includes('http://') || raw.includes('https://') || raw.includes('www.'))) {
+      docUrl = raw.trim();
+    }
+
+    if (!changeDesc) {
+      changeDesc = c.change_description || c.new_description || (c.requirement_documents ? `Document: ${c.requirement_documents}` : 'Requirement update recorded.');
+    }
+
+    return { changeDesc, docUrl, reason };
+  };
+
   // Overview Requirements & Changes Logic
   const loadOverviewRequirements = async (p) => {
     const token = localStorage.getItem('token');
@@ -1842,60 +1897,85 @@ export async function ProjectDetails(route, router) {
       const res = await fetch(`${API_BASE}/faculty/projects/${projectId}/client-requirements`, { headers });
       if (res.ok) {
         const resData = await res.json();
-        if (resData && resData.success && Array.isArray(resData.data)) {
-          requirements = resData.data;
+        if (resData) {
+          if (Array.isArray(resData.data)) {
+            requirements = resData.data;
+          } else if (Array.isArray(resData)) {
+            requirements = resData;
+          }
         }
       }
       if (requirements.length === 0) {
         const fallbackRes = await fetch(`${API_BASE}/projects/${projectId}/requirements`, { headers });
         if (fallbackRes.ok) {
           const fbData = await fallbackRes.json();
-          if (fbData && fbData.status === 'success' && Array.isArray(fbData.data)) {
-            requirements = fbData.data;
+          if (fbData) {
+            if (Array.isArray(fbData.data)) {
+              requirements = fbData.data;
+            } else if (Array.isArray(fbData)) {
+              requirements = fbData;
+            }
           }
         }
       }
 
       if (clientReqListEl) {
         if (requirements.length > 0) {
-          clientReqListEl.innerHTML = requirements.map((r, i) => `
-            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left;">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+          clientReqListEl.innerHTML = requirements.map((r, i) => {
+            const docContent = (r.documents || r.description || '').trim();
+            const isDocUrl = isUrl(docContent);
+            return `
+            <div style="padding: 0.85rem 1.15rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; background: var(--surface-card, #ffffff); text-align: left;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.4rem; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 0.5rem; text-align: left;">
                   <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 0.75rem; font-weight: 700;">${i + 1}</span>
-                  <strong style="font-size: 0.92rem; color: var(--text-main, var(--text-primary)); text-align: left;">${r.title || `Requirement #${i + 1}`}</strong>
+                  <strong style="font-size: 0.92rem; color: var(--text-main, #0f172a); text-align: left;">${r.title || `Requirement #${i + 1}`}</strong>
                 </div>
                 ${r.status ? `<span class="status-badge ${(r.status || '').toLowerCase()}" style="font-size: 0.72rem; padding: 0.15rem 0.55rem; text-transform: uppercase;">${r.status}</span>` : ''}
               </div>
-              <p style="margin: 0; font-size: 0.88rem; color: var(--text-muted, #475569); line-height: 1.5; white-space: pre-wrap; text-align: left;">${r.description || 'No detailed description provided.'}</p>
+              ${isDocUrl ? `
+                <div style="margin-top: 0.35rem;">
+                  <a href="${docContent}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Open Requirement Document</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              ` : `
+                <div style="margin: 0; font-size: 0.88rem; color: var(--text-muted, #475569); line-height: 1.45; word-break: break-word; text-align: left;">${docContent ? linkify(docContent) : '<em style="color:#94a3b8;">No documents or details provided.</em>'}</div>
+              `}
             </div>
-          `).join('');
+            `;
+          }).join('');
         } else if (p && p.requirements) {
+          const isReqUrl = isUrl(p.requirements);
           clientReqListEl.innerHTML = `
-            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left;">
-              <p style="margin: 0; font-size: 0.88rem; color: var(--text-main, #334155); line-height: 1.5; white-space: pre-wrap; text-align: left;">${p.requirements}</p>
+            <div style="padding: 0.85rem 1.15rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; background: var(--surface-card, #ffffff); text-align: left;">
+              ${isReqUrl ? `
+                <div>
+                  <a href="${p.requirements.trim()}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Open Requirement Document</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </a>
+                </div>
+              ` : `
+                <div style="margin: 0; font-size: 0.88rem; color: var(--text-main, #334155); line-height: 1.45; word-break: break-word; text-align: left;">${linkify(p.requirements)}</div>
+              `}
             </div>
           `;
         } else {
-          clientReqListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No client requirements documented for this project.</p>';
+          clientReqListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.88rem; margin: 0; font-style: italic; text-align: left;">No requirements documented for this project.</p>';
         }
       }
     } catch (err) {
       console.error('Error fetching client requirements:', err);
       if (clientReqListEl) {
-        if (p && p.requirements) {
-          clientReqListEl.innerHTML = `
-            <div style="padding: 0.85rem 1.1rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left;">
-              <p style="margin: 0; font-size: 0.88rem; color: var(--text-main, #334155); line-height: 1.5; white-space: pre-wrap; text-align: left;">${p.requirements}</p>
-            </div>
-          `;
-        } else {
-          clientReqListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No client requirements documented for this project.</p>';
-        }
+        clientReqListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.88rem; margin: 0; font-style: italic; text-align: left;">No requirements documented for this project.</p>';
       }
     }
 
-    // 2. Fetch requirement changes for Card 2
+    // 2. Fetch requirement changes
     const changesListEl = container.querySelector('#overview-requirement-changes-list');
     const badgeWrapperEl = container.querySelector('#req-changes-badge-wrapper');
     const countTextEl = container.querySelector('#req-changes-count-text');
@@ -1905,8 +1985,12 @@ export async function ProjectDetails(route, router) {
       const resChanges = await fetch(`${API_BASE}/faculty/projects/${projectId}/requirement-changes`, { headers });
       if (resChanges.ok) {
         const changesData = await resChanges.json();
-        if (changesData && changesData.success && Array.isArray(changesData.data)) {
-          changes = changesData.data;
+        if (changesData) {
+          if (Array.isArray(changesData.data)) {
+            changes = changesData.data;
+          } else if (Array.isArray(changesData)) {
+            changes = changesData;
+          }
         }
       }
 
@@ -1916,66 +2000,86 @@ export async function ProjectDetails(route, router) {
       if (badgeWrapperEl) {
         if (changes.length > 0) {
           badgeWrapperEl.style.display = 'inline-flex';
-          badgeWrapperEl.style.background = '#fff1f2';
-          badgeWrapperEl.style.color = '#e11d48';
-          badgeWrapperEl.style.borderColor = '#fecdd3';
         } else {
-          badgeWrapperEl.style.background = '#f1f5f9';
-          badgeWrapperEl.style.color = 'var(--text-muted)';
-          badgeWrapperEl.style.borderColor = 'var(--border-subtle)';
+          badgeWrapperEl.style.display = 'none';
         }
       }
 
       if (changesListEl) {
         if (changes.length > 0) {
+          changesListEl.style.display = 'flex';
           changesListEl.innerHTML = changes.map((c, i) => {
             const reqTitle = c.requirement_title || `Requirement Change #${i + 1}`;
-            const changeDesc = c.change_description || c.new_description || 'Requirement update requested.';
+            const { changeDesc, docUrl, reason } = extractUpdateDetails(c);
             const prevDesc = c.previous_description;
-            const reason = c.reason;
             const dateStr = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
             const status = (c.status || 'pending').toLowerCase();
             const statusColor = status === 'approved' ? 'var(--primary)' : (status === 'rejected' ? '#dc2626' : '#d97706');
             const statusBg = status === 'approved' ? 'var(--primary-light)' : (status === 'rejected' ? '#fef2f2' : '#fef3c7');
 
+            const isChangeDescUrl = isUrl(changeDesc);
+            const isDocUrlValid = isUrl(docUrl);
+
             return `
-              <div style="padding: 0.95rem 1.15rem; border: 1px solid var(--border-color, var(--border-subtle)); border-radius: 8px; background: var(--surface-card); text-align: left; position: relative;">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.45rem; flex-wrap: wrap;">
+              <div style="padding: 0.85rem 1.15rem; border: 1px solid #fed7aa; border-radius: 8px; background: #fffaf5; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.4rem; flex-wrap: wrap;">
                   <div style="display: flex; align-items: center; gap: 0.5rem; text-align: left;">
-                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: #fff7ed; color: #ea580c; font-size: 0.75rem; font-weight: 700;">🔔</span>
-                    <strong style="font-size: 0.92rem; color: var(--text-main, var(--text-primary)); text-align: left;">${reqTitle}</strong>
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: #ffedd5; color: #ea580c; font-size: 0.75rem; font-weight: 700;">🔔</span>
+                    <strong style="font-size: 0.92rem; color: #9a3412; text-align: left;">${reqTitle}</strong>
                   </div>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <span style="font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 9999px; font-weight: 700; background: ${statusBg}; color: ${statusColor}; text-transform: uppercase;">
                       ${status}
                     </span>
-                    ${dateStr ? `<span style="font-size: 0.75rem; color: var(--text-muted, var(--text-muted));">${dateStr}</span>` : ''}
+                    ${dateStr ? `<span style="font-size: 0.75rem; color: var(--text-muted, #64748b); font-weight: 600;">Updated: ${dateStr}</span>` : ''}
                   </div>
                 </div>
-                <div style="margin-top: 0.4rem; font-size: 0.86rem; color: var(--text-main, #1e293b); line-height: 1.5; white-space: pre-wrap; background: var(--bg-canvas-light); padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid #f1f5f9; text-align: left;">
-                  <strong>Change Description:</strong> ${changeDesc}
-                </div>
+
+                ${isChangeDescUrl ? `
+                  <div style="margin-top: 0.35rem;">
+                    <a href="${changeDesc.trim()}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                      <span>Open Updated Document</span>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
+                  </div>
+                ` : isDocUrlValid ? `
+                  <div style="margin: 0.35rem 0 0;">
+                    <div style="font-size: 0.88rem; color: var(--text-main, #1e293b); line-height: 1.45; word-break: break-word; margin-bottom: 0.35rem;">${linkify(changeDesc)}</div>
+                    <a href="${docUrl.trim()}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 6px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                      <span>Open Updated Document</span>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
+                  </div>
+                ` : `
+                  <div style="margin: 0.35rem 0 0; font-size: 0.88rem; color: var(--text-main, #1e293b); line-height: 1.45; word-break: break-word;">${linkify(changeDesc)}</div>
+                `}
+
                 ${prevDesc ? `
-                  <div style="margin-top: 0.35rem; font-size: 0.8rem; color: var(--text-muted, var(--text-muted)); line-height: 1.4; padding-left: 0.5rem; border-left: 2px solid #cbd5e1; text-align: left;">
-                    <em>Previous:</em> ${prevDesc}
+                  <div style="margin-top: 0.4rem; font-size: 0.8rem; color: var(--text-muted, #64748b); line-height: 1.4; padding-left: 0.5rem; border-left: 2px solid #cbd5e1;">
+                    <em>Previous:</em> ${isUrl(prevDesc) ? `<a href="${prevDesc.trim()}" target="_blank" rel="noopener noreferrer" style="color: #64748b; text-decoration: underline;">Open Previous Document ↗</a>` : linkify(prevDesc)}
                   </div>
                 ` : ''}
+
                 ${reason ? `
-                  <div style="margin-top: 0.35rem; font-size: 0.8rem; color: #b45309; text-align: left;">
-                    <strong>Reason:</strong> ${reason}
+                  <div style="margin-top: 0.35rem; font-size: 0.8rem; color: #b45309;">
+                    <strong>Reason:</strong> ${linkify(reason)}
                   </div>
                 ` : ''}
               </div>
             `;
           }).join('');
         } else {
-          changesListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes or updates recorded for this project.</p>';
+          changesListEl.style.display = 'flex';
+          changesListEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem; margin: 0; font-style: italic; text-align: left;">No updated requirements recorded.</p>';
         }
       }
     } catch (err) {
       console.error('Error fetching requirement changes:', err);
       if (changesListEl) {
-        changesListEl.innerHTML = '<p style="color: var(--text-muted, var(--text-muted)); font-size: 0.9rem; margin: 0; font-style: italic; text-align: left;">No requirement changes or updates recorded for this project.</p>';
+        changesListEl.style.display = 'flex';
+        changesListEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem; margin: 0; font-style: italic; text-align: left;">No updated requirements recorded.</p>';
       }
     }
   };
@@ -2004,7 +2108,7 @@ export async function ProjectDetails(route, router) {
         reqHtml += `
           <div style="padding: 1rem 1.25rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); margin-bottom: 0.75rem;">
             <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.35rem;">Project Overview Requirements</div>
-            <p style="margin: 0; font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap;">${pData.requirements}</p>
+            <div style="margin: 0; font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap;">${linkify(pData.requirements)}</div>
           </div>
         `;
       }
@@ -2017,7 +2121,7 @@ export async function ProjectDetails(route, router) {
                 <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-main);">${r.title || `Requirement #${i + 1}`}</span>
                 ${r.status ? `<span class="status-badge ${r.status.toLowerCase()}" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">${r.status}</span>` : ''}
               </div>
-              <p style="margin: 0; font-size: 0.86rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap;">${r.description || 'No description provided.'}</p>
+              <div style="margin: 0; font-size: 0.86rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap;">${(r.documents || r.description) ? linkify(r.documents || r.description) : 'No description provided.'}</div>
             </div>
             ${r.created_at ? `<span style="font-size: 0.76rem; color: var(--text-muted); white-space: nowrap;">${new Date(r.created_at).toLocaleDateString()}</span>` : ''}
           </div>

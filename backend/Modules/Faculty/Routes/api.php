@@ -8,6 +8,8 @@ Route::prefix('faculty')->group(function () {
     Route::get('/profile', [FacultyController::class, 'getProfile']);
     Route::put('/profile', [FacultyController::class, 'updateProfile']);
     Route::post('/profile', [FacultyController::class, 'updateProfile']);
+    Route::post('/profile/photo', [FacultyController::class, 'uploadProfilePhoto']);
+    Route::delete('/profile/photo', [FacultyController::class, 'deleteProfilePhoto']);
     Route::post('/change-password', [FacultyController::class, 'changePassword']);
     Route::get('/projects', [FacultyController::class, 'getProjects']);
     Route::get('/projects/{id}/report', [FacultyController::class, 'getProjectReport']);
@@ -35,4 +37,11 @@ Route::prefix('faculty')->group(function () {
     Route::delete('/modules/{moduleId}/students/{studentId}', [FacultyController::class, 'removeStudentFromModule']);
     Route::get('/notifications', [FacultyController::class, 'getNotifications']);
     Route::post('/github-repositories/{id}/verify', [FacultyController::class, 'verifyGithubRepository']);
+
+    // Chat routes
+    Route::get('/chat/projects/{projectId}/group', [FacultyController::class, 'getGroupChatMessages']);
+    Route::post('/chat/projects/{projectId}/group/messages', [FacultyController::class, 'saveGroupChatMessage']);
+    Route::get('/chat/projects/{projectId}/students', [FacultyController::class, 'getProjectChatStudents']);
+    Route::get('/chat/projects/{projectId}/individual/{studentId}', [FacultyController::class, 'getIndividualChatMessages']);
+    Route::post('/chat/projects/{projectId}/individual/{studentId}/messages', [FacultyController::class, 'saveIndividualChatMessage']);
 });

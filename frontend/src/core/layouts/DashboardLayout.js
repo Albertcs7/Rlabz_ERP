@@ -1,4 +1,4 @@
-import { useAuthStore } from '../stores/auth.js';
+﻿import { useAuthStore } from '../stores/auth.js';
 import { modules } from '../../module-manifest.js';
 import { API_BASE } from '../config/api.js';
 import { profilePhotoUrl, applyHeaderAvatar, rememberProfilePhoto } from '../shared/profilePhoto.js';
@@ -37,7 +37,7 @@ async function fetchNotifications() {
 function renderNotificationList(notifications) {
   if (!notifications.length) {
     return `<div style="text-align:center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.9rem;">
-      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔔</div>
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">ðŸ””</div>
       <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">No notifications</div>
       <div style="font-size: 0.78rem;">All pending updates and system alerts will appear here.</div>
     </div>`;
@@ -95,14 +95,18 @@ function renderNotificationList(notifications) {
 function populateSidebarNav(sidebarNav, currentPath, authStore) {
   if (!sidebarNav) return;
 
-  const isStudent = authStore.role === 'student' || currentPath.startsWith('/student');
+  const isFaculty = authStore.role === 'faculty' || currentPath.startsWith('/faculty');
+  const isStudent = authStore.role === 'student';
+  const isStudentPortal = currentPath.startsWith('/student');
   const isDeveloper = authStore.role === 'developer' || currentPath.startsWith('/developer');
   const isDirector = authStore.role === 'director' || currentPath.startsWith('/director');
   const isDesignHead = authStore.role === 'design_head' || currentPath.startsWith('/design');
   const isAdmin = authStore.role === 'admin' || currentPath.startsWith('/admin');
 
   let targetPortal = 'default';
-  if (isStudent) {
+  if (isFaculty) {
+    targetPortal = 'faculty';
+  } else if (isStudent && isStudentPortal) {
     targetPortal = 'student';
   } else if (isAdmin) {
     targetPortal = 'admin';
@@ -287,32 +291,6 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           `).join('')}
         </ul>
       `;
-    } else if (targetPortal === 'admin') {
-      const iconUsers = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
-      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
-      const iconStudents = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>`;
-
-      const navItems = [
-        { title: 'User Management', path: '/admin', icon: iconUsers },
-        { title: 'Projects', path: '/projects', icon: iconProjects },
-        { title: 'Students', path: '/admin/students', icon: iconStudents }
-      ];
-
-      sidebarNav.innerHTML = `
-        <div class="sidebar-section-title" style="padding: 0.75rem 1.25rem 0.25rem; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">
-          System Administration
-        </div>
-        <ul>
-          ${navItems.map(item => `
-            <li>
-              <a href="${item.path}">
-                ${item.icon}
-                <span>${item.title}</span>
-              </a>
-            </li>
-          `).join('')}
-        </ul>
-      `;
     } else {
       const iconsMap = {
         IconAdmin: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
@@ -359,8 +337,10 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
     const href = a.getAttribute('href');
     if (href) {
       let isActive = false;
-      if (href === '/admin' || href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
+      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
         isActive = currentPath === href || currentPath === href + '/';
+      } else if (href === '/faculty/profile') {
+        isActive = currentPath === '/faculty/profile' || currentPath.startsWith('/faculty/profile/') || currentPath === '/profile' || currentPath.startsWith('/profile/');
       } else {
         isActive = currentPath === href || currentPath.startsWith(href + '/') ||
           (href === '/projects' && (currentPath.startsWith('/projects') || currentPath.startsWith('/admin/projects'))) ||
@@ -384,27 +364,74 @@ export function updateSidebar(currentPath) {
   populateSidebarNav(sidebarNav, currentPath, authStore);
 }
 
-// Kept for existing callers (StudentSidebar, UserProfile); the implementation
-// lives in core/shared/profilePhoto.js so there is one header-avatar code path.
+
 export function updateTopBarAvatar(photoUrl, name) {
   const authStore = useAuthStore();
-  const displayName = name || authStore.user?.name || authStore.user?.username || 'User';
-  applyHeaderAvatar(document, photoUrl || null, displayName);
+  const displayName =
+    name || authStore.user?.name || authStore.user?.username || 'User';
+  const initial = displayName.charAt(0).toUpperCase() || 'U';
+
+  const avatarTargets = document.querySelectorAll(
+    '#user-profile-header .avatar, #finance-user-profile-header .avatar, .topbar .avatar, .user-profile .avatar, .user-avatar, .topbar-avatar, #topbar-user-avatar'
+  );
+
+  avatarTargets.forEach(avatarEl => {
+    if (photoUrl) {
+      avatarEl.style.padding = '0';
+      avatarEl.style.overflow = 'hidden';
+
+      // Update an existing image when the target itself is an img element.
+      if (avatarEl.tagName === 'IMG') {
+        avatarEl.src = photoUrl;
+        avatarEl.alt = displayName;
+      } else {
+        avatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+      }
+    } else {
+      avatarEl.style.padding = '';
+      avatarEl.style.overflow = '';
+
+      if (avatarEl.tagName === 'IMG') {
+        avatarEl.removeAttribute('src');
+        avatarEl.alt = displayName;
+      } else {
+        avatarEl.textContent = initial;
+      }
+    }
+  });
+
+  const popoverAvatarTargets = document.querySelectorAll(
+    '#popover-avatar, #finance-popover-avatar, .profile-popover-avatar'
+  );
+
+  popoverAvatarTargets.forEach(popAvatarEl => {
+    if (photoUrl) {
+      popAvatarEl.style.padding = '0';
+      popAvatarEl.style.overflow = 'hidden';
+      popAvatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+    } else {
+      popAvatarEl.style.padding = '';
+      popAvatarEl.style.overflow = '';
+      popAvatarEl.textContent = initial;
+    }
+  });
 }
 
 export async function DashboardLayout(contentChild, route, router) {
   const authStore = useAuthStore();
   const currentPath = window.location.pathname;
 
+  const wrapper = document.createElement('div');
+  const isStudentPortal = currentPath.startsWith('/student');
+  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
+
   const user = authStore.user;
   const isStudent = authStore.role === 'student';
-  const isStudentPortal = isStudent || currentPath.startsWith('/student');
-  const wrapper = document.createElement('div');
-  wrapper.className = `dashboard-layout animate-fade-in${isStudentPortal ? ' student-layout' : ''}`;
+  const isFacultyUser = authStore.role === 'faculty' || currentPath.startsWith('/faculty');
   const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
   const studentPhoto = (isStudent && studentIdentifier)
     ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
-    : null;
+    : (user?.avatar || null);
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
@@ -451,7 +478,23 @@ export async function DashboardLayout(contentChild, route, router) {
       <header class="topbar">
         <div class="topbar-title">${topbarTitle}</div>
         <div style="display:flex; align-items:center; gap:0.85rem;">
-          <div class="user-profile" id="user-profile-header">
+          ${!isStudentPortal ? `
+          <div class="notification-container">
+            <button id="noti-bell-btn" class="noti-bell-btn" title="Notifications" aria-label="Notifications">
+              ${BELL_ICON}
+              <span id="noti-badge" class="noti-badge"></span>
+            </button>
+
+            <div id="noti-dropdown" class="noti-dropdown">
+              <div class="noti-dropdown-header">
+                <h4>Notifications</h4>
+              </div>
+              <div id="noti-list-container" class="noti-list-container"><p class="noti-empty">Loading...</p></div>
+            </div>
+          </div>
+          ` : ''}
+
+        <div class="user-profile" id="user-profile-header">
           <div class="avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
             ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
@@ -651,8 +694,8 @@ export async function DashboardLayout(contentChild, route, router) {
     router.push('/auth/login');
   });
 
-  // Bind sidebar logo click — goes to the current role's own dashboard
-  // (same role→route mapping AuthController::respondWithToken() already
+  // Bind sidebar logo click â€” goes to the current role's own dashboard
+  // (same roleâ†’route mapping AuthController::respondWithToken() already
   // sends down as `user.defaultRoute`), never a generic/other-role page.
   const ROLE_HOME_ROUTES = {
     director: '/dashboard',
@@ -762,3 +805,4 @@ export async function DashboardLayout(contentChild, route, router) {
 
   return wrapper;
 }
+
