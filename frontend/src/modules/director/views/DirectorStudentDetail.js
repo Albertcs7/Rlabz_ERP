@@ -5,7 +5,9 @@ export function DirectorStudentDetail(route, router) {
   const container = document.createElement('div');
   container.className = 'director-dashboard student-detail-page';
   const authStore = useAuthStore();
-  const dashboardTitle = authStore.role === 'developer' ? 'Developer Dashboard' : 'Director Dashboard';
+  const isCurrentAdmin = authStore.role === 'admin' || window.location.pathname.startsWith('/admin');
+  const dashboardTitle = isCurrentAdmin ? 'Admin Students' : (authStore.role === 'developer' ? 'Developer Dashboard' : 'Director Dashboard');
+  const rosterUrl = isCurrentAdmin ? '/admin/students' : (authStore.role === 'developer' ? '/dashboard/students' : '/director/students');
 
   // Resolve Student ID from route params, path, or fallback
   const rawId = (route && route.params && route.params.id) 
@@ -28,7 +30,7 @@ export function DirectorStudentDetail(route, router) {
         </div>
       `;
       container.querySelector('#btn-back-notfound')?.addEventListener('click', () => {
-        router ? router.push('/director/students') : (window.location.href = '/director/students');
+        router ? router.push(rosterUrl) : (window.location.href = rosterUrl);
       });
       return;
     }
@@ -78,7 +80,7 @@ export function DirectorStudentDetail(route, router) {
         <div class="student-breadcrumb">
           <span>${dashboardTitle}</span>
           <span class="sep">/</span>
-          <a href="/director/students" id="breadcrumb-roster">Student Roster</a>
+          <a href="${rosterUrl}" id="breadcrumb-roster">Student Roster</a>
           <span class="sep">/</span>
           <strong style="color:#111827">${student.name} (${student.id})</strong>
         </div>
@@ -359,12 +361,12 @@ export function DirectorStudentDetail(route, router) {
 
     // Attach Event Listeners
     container.querySelector('#btn-back')?.addEventListener('click', () => {
-      router ? router.push('/director/students') : (window.location.href = '/director/students');
+      router ? router.push(rosterUrl) : (window.location.href = rosterUrl);
     });
 
     container.querySelector('#breadcrumb-roster')?.addEventListener('click', (e) => {
       e.preventDefault();
-      router ? router.push('/director/students') : (window.location.href = '/director/students');
+      router ? router.push(rosterUrl) : (window.location.href = rosterUrl);
     });
 
     container.querySelectorAll('.filter-btn').forEach(btn => {
@@ -396,9 +398,9 @@ export function DirectorStudentDetail(route, router) {
     container.querySelectorAll('.student-project-card-clickable').forEach(card => {
       card.addEventListener('click', () => {
         const title = card.getAttribute('data-project-title');
-        const targetUrl = title 
-          ? `/director/projects?tab=all&search=${encodeURIComponent(title)}` 
-          : '/director/projects?tab=all';
+        const targetUrl = isCurrentAdmin
+          ? (title ? `/projects?search=${encodeURIComponent(title)}` : '/projects')
+          : (title ? `/director/projects?tab=all&search=${encodeURIComponent(title)}` : '/director/projects?tab=all');
         if (router) router.push(targetUrl);
         else window.location.href = targetUrl;
       });

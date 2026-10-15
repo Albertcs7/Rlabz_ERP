@@ -20,7 +20,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:150',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:director,coordinator,finance,faculty,student,developer,design_head',
+            'role' => 'required|in:director,coordinator,finance,faculty,student,developer,design_head,admin',
             'phone' => 'nullable|string|max:20',
         ]);
         $validated['password'] = Hash::make($validated['password']);
@@ -60,6 +60,11 @@ class AuthController extends Controller
         if (!$user || !is_string($password) || !Hash::check($password, $user->password)) {
             $this->recordFailedLogin($request, $email, 'Login Failed - Invalid Credentials', 'Invalid credentials.', $user->id ?? null);
             return response()->json(['error' => 'Invalid email or password.'], 401);
+        }
+
+        if (isset($user->status) && $user->status === 'suspended') {
+            $this->recordFailedLogin($request, $email, 'Login Failed - Account Suspended', 'Account is suspended.', $user->id ?? null);
+            return response()->json(['error' => 'Account is suspended. Please contact administrator.'], 403);
         }
 
         $token = $this->generateJwt($user);
@@ -135,6 +140,7 @@ class AuthController extends Controller
         $role = $user->role ?? 'student';
         
         $defaultRoutes = [
+            'admin' => '/admin',
             'director' => '/director',
             'developer' => '/developer',
             'coordinator' => '/coordinator',
@@ -145,6 +151,7 @@ class AuthController extends Controller
         ];
         
         $modules = [
+            'admin' => ['admin', 'project', 'profile'],
             'director' => ['director', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication', 'design', 'profile'],
             'developer' => ['developer', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication', 'design', 'profile'],
             'coordinator' => ['coordinator', 'project', 'student', 'communication', 'github', 'certificates', 'design', 'profile'],
@@ -198,6 +205,7 @@ class AuthController extends Controller
             'sub' => $user->id,
             'email' => $user->email,
             'role' => $user->role,
+            'status' => $user->status ?? 'active',
             'permissions' => $permissions,
             'exp' => time() + 86400 * 30
         ]);

@@ -21,6 +21,15 @@ export const modules = [
     title: 'My Profile & Security',
   },
   {
+    name: 'admin',
+    path: '/admin',
+    loadRoutes: () => import('@/modules/admin/routes.js'),
+    sidebar: true,
+    title: 'User Management',
+    icon: 'IconAdmin',
+    allowedRoles: ['admin'],
+  },
+  {
     name: 'design',
     path: '/design',
     loadRoutes: () => import('@/modules/design/routes.js'),
