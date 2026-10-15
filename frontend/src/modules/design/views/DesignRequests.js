@@ -83,7 +83,7 @@ export async function DesignRequests(route, router) {
 
   function render() {
     container.innerHTML = `
-      <div style="max-width: 840px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+      <div style="max-width: 860px; width: 100%; margin: 0 auto; box-sizing: border-box; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 2.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
         <div style="margin-bottom: 1.5rem; text-align: center;">
           <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0 0 0.35rem 0; color: #0f172a;">Creative Request Intake Brief</h2>
           <p style="color: #64748b; font-size: 0.88rem; margin: 0;">Submit structured design deliverables for academic initiatives, events, or client projects.</p>
@@ -176,7 +176,7 @@ export async function DesignRequests(route, router) {
               </div>
             </div>
 
-            <!-- Brand Kit & Associated Project -->
+            <!-- Brand Kit & Priority -->
             <div class="form-grid-2">
               <div class="form-group">
                 <label style="font-weight:700;">Applicable Brand Kit *</label>
@@ -192,14 +192,11 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Associated Project</label>
-                <select id="intake-project-id" class="design-select">
-                  <option value="">Autonomous / General Division Request</option>
-                  ${availableProjects.map(p => `
-                    <option value="${p.id}" ${intakeForm.project_id == p.id ? 'selected' : ''}>
-                      ${p.title} (${p.client_name || 'Internal'})
-                    </option>
-                  `).join('')}
+                <label style="font-weight:700;">Priority Flag *</label>
+                <select id="intake-priority" class="design-select">
+                  <option value="normal" ${intakeForm.priority === 'normal' ? 'selected' : ''}>Normal Priority (Standard Queue)</option>
+                  <option value="high" ${intakeForm.priority === 'high' ? 'selected' : ''}>High Priority (48h Turnaround)</option>
+                  <option value="urgent" ${intakeForm.priority === 'urgent' ? 'selected' : ''}>Urgent Priority (Direct Lead Escalation)</option>
                 </select>
               </div>
             </div>
@@ -217,7 +214,7 @@ export async function DesignRequests(route, router) {
               </div>
             </div>
 
-            <!-- Required-by Date and Priority -->
+            <!-- Required-by Date and Branding Constraints -->
             <div class="form-grid-2">
               <div class="form-group">
                 <label style="font-weight:700;">Required-by Date &amp; Time *</label>
@@ -226,12 +223,8 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Priority Flag *</label>
-                <select id="intake-priority" class="design-select">
-                  <option value="normal" ${intakeForm.priority === 'normal' ? 'selected' : ''}>Normal Priority (Standard Queue)</option>
-                  <option value="high" ${intakeForm.priority === 'high' ? 'selected' : ''}>High Priority (48h Turnaround)</option>
-                  <option value="urgent" ${intakeForm.priority === 'urgent' ? 'selected' : ''}>Urgent Priority (Direct Lead Escalation)</option>
-                </select>
+                <label style="font-weight:700;">Special Colour or Branding Constraints</label>
+                <input type="text" id="intake-brand-constraints" class="design-input" placeholder="e.g. Sponsor logos on bottom bar; Gold & Navy palette" value="${intakeForm.brand_constraints}">
               </div>
             </div>
 
@@ -242,7 +235,7 @@ export async function DesignRequests(route, router) {
               <small style="color: #64748b; font-size: 0.74rem;">Distinct from title. Paste exact wording so designers can copy-paste without spelling or date discrepancies.</small>
             </div>
 
-            <!-- Reference Links & Brand Constraints -->
+            <!-- Reference Links & Requester Attachments -->
             <div class="form-grid-2">
               <div class="form-group">
                 <label style="font-weight:700;">Reference Links / Visual Moodboard</label>
@@ -250,16 +243,10 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Special Colour or Branding Constraints</label>
-                <input type="text" id="intake-brand-constraints" class="design-input" placeholder="e.g. Include sponsor logos on bottom bar; Gold & Navy palette" value="${intakeForm.brand_constraints}">
+                <label style="font-weight:700;">Requester Attachments</label>
+                <input type="text" id="intake-attachments" class="design-input" placeholder="https://drive.google.com/... cloud folder link" value="${intakeForm.requester_attachments}">
+                <small style="color: #64748b; font-size: 0.74rem;">Logos, speaker photos, raw footage. Deliverables are submitted separately.</small>
               </div>
-            </div>
-
-            <!-- Requester Attachments -->
-            <div class="form-group">
-              <label style="font-weight:700;">Requester Attachments (Reference Images, Raw Logos, Docs)</label>
-              <input type="text" id="intake-attachments" class="design-input" placeholder="https://drive.google.com/... or asset cloud folder link" value="${intakeForm.requester_attachments}">
-              <small style="color: #64748b; font-size: 0.74rem;">Files uploaded here are requester input materials (logos, speaker photos, raw footage). Final design deliverables are submitted separately by designers.</small>
             </div>
           </div>
 
@@ -480,7 +467,7 @@ export async function DesignRequests(route, router) {
         }
 
         intakeForm.title = title;
-        intakeForm.project_id = container.querySelector('#intake-project-id')?.value || null;
+        intakeForm.project_id = null;
         intakeForm.brand_kit_name = brandKit || 'RLabZ Core Platform Brand Kit';
         intakeForm.requesting_division = division;
         intakeForm.priority = container.querySelector('#intake-priority')?.value || 'normal';
