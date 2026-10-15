@@ -347,15 +347,14 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // phone matches users.phone varchar(20). Profile photos are not accepted
-        // here: they go through ProfilePhotoController (users.profile_photo_path);
-        // users.avatar is left in the schema for compatibility but no longer written.
         $validated = $request->validate([
             'name' => 'required|string|max:150',
             'phone' => 'nullable|string|max:20',
             'bio' => 'nullable|string|max:1000',
             'location' => 'nullable|string|max:150',
             'department' => 'nullable|string|max:150',
+            'avatar' => 'nullable|string',
+            'photo_url' => 'nullable|string',
         ]);
 
         $updateData = [
@@ -367,6 +366,14 @@ class AuthController extends Controller
         if (Schema::hasColumn('users', 'bio')) $updateData['bio'] = $validated['bio'] ?? null;
         if (Schema::hasColumn('users', 'location')) $updateData['location'] = $validated['location'] ?? 'Kochi, India';
         if (Schema::hasColumn('users', 'department')) $updateData['department'] = $validated['department'] ?? null;
+        
+        $photo = $validated['photo_url'] ?? ($validated['avatar'] ?? null);
+        if ($photo !== null && Schema::hasColumn('users', 'profile_photo_path')) {
+            $updateData['profile_photo_path'] = $photo ?: null;
+        }
+        if ($photo !== null && Schema::hasColumn('users', 'avatar')) {
+            $updateData['avatar'] = $photo ?: null;
+        }
 
         DB::table('users')->where('id', $userId)->update($updateData);
 

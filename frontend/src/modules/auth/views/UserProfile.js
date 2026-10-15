@@ -120,24 +120,19 @@ export async function UserProfile(route, router) {
       <div class="profile-hero-card">
         <div class="profile-hero-top">
           <div class="profile-hero-user">
-            ${!isStudent ? `
-            <!-- Non-student roles: the shared, server-backed profile photo uploader -->
-            <div id="profile-photo-slot" style="flex-shrink: 0;"></div>
-            ` : `
             <div class="profile-avatar-container" style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
-              <div class="profile-avatar-wrap" id="user-avatar-wrap" title="Click to upload profile photo" style="cursor: pointer; width: 100%; height: 100%;">
+              <div class="profile-avatar-wrap" id="user-avatar-wrap" title="Click to change photo in Edit Details" style="cursor: pointer; width: 100%; height: 100%;">
                 ${profileUser.avatar
                   ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
                   : `<span class="profile-avatar-fallback">${initials}</span>`
                 }
                 <span class="profile-avatar-badge" title="Online & Active"></span>
               </div>
-              <button type="button" class="profile-avatar-camera-btn" id="btn-hero-cam" title="Change Profile Photo" style="position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; border-radius: 50%; background: #059669; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.18); padding: 0; z-index: 2;">
+              <button type="button" class="profile-avatar-camera-btn" id="btn-hero-cam" title="Change Profile Photo (Edit Details)" style="position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; border-radius: 50%; background: #009688; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.18); padding: 0; z-index: 2;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
               </button>
             </div>
             <input type="file" id="hero-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
-            `}
             <div class="profile-hero-details">
               <h1>${profileUser.name}</h1>
               <div class="profile-hero-sub">
@@ -320,11 +315,10 @@ export async function UserProfile(route, router) {
                 <input type="text" id="edit-department" value="${profileUser.department || ''}" />
               </div>
 
-              ${isStudentRole ? `
               <div class="profile-field form-group-full">
-                <label for="edit-avatar">Profile Photo</label>
+                <label for="edit-avatar">Profile Photo (Image Link or File Upload)</label>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                  <input type="text" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="Enter image URL or upload image file..." style="flex: 1; min-width: 220px;" />
+                  <input type="text" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="Paste image URL (https://...) or upload an image file..." style="flex: 1; min-width: 220px;" />
                   <button type="button" class="prof-btn secondary" id="btn-browse-photo" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 0.95rem; font-size: 0.82rem; white-space: nowrap;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Upload Image
@@ -335,8 +329,8 @@ export async function UserProfile(route, router) {
                     </button>
                   ` : ''}
                 </div>
+                <small style="color: var(--text-muted, #64748b); font-size: 0.75rem; margin-top: 4px;">Paste any web image link (e.g. Unsplash, GitHub avatar, Google profile) or upload a file directly.</small>
               </div>
-              ` : ''}
 
               <div class="profile-field form-group-full">
                 <label for="edit-bio">About User / Bio</label>
@@ -519,12 +513,13 @@ export async function UserProfile(route, router) {
       });
     }
 
-    // Quick Profile Photo Upload Handler (students — unchanged; its elements only
-    // exist on the student layout)
+    // Quick Profile Photo Upload Handler
     async function applyProfilePhoto(photoDataUrl) {
       profileUser.avatar = photoDataUrl;
+      rememberProfilePhoto(photoDataUrl);
       if (authStore.user) {
         authStore.user.avatar = photoDataUrl;
+        authStore.user.profile_photo_url = photoDataUrl;
         localStorage.setItem('user', JSON.stringify(authStore.user));
       }
 
@@ -537,22 +532,32 @@ export async function UserProfile(route, router) {
       }
 
       // Sync topbar & popover avatars immediately
+      applyHeaderAvatar(document, photoDataUrl, profileUser.name);
       updateTopBarAvatar(photoDataUrl, profileUser.name);
       updateStudentNavbarAvatar();
 
       // Persist to backend
       if (token) {
         try {
-          const endpoint = authStore.role === 'student' ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
-          await fetch(endpoint, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ avatar: photoDataUrl })
-          });
+          if (photoDataUrl) {
+            await fetch(`${API_BASE}/auth/profile-photo`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ photo_url: photoDataUrl })
+            });
+          } else {
+            await fetch(`${API_BASE}/auth/profile-photo`, {
+              method: 'DELETE',
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+          }
         } catch (err) {
           console.warn('Could not persist avatar to server:', err);
         }
@@ -613,7 +618,7 @@ export async function UserProfile(route, router) {
         icon: 'success',
         title: 'Profile Picture Removed',
         text: 'Default initials avatar restored.',
-        timer: 2000,
+        timer: 1500,
         showConfirmButton: false
       });
     });
@@ -627,18 +632,16 @@ export async function UserProfile(route, router) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
 
+        const avatarVal = container.querySelector('#edit-avatar')?.value.trim() || null;
         const updatedData = {
           name: container.querySelector('#edit-name').value.trim(),
           phone: container.querySelector('#edit-phone').value.trim(),
           location: container.querySelector('#edit-location').value.trim(),
           department: container.querySelector('#edit-department').value.trim(),
           bio: container.querySelector('#edit-bio').value.trim(),
+          avatar: avatarVal,
+          photo_url: avatarVal,
         };
-        // Only students still send `avatar` (their unchanged photo flow). Other roles
-        // manage their photo through the uploader above, never via users.avatar.
-        if (isStudentRole) {
-          updatedData.avatar = container.querySelector('#edit-avatar')?.value.trim() || null;
-        }
 
         try {
           if (token) {
@@ -657,16 +660,41 @@ export async function UserProfile(route, router) {
               const err = await res.json().catch(() => ({}));
               throw new Error(err.message || 'Failed to update profile.');
             }
+
+            // Also persist to /api/auth/profile-photo if photo_url changed
+            if (avatarVal !== profileUser.avatar) {
+              if (avatarVal) {
+                await fetch(`${API_BASE}/auth/profile-photo`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ photo_url: avatarVal })
+                }).catch(() => {});
+              } else {
+                await fetch(`${API_BASE}/auth/profile-photo`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  }
+                }).catch(() => {});
+              }
+            }
           }
 
           // Update local state and authStore
-          profileUser = { ...profileUser, ...updatedData };
+          profileUser = { ...profileUser, ...updatedData, avatar: avatarVal };
+          rememberProfilePhoto(avatarVal);
           if (authStore.user) {
             authStore.user.name = updatedData.name;
             authStore.user.phone = updatedData.phone;
             authStore.user.location = updatedData.location;
             authStore.user.department = updatedData.department;
-            if (isStudentRole) authStore.user.avatar = updatedData.avatar;
+            authStore.user.avatar = avatarVal;
+            authStore.user.profile_photo_url = avatarVal;
             authStore.user.bio = updatedData.bio;
             localStorage.setItem('user', JSON.stringify(authStore.user));
           }
@@ -681,13 +709,8 @@ export async function UserProfile(route, router) {
           }
 
           // Update header display if present
-          const headerName = document.querySelector('#user-profile-header .user-name') || document.querySelector('#finance-user-profile-header .user-name');
-          if (headerName) headerName.textContent = updatedData.name;
-          const popoverName = document.querySelector('#popover-name') || document.querySelector('#finance-popover-name');
-          if (popoverName) popoverName.textContent = updatedData.name;
-
-          // Update topbar avatar immediately (staff: their saved server photo)
-          updateTopBarAvatar(isStudentRole ? updatedData.avatar : profileUser.avatar, updatedData.name);
+          applyHeaderAvatar(document, avatarVal, updatedData.name);
+          updateTopBarAvatar(avatarVal, updatedData.name);
           updateStudentNavbarAvatar();
 
           Swal.fire({
