@@ -15,6 +15,7 @@ return new class extends Migration
     {
         Schema::table('hosting_charges', function (Blueprint $table) {
             $table->string('domain_name')->nullable()->after('expiry_date');
+            $table->index('domain_name', 'idx_hostchg_domain_name');
         });
     }
 
@@ -26,6 +27,7 @@ return new class extends Migration
     public function down()
     {
         Schema::table('hosting_charges', function (Blueprint $table) {
+            $table->dropIndex('idx_hostchg_domain_name');
             $table->dropColumn('domain_name');
         });
     }

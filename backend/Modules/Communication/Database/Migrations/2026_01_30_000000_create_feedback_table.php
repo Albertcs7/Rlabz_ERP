@@ -15,6 +15,8 @@ return new class extends Migration
             $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
             $table->text('comments');
             $table->timestamps();
+
+            $table->index(['project_id', 'student_id'], 'idx_feedback_project_student');
         });
     }
 

@@ -18,6 +18,11 @@ return new class extends Migration
             $table->text('feedback')->nullable();
             $table->timestamp('submitted_at');
             $table->timestamps();
+
+            $table->index(['student_id', 'report_date'], 'idx_studrep_student_date');
+            $table->index(['student_id', 'approval_status'], 'idx_studrep_student_approval');
+            $table->index('approval_status', 'idx_studrep_approval_status');
+            $table->index('report_type', 'idx_studrep_report_type');
         });
     }
 

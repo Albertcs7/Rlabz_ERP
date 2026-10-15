@@ -24,6 +24,9 @@ return new class extends Migration
                 $table->timestamps();
 
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+                $table->index('division', 'idx_dsnuprof_division');
+                $table->index('is_active', 'idx_dsnuprof_is_active');
             });
         }
 
@@ -72,6 +75,20 @@ return new class extends Migration
 
                 $table->foreign('requester_id')->references('id')->on('users')->onDelete('cascade');
                 $table->foreign('assigned_to')->references('id')->on('users')->onDelete('set null');
+
+                $table->index(['status', 'required_by'], 'idx_dsntkt_status_required');
+                $table->index(['assigned_to', 'status'], 'idx_dsntkt_assigned_status');
+                $table->index(['requester_id', 'status'], 'idx_dsntkt_requester_status');
+                $table->index('status', 'idx_dsntkt_status');
+                $table->index('priority', 'idx_dsntkt_priority');
+                $table->index('required_by', 'idx_dsntkt_required_by');
+                $table->index('work_type', 'idx_dsntkt_work_type');
+                $table->index('ball_is_with', 'idx_dsntkt_ball_is_with');
+                $table->index('requesting_division', 'idx_dsntkt_req_division');
+                $table->index('title', 'idx_dsntkt_title');
+                $table->index('current_version_id', 'idx_dsntkt_current_version');
+                $table->index('approved_by', 'idx_dsntkt_approved_by');
+                $table->index('second_level_approved_by', 'idx_dsntkt_2nd_approved_by');
             });
         }
 
@@ -93,6 +110,9 @@ return new class extends Migration
 
                 $table->foreign('ticket_id')->references('id')->on('design_tickets')->onDelete('cascade');
                 $table->foreign('uploader_id')->references('id')->on('users')->onDelete('cascade');
+
+                $table->index(['ticket_id', 'version_number'], 'idx_dsnver_ticket_version');
+                $table->index(['ticket_id', 'is_current'], 'idx_dsnver_ticket_current');
             });
         }
 
@@ -113,6 +133,10 @@ return new class extends Migration
                 $table->foreign('ticket_id')->references('id')->on('design_tickets')->onDelete('cascade');
                 $table->foreign('version_id')->references('id')->on('design_versions')->onDelete('cascade');
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+                $table->index(['ticket_id', 'status'], 'idx_dsncom_ticket_status');
+                $table->index('parent_id', 'idx_dsncom_parent_id');
+                $table->index('resolved_by', 'idx_dsncom_resolved_by');
             });
         }
 
@@ -137,6 +161,10 @@ return new class extends Migration
 
                 $table->foreign('source_ticket_id')->references('id')->on('design_tickets')->onDelete('set null');
                 $table->foreign('designer_id')->references('id')->on('users')->onDelete('set null');
+
+                $table->index('work_type', 'idx_dsnast_work_type');
+                $table->index('division', 'idx_dsnast_division');
+                $table->index('campaign', 'idx_dsnast_campaign');
             });
         }
 
@@ -154,6 +182,9 @@ return new class extends Migration
 
                 $table->foreign('ticket_id')->references('id')->on('design_tickets')->onDelete('cascade');
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+                $table->index(['ticket_id', 'created_at'], 'idx_dsnaud_ticket_created');
+                $table->index('action', 'idx_dsnaud_action');
             });
         }
 
@@ -172,6 +203,9 @@ return new class extends Migration
 
                 $table->foreign('ticket_id')->references('id')->on('design_tickets')->onDelete('cascade');
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+                $table->index(['user_id', 'is_read', 'created_at'], 'idx_dsnnotif_user_read_created');
+                $table->index('event', 'idx_dsnnotif_event');
             });
         }
     }

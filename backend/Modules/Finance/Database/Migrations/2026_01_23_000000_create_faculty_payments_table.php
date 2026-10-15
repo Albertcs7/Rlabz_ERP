@@ -15,6 +15,10 @@ return new class extends Migration
             $table->date('payment_date')->nullable();
             $table->enum('status', ['calculated', 'approved', 'processing', 'paid', 'failed']);
             $table->timestamps();
+
+            $table->index(['project_faculty_id', 'status'], 'idx_facpay_projfac_status');
+            $table->index('status', 'idx_facpay_status');
+            $table->index('payment_date', 'idx_facpay_payment_date');
         });
     }
 

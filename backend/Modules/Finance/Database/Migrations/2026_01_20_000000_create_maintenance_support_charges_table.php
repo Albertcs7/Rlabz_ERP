@@ -16,6 +16,9 @@ return new class extends Migration
             $table->date('end_date')->nullable();
             $table->text('description')->nullable();
             $table->timestamps();
+
+            $table->index(['project_finance_id', 'end_date'], 'idx_maintchg_projfin_end');
+            $table->index('end_date', 'idx_maintchg_end_date');
         });
     }
 

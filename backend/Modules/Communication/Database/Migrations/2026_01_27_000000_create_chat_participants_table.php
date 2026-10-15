@@ -14,6 +14,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamp('joined_at');
             $table->timestamps();
+
+            $table->index(['chat_id', 'user_id'], 'idx_chatpart_chat_user');
         });
     }
 

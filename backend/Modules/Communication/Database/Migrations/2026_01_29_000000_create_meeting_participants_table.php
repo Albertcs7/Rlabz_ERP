@@ -14,6 +14,9 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->enum('attendance_status', ['invited', 'attended', 'absent']);
             $table->timestamps();
+
+            $table->index(['meeting_id', 'user_id'], 'idx_meetpart_meeting_user');
+            $table->index(['user_id', 'attendance_status'], 'idx_meetpart_user_attendance');
         });
     }
 

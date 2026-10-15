@@ -14,6 +14,8 @@ return new class extends Migration
             $table->foreignId('faculty_id')->constrained('users')->onDelete('cascade');
             $table->date('assigned_date');
             $table->timestamps();
+
+            $table->index(['project_id', 'faculty_id'], 'idx_projfac_project_faculty');
         });
     }
 

@@ -24,6 +24,9 @@ return new class extends Migration
             $table->text('remarks')->nullable();
             $table->foreignId('renewed_by')->constrained('users');
             $table->timestamps();
+
+            $table->index(['hosting_charge_id', 'renewal_date'], 'idx_sslrenew_host_date');
+            $table->index('new_expiry_date', 'idx_sslrenew_new_expiry');
         });
     }
 
