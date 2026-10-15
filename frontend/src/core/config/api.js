@@ -23,7 +23,7 @@ export const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL.replace(/\/+$/, '')}/api`
   : (isLocal && isDevPort)
     ? 'http://127.0.0.1:8000/api'
-    : 'https://rlabzerp-production-76f6.up.railway.app/api';
+    : '/api';
 
 /**
  * Base Storage URL (for uploaded files, certificates, avatars, PDFs):
@@ -32,7 +32,7 @@ export const STORAGE_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL.replace(/\/+$/, '')}/storage`
   : (isLocal && isDevPort)
     ? 'http://127.0.0.1:8000/storage'
-    : 'https://rlabzerp-production-76f6.up.railway.app/storage';
+    : '/storage';
 
 export default {
   API_BASE,
