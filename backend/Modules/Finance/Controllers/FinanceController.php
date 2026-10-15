@@ -69,18 +69,46 @@ class FinanceController extends Controller
         return response()->json($payments);
     }
 
-    public function getInvoices()
+    public function getInvoices(Request $request)
     {
-        $invoices = $this->financeService->getAllInvoices();
-        return response()->json($invoices);
+        $perPage = (int) $request->input('per_page', 20);
+        $paginator = \Modules\Finance\Models\Invoice::with(['projectFinance.project', 'clientPayments', 'items'])
+            ->orderBy('id', 'desc')
+            ->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $paginator->items(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
+        ]);
     }
 
     public function getTransactions(Request $request)
     {
         $sort = $request->query('sort');
         $projectId = $request->query('project_id') ?: $request->query('projectId');
-        $transactions = $this->financeService->getAllTransactions($sort, $projectId);
-        return response()->json($transactions);
+        $all = collect($this->financeService->getAllTransactions($sort, $projectId));
+        
+        $perPage = (int) $request->query('per_page', 20);
+        $page = (int) $request->query('page', 1);
+        $total = $all->count();
+        $items = $all->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $items,
+            'pagination' => [
+                'current_page' => $page,
+                'last_page' => (int) ceil($total / max($perPage, 1)),
+                'per_page' => $perPage,
+                'total' => $total,
+            ]
+        ]);
     }
 
     public function updateAllocations(Request $request, $id)

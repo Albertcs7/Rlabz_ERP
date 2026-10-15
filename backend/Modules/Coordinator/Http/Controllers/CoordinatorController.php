@@ -111,7 +111,8 @@ class CoordinatorController extends Controller
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
-        $projects = Project::with([
+        $perPage = (int) $request->input('per_page', 20);
+        $paginator = Project::with([
             'creator',
             'students:id,name,email',
             'faculty:id,name,email',
@@ -119,15 +120,22 @@ class CoordinatorController extends Controller
             'modules.students:id,name,email',
             'requirements',
             'closure',
-        ])->latest()->get();
+        ])->latest()->paginate($perPage);
 
+        $projects = collect($paginator->items());
         $projects->each(function (Project $project) {
             $project->requirements_text = $project->getOriginal('requirements');
         });
 
         return response()->json([
             'data' => $projects,
-            'count' => $projects->count(),
+            'count' => $paginator->total(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
         ]);
     }
 

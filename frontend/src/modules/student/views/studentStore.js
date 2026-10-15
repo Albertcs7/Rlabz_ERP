@@ -48,6 +48,13 @@ async function apiFetch(path, options = {}) {
   return response.json();
 }
 
+function toArray(val) {
+  if (Array.isArray(val)) return val;
+  if (Array.isArray(val?.data)) return val.data;
+  if (Array.isArray(val?.data?.data)) return val.data.data;
+  return [];
+}
+
 export async function ensureDataLoaded(force = false) {
   const currentToken = localStorage.getItem('token');
   
@@ -73,16 +80,16 @@ export async function ensureDataLoaded(force = false) {
   
   try {
     // 1. Fetch projects
-    cachedProjects = await apiFetch('/student/projects');
+    cachedProjects = toArray(await apiFetch('/student/projects'));
     
     // 2. Fetch sprints (modules)
-    cachedSprints = await apiFetch('/student/sprints');
+    cachedSprints = toArray(await apiFetch('/student/sprints'));
     
     // 3. Fetch reports
-    cachedReports = await apiFetch('/student/reports');
+    cachedReports = toArray(await apiFetch('/student/reports'));
     
     // 4. Fetch work logs
-    cachedWorkLogs = await apiFetch('/student/work-logs');
+    cachedWorkLogs = toArray(await apiFetch('/student/work-logs'));
     
     // 5. Fetch github
     const githubRes = await apiFetch('/student/github');
@@ -90,7 +97,7 @@ export async function ensureDataLoaded(force = false) {
     cachedGithubProjects = Array.isArray(githubRes) ? [] : (githubRes.projects || []);
     
     // 6. Fetch meetings
-    cachedMeetings = await apiFetch('/student/meetings');
+    cachedMeetings = toArray(await apiFetch('/student/meetings'));
 
     // 7. Fetch calendar events (ERP deadlines, sprints, meetings, reviews, reports)
     try {
