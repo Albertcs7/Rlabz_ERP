@@ -14,6 +14,7 @@ let cachedGithub = [];
 let cachedGithubProjects = [];
 let cachedChatMessages = [];
 let cachedNotifications = [];
+let cachedCertificates = [];
 let cachedCalendarEvents = [];
 let cachedProfile = null;
 let cachedDashboard = null;
@@ -47,6 +48,13 @@ async function apiFetch(path, options = {}) {
   return response.json();
 }
 
+function toArray(val) {
+  if (Array.isArray(val)) return val;
+  if (Array.isArray(val?.data)) return val.data;
+  if (Array.isArray(val?.data?.data)) return val.data.data;
+  return [];
+}
+
 export async function ensureDataLoaded(force = false) {
   const currentToken = localStorage.getItem('token');
   
@@ -60,6 +68,7 @@ export async function ensureDataLoaded(force = false) {
     cachedGithub = [];
     cachedChatMessages = [];
     cachedNotifications = [];
+    cachedCertificates = [];
     cachedCalendarEvents = [];
     cachedProfile = null;
     cachedDashboard = null;
@@ -71,16 +80,16 @@ export async function ensureDataLoaded(force = false) {
   
   try {
     // 1. Fetch projects
-    cachedProjects = await apiFetch('/student/projects');
+    cachedProjects = toArray(await apiFetch('/student/projects'));
     
     // 2. Fetch sprints (modules)
-    cachedSprints = await apiFetch('/student/sprints');
+    cachedSprints = toArray(await apiFetch('/student/sprints'));
     
     // 3. Fetch reports
-    cachedReports = await apiFetch('/student/reports');
+    cachedReports = toArray(await apiFetch('/student/reports'));
     
     // 4. Fetch work logs
-    cachedWorkLogs = await apiFetch('/student/work-logs');
+    cachedWorkLogs = toArray(await apiFetch('/student/work-logs'));
     
     // 5. Fetch github
     const githubRes = await apiFetch('/student/github');
@@ -88,7 +97,7 @@ export async function ensureDataLoaded(force = false) {
     cachedGithubProjects = Array.isArray(githubRes) ? [] : (githubRes.projects || []);
     
     // 6. Fetch meetings
-    cachedMeetings = await apiFetch('/student/meetings');
+    cachedMeetings = toArray(await apiFetch('/student/meetings'));
 
     // 7. Fetch calendar events (ERP deadlines, sprints, meetings, reviews, reports)
     try {
@@ -123,6 +132,16 @@ export async function ensureDataLoaded(force = false) {
     } catch (err) {
       console.warn('Could not load notifications:', err);
       cachedNotifications = [];
+    }
+
+    // 9. Fetch the authenticated student's own certificates (backend-scoped by
+    // the JWT subject — never trust a client-side project/name match).
+    try {
+      const certResponse = await apiFetch('/certificates/mine');
+      cachedCertificates = Array.isArray(certResponse?.data) ? certResponse.data : [];
+    } catch (err) {
+      console.warn('Could not load certificates:', err);
+      cachedCertificates = [];
     }
 
     // 10. Fetch unified dashboard (contains assigned tasks, projects, modules, meetings, stats)
@@ -194,6 +213,10 @@ export function getSprints() {
 
 export function getReports() {
   return cachedReports;
+}
+
+export function getCertificates() {
+  return cachedCertificates;
 }
 
 export function getWorkLogs() {
@@ -289,31 +312,10 @@ export async function fetchLiveStudentProfile() {
   }
 }
 
-export async function fetchPasswordRequestStatus() {
-  try {
-    return await apiFetch('/student/password-request-status');
-  } catch (e) {
-    console.error('Failed to fetch password request status:', e);
-    return { has_request: false, status: 'none', request: null };
-  }
-}
-
-export async function requestPasswordChangeAccess() {
-  return await apiFetch('/student/request-password-change', {
-    method: 'POST'
-  });
-}
-
-export async function cancelPasswordRequest() {
-  return await apiFetch('/student/cancel-password-request', {
-    method: 'POST'
-  });
-}
-
-export async function updateStudentPassword(new_password, confirm_password) {
+export async function updateStudentPassword(current_password, new_password, confirm_password) {
   return await apiFetch('/student/change-password', {
     method: 'POST',
-    body: JSON.stringify({ new_password, confirm_password })
+    body: JSON.stringify({ current_password, new_password, confirm_password })
   });
 }
 

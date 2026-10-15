@@ -71,6 +71,17 @@ export async function ProjectCreate(route, router) {
               <input type="date" name="end_date" class="premium-input" />
             </div>
 
+            <div class="form-group form-full-width">
+              <label>Project Drive Link (Google Drive / Cloud Folder)</label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <input type="url" name="drive_link" class="premium-input" placeholder="https://drive.google.com/drive/folders/..." style="padding-left: 2.5rem;" />
+                <svg style="position: absolute; left: 0.85rem; pointer-events: none; color: var(--primary, #4f46e5);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <small style="color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Enter the Google Drive or cloud storage URL containing project specifications, assets, and deliverables.</small>
+            </div>
+
             <div class="form-group form-full-width" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; display: flex; align-items: center; justify-content: flex-end; gap: 1rem;">
               <span id="form-error" style="color: var(--danger); font-weight: 500;"></span>
               <button type="submit" class="btn btn-primary shadow-hover" id="btn-submit" style="padding: 0.75rem 2rem; font-size: 1rem;">Create Project</button>

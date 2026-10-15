@@ -227,7 +227,11 @@ export function DirectorStudents(route, router) {
         if (e.target.closest('a') || e.target.closest('.student-project-chip-clickable') || e.target.closest('.student-project-more-btn')) return;
         const studentId = row.getAttribute('data-id');
         if (studentId) {
-          router ? router.push(`/director/students/${studentId}`) : (window.location.href = `/director/students/${studentId}`);
+          const isCurrentAdmin = window.location.pathname.startsWith('/admin');
+          const isDirector = window.location.pathname.startsWith('/director');
+          const base = isCurrentAdmin ? '/admin' : (isDirector ? '/director' : '/dashboard');
+          const targetUrl = `${base}/students/${studentId}`;
+          router ? router.push(targetUrl) : (window.location.href = targetUrl);
         }
       });
     });
@@ -238,9 +242,11 @@ export function DirectorStudents(route, router) {
         e.preventDefault();
         const pTitle = chip.getAttribute('data-project-title');
         if (pTitle) {
+          const isCurrentAdmin = window.location.pathname.startsWith('/admin');
           const isDirector = window.location.pathname.startsWith('/director');
-          const base = isDirector ? '/director' : '/dashboard';
-          const targetUrl = `${base}/projects?tab=active&search=${encodeURIComponent(pTitle)}`;
+          const targetUrl = isCurrentAdmin
+            ? `/projects?search=${encodeURIComponent(pTitle)}`
+            : `${isDirector ? '/director' : '/dashboard'}/projects?tab=active&search=${encodeURIComponent(pTitle)}`;
           if (router) router.push(targetUrl);
           else window.location.href = targetUrl;
         }
@@ -252,9 +258,11 @@ export function DirectorStudents(route, router) {
         e.stopPropagation();
         const studentId = btn.getAttribute('data-student-id');
         if (studentId) {
+          const isCurrentAdmin = window.location.pathname.startsWith('/admin');
           const isDirector = window.location.pathname.startsWith('/director');
-          const base = isDirector ? '/director' : '/dashboard';
-          router ? router.push(`${base}/students/${studentId}`) : (window.location.href = `${base}/students/${studentId}`);
+          const base = isCurrentAdmin ? '/admin' : (isDirector ? '/director' : '/dashboard');
+          const targetUrl = `${base}/students/${studentId}`;
+          router ? router.push(targetUrl) : (window.location.href = targetUrl);
         }
       });
     });
@@ -288,8 +296,9 @@ export function DirectorStudents(route, router) {
     // Attach Filter Listeners (Buttons & Cards)
     const selectTrack = (track) => {
       currentTrackFilter = track;
+      const isCurrentAdmin = window.location.pathname.startsWith('/admin');
       const isDirector = window.location.pathname.startsWith('/director');
-      const base = isDirector ? '/director' : '/dashboard';
+      const base = isCurrentAdmin ? '/admin' : (isDirector ? '/director' : '/dashboard');
       const path = track === 'All' ? `${base}/students` : `${base}/students?track=${track}`;
       window.history.replaceState({}, '', path);
       render();

@@ -5,10 +5,11 @@ namespace Modules\Auth\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +22,12 @@ class User extends Authenticatable
         'password',
         'phone',
         'role',
+        'status',
+        'department',
+        'location',
+        'bio',
+        'avatar',
+        'profile_photo_path',
         'permissions',
     ];
 
@@ -41,11 +48,15 @@ class User extends Authenticatable
      */
     protected $casts = [
         'permissions' => 'array',
-        
     ];
 
     public function studentProfile()
     {
         return $this->hasOne(\Modules\Student\Models\StudentProfile::class, 'student_id');
+    }
+
+    public function facultyProfile()
+    {
+        return $this->hasOne(\Modules\Faculty\Models\FacultyProfile::class, 'faculty_id');
     }
 }

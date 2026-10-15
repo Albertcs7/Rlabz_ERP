@@ -19,6 +19,8 @@ return new class extends Migration
             $table->timestamp('approved_at')->nullable();
             $table->enum('status', ['draft', 'pending_approval', 'approved', 'rejected'])->default('draft');
             $table->timestamps();
+
+            $table->index('status', 'idx_projfin_status');
         });
     }
 

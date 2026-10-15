@@ -15,6 +15,8 @@ return new class extends Migration
             $table->string('report_file', 500);
             $table->foreignId('uploaded_by')->constrained('users');
             $table->dateTime('upload_date');
+
+            $table->index(['project_id', 'upload_date'], 'idx_projrep_project_upload');
         });
     }
 

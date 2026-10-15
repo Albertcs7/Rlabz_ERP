@@ -12,6 +12,7 @@ use Modules\Finance\Models\ProjectFinance;
 use Modules\Finance\Models\Invoice;
 use Modules\Finance\Models\HostingCharge;
 use Modules\Finance\Models\MaintenanceSupportCharge;
+use Modules\Finance\Models\MarketingExpense;
 use Modules\Finance\Services\FinanceService;
 use Modules\Project\Models\Project;
 
@@ -195,9 +196,15 @@ class PaymentController extends Controller
             return response()->json(['message' => $check['message']], $check['http_status']);
         }
 
+        $overheadCheck = $this->financeService->evaluateOverheadCeiling((int) $validated['project_finance_id'], (float) $validated['amount']);
+
         $charge = HostingCharge::create($validated);
 
-        return response()->json(['message' => 'Resource payment recorded successfully', 'charge' => $charge]);
+        return response()->json([
+            'message' => 'Resource payment recorded successfully',
+            'charge' => $charge,
+            'overhead_check' => $overheadCheck
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -224,9 +231,51 @@ class PaymentController extends Controller
             return response()->json(['message' => $check['message']], $check['http_status']);
         }
 
+        $overheadCheck = $this->financeService->evaluateOverheadCeiling((int) $validated['project_finance_id'], (float) $validated['amount']);
+
         $charge = MaintenanceSupportCharge::create($validated);
 
-        return response()->json(['message' => 'Maintenance record added successfully', 'charge' => $charge]);
+        return response()->json([
+            'message' => 'Maintenance record added successfully',
+            'charge' => $charge,
+            'overhead_check' => $overheadCheck
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Marketing Expense (Rule A + Rule B)
+    // ─────────────────────────────────────────────────────────────────────────
+    public function recordMarketingExpense(Request $request)
+    {
+        $validated = $request->validate([
+            'project_finance_id' => 'required|exists:project_finances,id',
+            'title'              => 'required|string|max:255',
+            'category'           => 'nullable|string|max:100',
+            'amount'             => 'required|numeric|min:0.01',
+            'expense_date'       => 'required|date',
+            'vendor'             => 'nullable|string|max:255',
+        ]);
+
+        $project = $this->projectFromFinanceId((int) $validated['project_finance_id']);
+        if (!$project) {
+            return response()->json(['message' => 'Project not found for this finance record.'], 422);
+        }
+
+        // Rule A + Rule B: validate budget > 0 and project not locked
+        $check = $this->financeService->validateProjectForFinancialWrite($project);
+        if (!$check['valid']) {
+            return response()->json(['message' => $check['message']], $check['http_status']);
+        }
+
+        $validated['category'] = $validated['category'] ?? 'other';
+        $validated['recorded_by'] = $this->currentUserId($request);
+
+        $expense = MarketingExpense::create($validated);
+
+        return response()->json([
+            'message' => 'Marketing expense recorded successfully',
+            'data'    => $expense
+        ], 201);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -234,7 +283,7 @@ class PaymentController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function getProjectBillingLimits($id)
     {
-        $pf = ProjectFinance::with(['project', 'hostingCharges', 'maintenanceSupportCharges'])
+        $pf = ProjectFinance::with(['project', 'hostingCharges', 'maintenanceSupportCharges', 'marketingExpenses'])
             ->where('id', $id)
             ->orWhere('project_id', $id)
             ->first();
@@ -261,6 +310,11 @@ class PaymentController extends Controller
             'total_development_amount' => $totalDevAmount,
             'remaining_dev_billable'   => $remainingDevBillable,
             'total_project_budget'     => $totalProjectBudget,
+            'overhead_budget'          => (float) ($pf->overhead_budget ?? 0),
+            'consumed_overhead'        => $pf->consumed_overhead,
+            'remaining_overhead'       => $pf->remaining_overhead,
+            'marketing_budget'         => (float) ($pf->marketing_budget ?? 0),
+            'marketing_expenses'       => $pf->marketingExpenses,
             'hosting_charges'          => $pf->hostingCharges,
             'maintenance_charges'      => $pf->maintenanceSupportCharges
         ]);

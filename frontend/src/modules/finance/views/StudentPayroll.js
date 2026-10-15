@@ -26,87 +26,117 @@ export async function StudentPayroll(route, router) {
   const generateReceipt = (pr) => {
     const printEl = document.createElement('div');
     printEl.innerHTML = `
-      <div style="font-family: Arial, sans-serif; color: #1a1a1a; padding: 40px; max-width: 700px; margin: 0 auto;">
-        <!-- Header -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 3px solid var(--primary); padding-bottom: 18px; margin-bottom: 24px;">
-          <div>
-            <div style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:-0.5px;">RLabZ</div>
-            <div style="font-size:12px; color:#666; margin-top:4px;">Modular Enterprise Resource Planning<br>Rajagiri College of Social Sciences, Kochi</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:18px; font-weight:800; color:#333; margin-bottom:4px;">STUDENT PAYROLL RECEIPT</div>
-            <div style="font-size:12px; color:#666;">Ref: <strong>${pr.txRef}</strong></div>
-            <div style="font-size:12px; color:#666;">Payment Date: <strong>${pr.paymentDate}</strong></div>
-          </div>
-        </div>
+      <div style="position: relative; font-family: Arial, sans-serif; color: #1a1a1a; padding: 40px; max-width: 700px; margin: 0 auto; overflow: hidden;">
+        
+        <!-- BACKGROUND WATERMARK LAYER (z-index: 0) -->
+        <img
+          src="/assets/RlabZ_Watermark.png"
+          alt="RLabZ Watermark"
+          style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 504px;
+            height: auto;
+            opacity: 0.096;
+            pointer-events: none;
+            z-index: 0;
+            mix-blend-mode: multiply;
+          "
+          onerror="this.style.display='none'"
+        />
 
-        <!-- Student Info -->
-        <div style="display:flex; justify-content:space-between; margin-bottom:24px; background:#f8fafb; border-radius:8px; padding:16px 20px;">
-          <div>
-            <div style="font-size:11px; text-transform:uppercase; color:#888; letter-spacing:0.05em; margin-bottom:4px;">Student Name</div>
-            <div style="font-size:16px; font-weight:700;">${pr.studentName}</div>
-            <div style="font-size:12px; color:#666; margin-top:2px;">ID: ${pr.id}</div>
-          </div>
-          <div>
-            <div style="font-size:11px; text-transform:uppercase; color:#888; letter-spacing:0.05em; margin-bottom:4px;">Designation</div>
-            <div style="font-size:16px; font-weight:700;">${pr.designation}</div>
-          </div>
-          <div>
-            <div style="font-size:11px; text-transform:uppercase; color:#888; letter-spacing:0.05em; margin-bottom:4px;">Project</div>
-            <div style="font-size:16px; font-weight:700;">${pr.projectName}</div>
-          </div>
-        </div>
-
-        <!-- Payroll Details -->
-        <table style="width:100%; border-collapse:collapse; margin-bottom:24px; font-size:13px;">
-          <thead>
-            <tr style="background:#f1f5f9;">
-              <th style="padding:10px 14px; text-align:left; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid var(--border-subtle);">Description</th>
-              <th style="padding:10px 14px; text-align:right; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid var(--border-subtle);">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom:1px solid var(--border-subtle);">
-              <td style="padding:10px 14px;">Payroll Period</td>
-              <td style="padding:10px 14px; text-align:right; font-weight:600;">${pr.period}</td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border-subtle);">
-              <td style="padding:10px 14px;">Logged Hours</td>
-              <td style="padding:10px 14px; text-align:right; color:#666;">${pr.loggedHours} hrs</td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border-subtle);">
-              <td style="padding:10px 14px; font-weight:600;">Approved Hours</td>
-              <td style="padding:10px 14px; text-align:right; font-weight:600;">${pr.approvedHours} hrs</td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border-subtle);">
-              <td style="padding:10px 14px;">Applicable Rate (${pr.designation})</td>
-              <td style="padding:10px 14px; text-align:right; font-weight:600;">₹${pr.rate}/hr</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <!-- Total -->
-        <div style="display:flex; justify-content:flex-end; margin-bottom:28px;">
-          <table style="width:280px; font-size:14px;">
-            <tr style="border-top:2px solid var(--primary);">
-              <td style="padding:12px 14px; font-size:16px; font-weight:800;">Total Paid</td>
-              <td style="padding:12px 14px; text-align:right; font-size:18px; font-weight:800; color:var(--primary);">${fmt(pr.grossAmount)}</td>
+        <!-- ALL PDF RECEIPT CONTENT (z-index: 1) -->
+        <div style="position: relative; z-index: 1;">
+          <!-- Header -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-bottom: 3px solid var(--primary); padding-bottom: 18px; margin-bottom: 24px;">
+            <tr>
+              <td style="vertical-align: top;">
+                <img
+                  src="/assets/RlabZ_Logo.png"
+                  alt="RLabZ Logo"
+                  style="height: 70px; width: auto; display: inline-block; object-fit: contain; margin-bottom: 6px;"
+                  onerror="this.style.display='none'"
+                />
+                <div style="font-size:12px; color:#666; margin-top:2px;">Modular Enterprise Resource Planning<br>Rajagiri College of Social Sciences, Kochi</div>
+              </td>
+              <td style="vertical-align: top; text-align: right;">
+                <div style="font-size:18px; font-weight:800; color:#333; margin-bottom:4px; letter-spacing:0.02em;">STUDENT PAYROLL RECEIPT</div>
+                <div style="font-size:12px; color:#666; margin-bottom:2px;">Ref: <strong>${pr.txRef}</strong></div>
+                <div style="font-size:12px; color:#666;">Payment Date: <strong>${pr.paymentDate}</strong></div>
+              </td>
             </tr>
           </table>
-        </div>
 
-        <!-- Payment Status -->
-        <div style="background:var(--primary-light); border:1px solid var(--border-color); border-radius:8px; padding:16px 20px;">
-          <div style="font-size:11px; text-transform:uppercase; color:var(--primary); letter-spacing:0.05em; margin-bottom:6px;">Payment Status</div>
-          <div style="font-size:17px; font-weight:800; color:var(--primary);">PAID</div>
-          <div style="font-size:13px; color:var(--primary); margin-top:6px;">
-            Paid on: <strong>${pr.paymentDate}</strong>&nbsp;&nbsp;|&nbsp;&nbsp;
-            Transaction Ref: <strong style="font-family:monospace;">${pr.txRef}</strong>
+          <!-- Student Info -->
+          <div style="display:flex; justify-content:space-between; margin-bottom:24px; background:#f8fafb; border-radius:8px; padding:16px 20px;">
+            <div>
+              <div style="font-size:11px; text-transform:uppercase; color:#888; letter-spacing:0.05em; margin-bottom:4px;">Student Name</div>
+              <div style="font-size:16px; font-weight:700;">${pr.studentName}</div>
+              <div style="font-size:12px; color:#666; margin-top:2px;">ID: ${pr.id}</div>
+            </div>
+            <div>
+              <div style="font-size:11px; text-transform:uppercase; color:#888; letter-spacing:0.05em; margin-bottom:4px;">Designation</div>
+              <div style="font-size:16px; font-weight:700;">${pr.designation}</div>
+            </div>
+            <div>
+              <div style="font-size:11px; text-transform:uppercase; color:#888; letter-spacing:0.05em; margin-bottom:4px;">Project</div>
+              <div style="font-size:16px; font-weight:700;">${pr.projectName}</div>
+            </div>
           </div>
-        </div>
 
-        <div style="margin-top:30px; text-align:center; font-size:11px; color:#aaa;">
-          This is a system-generated payroll receipt from RLabZ ERP. No signature required.
+          <!-- Payroll Details -->
+          <table style="width:100%; border-collapse:collapse; margin-bottom:24px; font-size:13px;">
+            <thead>
+              <tr style="background:#f1f5f9;">
+                <th style="padding:10px 14px; text-align:left; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid var(--border-subtle);">Description</th>
+                <th style="padding:10px 14px; text-align:right; color:#555; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid var(--border-subtle);">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--border-subtle);">
+                <td style="padding:10px 14px;">Payroll Period</td>
+                <td style="padding:10px 14px; text-align:right; font-weight:600;">${pr.period}</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border-subtle);">
+                <td style="padding:10px 14px;">Logged Hours</td>
+                <td style="padding:10px 14px; text-align:right; color:#666;">${pr.loggedHours} hrs</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border-subtle);">
+                <td style="padding:10px 14px; font-weight:600;">Approved Hours</td>
+                <td style="padding:10px 14px; text-align:right; font-weight:600;">${pr.approvedHours} hrs</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border-subtle);">
+                <td style="padding:10px 14px;">Applicable Rate</td>
+                <td style="padding:10px 14px; text-align:right; font-weight:600;">₹${pr.rate}/hr</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Total -->
+          <div style="display:flex; justify-content:flex-end; margin-bottom:28px;">
+            <table style="width:280px; font-size:14px;">
+              <tr style="border-top:2px solid var(--primary);">
+                <td style="padding:12px 14px; font-size:16px; font-weight:800;">Total Paid</td>
+                <td style="padding:12px 14px; text-align:right; font-size:18px; font-weight:800; color:var(--primary);">${fmt(pr.grossAmount)}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Payment Status -->
+          <div style="background:var(--primary-light); border:1px solid var(--border-color); border-radius:8px; padding:16px 20px;">
+            <div style="font-size:11px; text-transform:uppercase; color:var(--primary); letter-spacing:0.05em; margin-bottom:6px;">Payment Status</div>
+            <div style="font-size:17px; font-weight:800; color:var(--primary);">PAID</div>
+            <div style="font-size:13px; color:var(--primary); margin-top:6px;">
+              Paid on: <strong>${pr.paymentDate}</strong>&nbsp;&nbsp;|&nbsp;&nbsp;
+              Transaction Ref: <strong style="font-family:monospace;">${pr.txRef}</strong>
+            </div>
+          </div>
+
+          <div style="margin-top:30px; text-align:center; font-size:11px; color:#aaa; border-top:1px solid var(--border-subtle); padding-top:12px;">
+            This is a system-generated payroll receipt from RLabZ ERP. No signature required.
+          </div>
         </div>
       </div>
     `;
@@ -138,7 +168,7 @@ export async function StudentPayroll(route, router) {
       const sName = pr.student_name || 'Unknown';
       const desg = (pr.designation || '').charAt(0).toUpperCase() + (pr.designation || '').slice(1);
       const status = pr.status || 'Pending';
-      
+
       const matchProject = projectFilter === 'All' || projId.toString() === projectFilter;
       const matchDesg = desgFilter === 'All' || desg === desgFilter;
       const matchStatus = statusFilter === 'All' || status === statusFilter;
@@ -223,7 +253,7 @@ export async function StudentPayroll(route, router) {
         const psId = btn.dataset.id;
         const desg = btn.dataset.desg;
         const remaining = parseFloat(btn.dataset.remaining) || 0;
-        
+
         // Create payment modal
         const modal = document.createElement('div');
         modal.className = 'fin-modal-overlay';
@@ -245,7 +275,7 @@ export async function StudentPayroll(route, router) {
           </div>
         `;
         document.body.appendChild(modal);
-        
+
         modal.querySelector('#cancel-pay').addEventListener('click', () => modal.remove());
         modal.querySelector('#confirm-pay').addEventListener('click', async () => {
           const amount = parseFloat(modal.querySelector('#pay-amount').value);
@@ -259,11 +289,11 @@ export async function StudentPayroll(route, router) {
               designation: desg
             });
             modal.remove();
-            
+
             // set loading state before re-fetching
             const tbody = container.querySelector('#payroll-tbody');
             if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:3rem;color:var(--text-muted)"><span class="fin-spinner" style="margin-right:10px"></span> Updating payroll...</td></tr>`;
-            
+
             payrollData = await financeService.getStudentPayroll();
             renderTable();
           } catch (e) {
@@ -404,12 +434,12 @@ export async function StudentPayroll(route, router) {
 
         payrollData = await financeService.getStudentPayroll();
         allProjects = await financeService.getProjectsList();
-        
+
         const projectFilter = container.querySelector('#project-filter');
         projectFilter.innerHTML = '<option value="All">All Projects</option>' + allProjects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-        
+
         renderTable();
-        
+
         // Fetch and render rate history
         rateHistory = await financeService.getStudentHourlyRateHistory();
         renderRateHistory();
@@ -421,7 +451,7 @@ export async function StudentPayroll(route, router) {
 
     const renderRateHistory = (modalTbody) => {
       if (!rateHistory.length) {
-        if(modalTbody) modalTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No history available</td></tr>';
+        if (modalTbody) modalTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No history available</td></tr>';
         return;
       }
       const html = rateHistory.map(h => `
@@ -432,7 +462,7 @@ export async function StudentPayroll(route, router) {
           <td>${h.updated_by_name}</td>
         </tr>
       `).join('');
-      if(modalTbody) modalTbody.innerHTML = html;
+      if (modalTbody) modalTbody.innerHTML = html;
     };
 
     // Bind Manage Rate Button - opens a full modal
@@ -499,10 +529,10 @@ export async function StudentPayroll(route, router) {
           await financeService.updateStudentHourlyRate({ new_rate: newRate });
           currentGlobalRate = newRate;
           modal.querySelector('#modal-current-rate').textContent = '\u20b9' + newRate + '/hour';
-          
+
           rateHistory = await financeService.getStudentHourlyRateHistory();
           renderRateHistory(modalTbody);
-          
+
           saveBtn.disabled = false;
           saveBtn.textContent = 'Save New Rate';
         } catch (e) {

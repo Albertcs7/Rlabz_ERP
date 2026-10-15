@@ -19,6 +19,10 @@ return new class extends Migration
             $table->enum('status', ['scheduled', 'completed', 'cancelled']);
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
+
+            $table->index(['project_id', 'scheduled_at'], 'idx_meetings_proj_scheduled');
+            $table->index(['status', 'scheduled_at'], 'idx_meetings_status_scheduled');
+            $table->index('scheduled_at', 'idx_meetings_scheduled_at');
         });
     }
 

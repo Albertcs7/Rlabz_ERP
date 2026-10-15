@@ -1,431 +1,380 @@
 import { API_BASE } from '@/core/config/api.js';
-import Swal from 'sweetalert2';
+import { updateDesignSidebar } from '../layouts/DesignLayout.js';
+import { openTicketStudioModal, getStatusBadge, getPriorityBadge, getBallBadge } from '../utils/ticketModal.js';
 import '../design.css';
 
 export async function DesignDashboard(route, router) {
+  setTimeout(updateDesignSidebar, 0);
+
   const container = document.createElement('div');
   container.className = 'design-module animate-fade-in';
 
-  let currentTab = 'projects'; // 'projects' | 'tokens' | 'components' | 'activity'
   const token = localStorage.getItem('token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-  let stats = {
-    activeDesignTracks: 6,
-    mockupsInReview: 7,
-    designTokens: 48,
-    figmaPrototypes: 6,
-  };
+  // Fetch Dashboard Summary Data & Notifications
+  let stats = null;
+  let recentTickets = [];
+  let urgentDeadlines = [];
+  let teamCapacity = [];
+  let recentAudit = [];
+  let designAlerts = [];
+  let unreadNotifCount = 0;
 
-  let projects = [
-    {
-      id: 1,
-      title: 'Smart Campus IoT System',
-      project_type: 'IoT Web Dashboard',
-      status: 'in_progress',
-      figma_url: 'https://www.figma.com/file/rlabz-design-system/smart-iot',
-      progress_percentage: 85,
-      screens_count: 18,
-      lead_designer: 'Design Head',
-      tags: ['Dark Mode', 'WebSockets', 'Telemetry Charts', 'Responsive']
-    },
-    {
-      id: 2,
-      title: 'Campus ERP Mobile Application',
-      project_type: 'Mobile App (Flutter)',
-      status: 'in_progress',
-      figma_url: 'https://www.figma.com/file/rlabz-design-system/campus-erp',
-      progress_percentage: 70,
-      screens_count: 24,
-      lead_designer: 'Design Head',
-      tags: ['Mobile UI', 'Figma Wireframes', 'Biometric Flow', 'Design Tokens']
-    },
-    {
-      id: 3,
-      title: 'Automated Library Kiosk System',
-      project_type: 'Touchscreen Kiosk UI',
-      status: 'completed',
-      figma_url: 'https://www.figma.com/file/rlabz-design-system/library-kiosk',
-      progress_percentage: 100,
-      screens_count: 14,
-      lead_designer: 'Student Orbit',
-      tags: ['Touch Interface', 'High Contrast', 'Large Target Areas', 'Slip Print UI']
-    },
-    {
-      id: 4,
-      title: 'Rajagiri ERP Executive Control Panel',
-      project_type: 'Enterprise Web Portal',
-      status: 'in_progress',
-      figma_url: 'https://www.figma.com/file/rlabz-design-system/executive-panel',
-      progress_percentage: 60,
-      screens_count: 32,
-      lead_designer: 'Design Head',
-      tags: ['Executive KPIs', 'Audit Flow', 'Design System v2', 'Tailored Modals']
+  try {
+    const [dashRes, tickRes, capRes, auditRes, notifRes] = await Promise.all([
+      fetch(`${API_BASE}/design/dashboard`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/design/tickets`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/design/team-capacity`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/design/audit-logs`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/design/notifications`, { headers }).then(r => r.ok ? r.json() : null)
+    ]);
+
+    if (dashRes && dashRes.status === 'success') {
+      stats = dashRes.stats;
+      urgentDeadlines = dashRes.urgentDeadlines || [];
     }
-  ];
-
-  let assets = {
-    colors: [
-      { name: 'RLabZ Primary Emerald', hex: '#059669', token: '--primary', desc: 'Interactive buttons and active tab markers' },
-      { name: 'Primary Hover Forest', hex: '#047857', token: '--primary-hover', desc: 'Hover states and active borders' },
-      { name: 'Royal Billing Blue', hex: '#2563eb', token: '--accent-blue', desc: 'Financial invoices and metrics' },
-      { name: 'Dark Slate Surface', hex: '#0f172a', token: '--bg-slate', desc: 'Dark theme canvas and contrasting headers' },
-      { name: 'Card Surface Clean', hex: '#ffffff', token: '--bg-card', desc: 'Modular cards and elevation surfaces' },
-      { name: 'Amber Warning Tag', hex: '#d97706', token: '--tag-amber', desc: 'Impending renewal alert tags' },
-      { name: 'Crimson Alert Tag', hex: '#dc2626', token: '--tag-red', desc: 'Overdue task flags' },
-    ],
-    components: [
-      { name: 'Rounded KPI Metric Card', version: 'v2.4', state: 'Production Ready', category: 'Data Display' },
-      { name: 'Slide-Over Notification Drawer', version: 'v1.8', state: 'Production Ready', category: 'Overlays' },
-      { name: 'Interactive Profile Tabs Sheet', version: 'v2.0', state: 'Production Ready', category: 'User Management' },
-      { name: 'Financial Transaction Table Grid', version: 'v1.5', state: 'Production Ready', category: 'Data Grids' },
-      { name: 'Accessible Multi-State Modal Dialog', version: 'v2.1', state: 'Production Ready', category: 'Feedback & Modals' },
-    ]
-  };
-
-  let activities = [
-    { id: 1, title: 'Mobile App High-Fidelity UI Screens', project: 'Campus ERP Mobile Application', author: 'Design Head', type: 'Figma Prototype', status: 'Approved' },
-    { id: 2, title: 'IoT Telemetry Dark Mode Dashboard Spec', project: 'Smart Campus IoT System', author: 'Student Spark', type: 'UI Kit', status: 'In Review' },
-    { id: 3, title: 'Touchscreen Kiosk Flow & Accessibility Audit', project: 'Automated Library Kiosk System', author: 'Student Orbit', type: 'UX Wireframe', status: 'Approved' },
-    { id: 4, title: 'Executive Control Panel Navigation System', project: 'Rajagiri ERP Executive Control Panel', author: 'Design Head', type: 'Component Spec', status: 'Completed' }
-  ];
-
-  // Fetch live backend design data
-  if (token) {
-    try {
-      const [dashRes, projRes, assetRes] = await Promise.all([
-        fetch(`${API_BASE}/design/dashboard`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE}/design/projects`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE}/design/assets`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-
-      if (dashRes.ok) {
-        const d = await dashRes.json();
-        if (d.stats) stats = { ...stats, ...d.stats };
-        if (d.activities) activities = d.activities;
-      }
-      if (projRes.ok) {
-        const p = await projRes.json();
-        if (p.data && p.data.length > 0) projects = p.data;
-      }
-      if (assetRes.ok) {
-        const a = await assetRes.json();
-        if (a.data) assets = a.data;
-      }
-    } catch (e) {
-      console.warn('Design module using localized data:', e);
+    if (tickRes && tickRes.status === 'success') {
+      recentTickets = (tickRes.data || []).slice(0, 5);
     }
+    if (capRes && capRes.status === 'success') {
+      teamCapacity = capRes.team || [];
+    }
+    if (auditRes && auditRes.status === 'success') {
+      recentAudit = (auditRes.data || []).slice(0, 6);
+    }
+    if (notifRes && notifRes.status === 'success') {
+      designAlerts = notifRes.alerts || [];
+      unreadNotifCount = notifRes.unreadCount || designAlerts.length;
+    }
+  } catch (e) {
+    console.error('Error loading design dashboard:', e);
   }
 
-  function render() {
-    container.innerHTML = `
-      <!-- Header -->
-      <div class="design-header">
-        <div>
-          <h1>Design Studio & Assets</h1>
-          <p>Enterprise UI/UX Design System, Prototypes & Asset Governance</p>
-        </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button class="design-btn outline" id="btn-copy-tokens">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-            Copy Design Tokens
-          </button>
-          <button class="design-btn primary" id="btn-add-track">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            + Add Figma Prototype Track
-          </button>
-        </div>
-      </div>
+  const s = stats || {
+    totalTickets: 0,
+    openTickets: 0,
+    unassignedQueue: 0,
+    approvalsPending: 0,
+    revisionsActive: 0,
+    overdueCount: 0,
+    assetCount: 0
+  };
 
-      <!-- KPI Strip -->
-      <div class="design-kpi-grid">
-        <div class="design-kpi-card blue">
-          <div class="kpi-lbl">Active Design Tracks</div>
-          <div class="kpi-num">${stats.activeDesignTracks}</div>
-          <div class="kpi-sub">Across all ERP sprints</div>
-        </div>
-        <div class="design-kpi-card amber">
-          <div class="kpi-lbl">Mockups In Review</div>
-          <div class="kpi-num">${stats.mockupsInReview}</div>
-          <div class="kpi-sub">Awaiting Design Head sign-off</div>
-        </div>
-        <div class="design-kpi-card green">
-          <div class="kpi-lbl">Design System Tokens</div>
-          <div class="kpi-num">${stats.designTokens || 48}</div>
-          <div class="kpi-sub">Standardized CSS custom props</div>
-        </div>
-        <div class="design-kpi-card purple">
-          <div class="kpi-lbl">Figma Prototypes</div>
-          <div class="kpi-num">${stats.figmaPrototypes}</div>
-          <div class="kpi-sub">Live synced deliverables</div>
-        </div>
-      </div>
+  // Build Notification Drawer HTML (exact match to Finance module layout)
+  const drawerHtml = `
+    <!-- Floating Bell Button -->
+    <button class="fin-bell-trigger ${designAlerts.length > 0 ? 'fin-bell-shake' : ''}" id="fin-bell-btn" title="View Action Items & Notifications">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      ${designAlerts.length > 0 ? `<span class="fin-bell-badge">${designAlerts.length}</span>` : ''}
+    </button>
 
-      <!-- Tabs Navigation -->
-      <div class="design-tabs">
-        <button class="design-tab-btn ${currentTab === 'projects' ? 'active' : ''}" data-tab="projects">
-          UI/UX Project Tracks (${projects.length})
-        </button>
-        <button class="design-tab-btn ${currentTab === 'tokens' ? 'active' : ''}" data-tab="tokens">
-          Design Tokens & Palette
-        </button>
-        <button class="design-tab-btn ${currentTab === 'components' ? 'active' : ''}" data-tab="components">
-          Component Library (${assets.components?.length || 5})
-        </button>
-        <button class="design-tab-btn ${currentTab === 'activity' ? 'active' : ''}" data-tab="activity">
-          Review Log & Activities
+    <!-- Drawer Backdrop -->
+    <div class="fin-drawer-backdrop" id="fin-drawer-backdrop"></div>
+
+    <!-- Notification Drawer -->
+    <div class="fin-notification-drawer" id="fin-notification-drawer">
+      <div class="fin-drawer-header">
+        <div class="fin-drawer-title-wrap">
+          <span class="fin-drawer-title">Design Action Items</span>
+          ${designAlerts.length > 0 ? `<span class="fin-drawer-count">${designAlerts.length}</span>` : ''}
+        </div>
+        <button class="fin-drawer-close" id="fin-drawer-close" title="Close Drawer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
         </button>
       </div>
 
-      <!-- Tab Content Outlet -->
-      <div class="design-tab-content">
-        ${renderTabContent()}
-      </div>
-    `;
-
-    attachEvents();
-  }
-
-  function renderTabContent() {
-    if (currentTab === 'projects') {
-      return `
-        <div class="design-projects-grid">
-          ${projects.map(p => `
-            <div class="design-card">
-              <div class="design-card-top">
-                <div class="design-card-title">${p.title}</div>
-                <span class="design-type-badge">${p.project_type || 'Web App'}</span>
+      <div class="fin-drawer-body">
+        ${designAlerts.length > 0
+          ? designAlerts.map(a => `
+            <div class="fin-action-card ${a.isOverdue || (a.daysLeft !== null && a.daysLeft <= 0) ? 'card-overdue' : 'card-upcoming'}" data-ticket-id="${a.ticketId || ''}" data-category="${a.category}" data-type="${a.type}" role="button" tabindex="0">
+              <div class="fin-card-header-row">
+                <span class="fin-cat-badge fin-cat-${a.type || 'info'}">${a.category}</span>
+                ${a.daysLeft !== null && a.daysLeft !== undefined ? `
+                  <span class="fin-countdown-tag ${a.isOverdue || a.daysLeft < 0 ? 'tag-red' : (a.daysLeft === 0 ? 'tag-red' : 'tag-amber')}">
+                    ${a.isOverdue || a.daysLeft < 0 ? `${Math.abs(a.daysLeft)}d Overdue` : (a.daysLeft === 0 ? 'Due Today' : `${a.daysLeft}d Left`)}
+                  </span>
+                ` : `
+                  <span class="fin-countdown-tag tag-amber">Action Needed</span>
+                `}
               </div>
-
-              <div class="design-meta-row">
-                <span>Lead: <strong>${p.lead_designer || 'Design Head'}</strong></span>
-                <span>${p.screens_count || 16} Screens</span>
-              </div>
-
-              <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">
-                <span>Design Sprint Progress</span>
-                <span style="font-weight:700; color:var(--primary);">${p.progress_percentage || 50}%</span>
-              </div>
-              <div class="design-prog-bar">
-                <div class="design-prog-fill" style="width: ${p.progress_percentage || 50}%;"></div>
-              </div>
-
-              <div class="design-tags-wrap">
-                ${(p.tags || ['UI/UX', 'Figma', 'Tokens']).map(t => `<span class="design-pill-tag">${t}</span>`).join('')}
-              </div>
-
-              <div class="design-card-actions">
-                <a href="${p.figma_url || '#'}" target="_blank" class="design-btn primary">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  Open in Figma
-                </a>
-                <button class="design-btn outline btn-review-track" data-id="${p.id}" data-title="${p.title}">
-                  Submit Review
-                </button>
+              <div class="fin-card-msg">${a.message}</div>
+              <div class="fin-card-meta">
+                <span class="fin-project-name">${a.ticketNumber ? `<strong>${a.ticketNumber}</strong> · ` : ''}${a.projectName || 'Design Studio'}</span>
               </div>
             </div>
-          `).join('')}
+          `).join('')
+          : `<div style="text-align:center; padding: 2.5rem 1rem; color: #64748b; font-size: 0.9rem;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
+              No pending action items.<br>All design briefs are scoped, assigned, and on schedule.
+            </div>`
+        }
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = `
+    <!-- Native Notification Drawer & Bell (Finance Styled) -->
+    ${drawerHtml}
+
+    <!-- Top Header & Quick Actions -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin: 0; color: #0f172a;">Design Studio Dashboard</h2>
+        <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+          Executive oversight for creative intake, workload balancing, deliverables, and brand assets.
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <a href="/design/scheduling" class="fin-btn outline" id="btn-dash-calendar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          14-Day Calendar
+        </a>
+        <a href="/design/requests" class="fin-btn primary" id="btn-dash-raise">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Raise New Request
+        </a>
+      </div>
+    </div>
+
+    <!-- KPI Metrics Strip (Finance Styled) -->
+    <div class="fin-kpi-strip">
+      <div class="fin-kpi-card blue">
+        <div class="kpi-label">Active Tickets</div>
+        <div class="kpi-value">${s.openTickets}</div>
+        <div class="kpi-sub">${s.totalTickets} total lifetime jobs</div>
+      </div>
+      <div class="fin-kpi-card dark-green">
+        <div class="kpi-label">Archived Assets</div>
+        <div class="kpi-value">${s.assetCount}</div>
+        <div class="kpi-sub">Reusable deliverables in library</div>
+      </div>
+      <div class="fin-kpi-card warning">
+        <div class="kpi-label">Unassigned Queue</div>
+        <div class="kpi-value">${s.unassignedQueue}</div>
+        <div class="kpi-sub">Awaiting Lead allocation</div>
+      </div>
+      <div class="fin-kpi-card ${s.overdueCount > 0 ? 'danger' : 'purple'}">
+        <div class="kpi-label">${s.overdueCount > 0 ? 'Overdue Requests' : 'Pending Review'}</div>
+        <div class="kpi-value">${s.overdueCount > 0 ? s.overdueCount : s.approvalsPending}</div>
+        <div class="kpi-sub">${s.overdueCount > 0 ? 'Past required delivery date' : `${s.revisionsActive} active revision rounds`}</div>
+      </div>
+    </div>
+
+    <!-- 2-Column Summary Section -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+      <!-- Recent Tickets Summary Table -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: #0f172a;">Recent Design Jobs</h3>
+            <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">Active deliverables across divisions and projects.</p>
+          </div>
+          <a href="/design/tickets" style="font-size: 0.82rem; font-weight: 600; color: #059669; text-decoration: none;">
+            View All Tickets &rarr;
+          </a>
         </div>
-      `;
-    }
 
-    if (currentTab === 'tokens') {
-      return `
-        <div>
-          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Standard Color Palette</h3>
-          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-            Tailored semantic colors adhering to WCAG 2.1 AA accessibility contrast standards.
-          </p>
+        <table class="design-data-table">
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Title & Project</th>
+              <th>Status</th>
+              <th>Assigned To</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recentTickets.length === 0 ? `
+              <tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 2rem;">No recent tickets found.</td></tr>
+            ` : recentTickets.map(t => `
+              <tr>
+                <td>
+                  <span class="design-ticket-id-link btn-view-ticket" data-id="${t.id}">
+                    ${t.ticket_number}
+                  </span>
+                </td>
+                <td>
+                  <div style="font-weight: 700; color: #0f172a;">${t.title}</div>
+                  <div style="font-size: 0.72rem; color: #64748b; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                    ${t.project_title ? `<span class="asset-project-badge">📁 ${t.project_title}</span>` : ''}
+                    ${t.brand_kit_name ? `<span class="asset-brand-badge">🎨 ${t.brand_kit_name}</span>` : ''}
+                  </div>
+                </td>
+                <td>${getStatusBadge(t.status)}</td>
+                <td>
+                  ${t.assigned_to_name ? `
+                    <div style="font-weight: 600; font-size: 0.82rem;">${t.assigned_to_name}</div>
+                  ` : `
+                    <span style="color: #d97706; font-weight: 600; font-size: 0.78rem;">● Unassigned</span>
+                  `}
+                </td>
+                <td>
+                  <button class="design-btn design-btn-secondary design-btn-sm btn-open-studio" data-id="${t.id}">
+                    Open Studio
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
 
-          <div class="swatches-grid">
-            ${(assets.colors || []).map(c => `
-              <div class="swatch-card">
-                <div class="swatch-color-preview" style="background: ${c.hex};"></div>
-                <div class="swatch-info">
-                  <div class="swatch-name">${c.name}</div>
-                  <div class="swatch-hex">${c.hex}</div>
-                  <span class="swatch-token">${c.token}</span>
-                  <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 6px;">${c.desc || ''}</div>
+      <!-- Right Column: Urgent Deadlines & Capacity Snapshot -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Overdue & Upcoming Deadlines Card -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">SLA &amp; Deadline Radar</h4>
+            <span class="fin-badge ${urgentDeadlines.length > 0 ? 'danger' : 'success'}">${urgentDeadlines.length} Active</span>
+          </div>
+
+          ${urgentDeadlines.length === 0 ? `
+            <div style="font-size: 0.82rem; color: #059669; text-align: center; padding: 1rem 0;">
+              ✓ All active deliverables are within committed SLAs.
+            </div>
+          ` : `
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${urgentDeadlines.slice(0, 4).map(u => `
+                <div style="background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 8px 12px; font-size: 0.78rem;">
+                  <div style="display: flex; justify-content: space-between; font-weight: 700; color: #991b1b;">
+                    <span>${u.ticket_number}</span>
+                    <span>Req: ${new Date(u.required_by).toLocaleDateString()}</span>
+                  </div>
+                  <div style="color: #450a0a; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${u.title}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+
+        <!-- Designer Workload Summary -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Team Availability</h4>
+            <a href="/design/users" style="font-size: 0.78rem; font-weight: 600; color: #059669; text-decoration: none;">
+              Manage &rarr;
+            </a>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${teamCapacity.slice(0, 4).map(m => `
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 3px;">
+                  <span style="font-weight: 600; color: #1e293b;">${m.name}</span>
+                  <span style="color: #64748b;">${m.hours_committed_this_week}h committed</span>
+                </div>
+                <div style="height: 6px; background: #f1f5f9; border-radius: 9999px; overflow: hidden;">
+                  <div style="height: 100%; width: ${Math.min((m.hours_committed_this_week / 40) * 100, 100)}%; background: ${m.hours_committed_this_week > 35 ? '#dc2626' : '#059669'}; border-radius: 9999px;"></div>
                 </div>
               </div>
             `).join('')}
           </div>
         </div>
-      `;
-    }
+      </div>
+    </div>
 
-    if (currentTab === 'components') {
-      return `
-        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left;">
-            <thead>
-              <tr style="background: #f8fafc; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">
-                <th style="padding: 12px 16px;">Component Name</th>
-                <th style="padding: 12px 16px;">Category</th>
-                <th style="padding: 12px 16px;">Spec Version</th>
-                <th style="padding: 12px 16px;">Status</th>
-                <th style="padding: 12px 16px; text-align: right;">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(assets.components || []).map(comp => `
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 14px 16px; font-weight: 600;">${comp.name}</td>
-                  <td style="padding: 14px 16px; color: var(--text-muted);">${comp.category}</td>
-                  <td style="padding: 14px 16px;"><span style="font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${comp.version}</span></td>
-                  <td style="padding: 14px 16px;"><span style="display:inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; background: rgba(5, 150, 105, 0.1); color: var(--primary);">${comp.state}</span></td>
-                  <td style="padding: 14px 16px; text-align: right;">
-                    <button class="design-btn outline sm btn-view-spec" data-name="${comp.name}">View Spec</button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+    <!-- Recent Audit History Strip -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+        <div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: #0f172a;">Recent Audit Events</h3>
+          <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">Chronological trail of recent assignments, version uploads, and approvals.</p>
         </div>
-      `;
-    }
+        <a href="/design/audit-log" style="font-size: 0.82rem; font-weight: 600; color: #059669; text-decoration: none;">
+          View Full Audit Log &rarr;
+        </a>
+      </div>
 
-    if (currentTab === 'activity') {
-      return `
-        <div class="design-activity-list">
-          ${activities.map(act => `
-            <div class="design-act-item">
-              <div>
-                <div class="design-act-title">${act.title}</div>
-                <div class="design-act-sub">Project: <strong>${act.project}</strong> • Author: ${act.author} • Type: ${act.type}</div>
-              </div>
-              <div>
-                <span style="display:inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; background: ${act.status === 'Approved' ? 'rgba(5, 150, 105, 0.1)' : 'rgba(217, 119, 6, 0.1)'}; color: ${act.status === 'Approved' ? '#059669' : '#d97706'};">
-                  ${act.status}
-                </span>
-              </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px;">
+        ${recentAudit.map(a => `
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 0.78rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <strong style="color: #0f172a;">${a.actor_name || 'System User'}</strong>
+              <span style="color: #94a3b8;">${new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
-          `).join('')}
-        </div>
-      `;
-    }
-  }
-
-  function attachEvents() {
-    // Tabs
-    container.querySelectorAll('.design-tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentTab = btn.getAttribute('data-tab');
-        render();
-      });
-    });
-
-    // Copy Tokens button
-    container.querySelector('#btn-copy-tokens')?.addEventListener('click', () => {
-      const tokensCss = `:root {\n  --primary: #059669;\n  --primary-hover: #047857;\n  --accent-blue: #2563eb;\n  --bg-slate: #0f172a;\n  --bg-card: #ffffff;\n  --tag-amber: #d97706;\n  --tag-red: #dc2626;\n}`;
-      navigator.clipboard.writeText(tokensCss).then(() => {
-        Swal.fire({
-          icon: 'success',
-          title: 'Tokens Copied!',
-          text: 'Design tokens CSS custom properties copied to clipboard.',
-          timer: 1800,
-          showConfirmButton: false
-        });
-      });
-    });
-
-    // Add Figma Track button
-    container.querySelector('#btn-add-track')?.addEventListener('click', () => {
-      Swal.fire({
-        title: 'Add Design Prototype Track',
-        html: `
-          <div style="display:flex; flex-direction:column; gap:12px; text-align:left; font-size:0.88rem;">
-            <div>
-              <label style="font-weight:600;">Project Title</label>
-              <input id="swal-track-title" class="swal2-input" placeholder="e.g. Healthcare Patient Portal" style="margin:4px 0; width:100%;">
+            <div style="color: #334155;">
+              <span style="color: #059669; font-weight: 700; text-transform: uppercase;">${a.action}</span>
+              ${a.ticket_number ? ` on <strong>${a.ticket_number}</strong>` : ''}
             </div>
-            <div>
-              <label style="font-weight:600;">Figma Prototype / File URL</label>
-              <input id="swal-track-url" class="swal2-input" placeholder="https://www.figma.com/file/..." style="margin:4px 0; width:100%;">
-            </div>
-            <div>
-              <label style="font-weight:600;">Assigned Lead Designer</label>
-              <input id="swal-track-lead" class="swal2-input" value="Design Head" style="margin:4px 0; width:100%;">
-            </div>
+            ${a.reason ? `<div style="font-style: italic; color: #64748b; margin-top: 3px;">"${a.reason}"</div>` : ''}
           </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Register Track',
-        confirmButtonColor: '#059669',
-        preConfirm: () => {
-          const title = document.getElementById('swal-track-title').value.trim();
-          const url = document.getElementById('swal-track-url').value.trim();
-          const lead = document.getElementById('swal-track-lead').value.trim();
-          if (!title) {
-            Swal.showValidationMessage('Please enter a project title');
-            return false;
-          }
-          return { title, url, lead };
-        }
-      }).then(res => {
-        if (res.isConfirmed) {
-          projects.unshift({
-            id: Date.now(),
-            title: res.value.title,
-            project_type: 'Web & Mobile UI',
-            status: 'in_progress',
-            figma_url: res.value.url || 'https://www.figma.com',
-            progress_percentage: 25,
-            screens_count: 8,
-            lead_designer: res.value.lead,
-            tags: ['New Prototype', 'Design Review']
-          });
-          stats.activeDesignTracks += 1;
-          render();
-          Swal.fire({ icon: 'success', title: 'Track Added!', timer: 1500, showConfirmButton: false });
-        }
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  // Attach Studio Modal events
+  container.querySelectorAll('.btn-open-studio, .btn-view-ticket').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      openTicketStudioModal(id, () => {
+        // Refresh page after approval/rejection
+        router.push('/design');
       });
     });
+  });
 
-    // Review buttons
-    container.querySelectorAll('.btn-review-track').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const title = btn.getAttribute('data-title');
-        Swal.fire({
-          title: `Submit Design Feedback: ${title}`,
-          input: 'textarea',
-          inputPlaceholder: 'Enter UI/UX review remarks, layout notes, or approval decisions...',
-          showCancelButton: true,
-          confirmButtonText: 'Approve & Sign Off',
-          confirmButtonColor: '#059669',
-          cancelButtonText: 'Request Revisions'
-        }).then(result => {
-          if (result.isConfirmed) {
-            Swal.fire({ icon: 'success', title: 'Design Approved!', text: 'Approval logged in audit trail.', timer: 1800, showConfirmButton: false });
-          } else if (result.dismiss === Swal.DismissReason.cancel && result.value) {
-            Swal.fire({ icon: 'info', title: 'Revisions Requested', text: 'Comments sent to design sprint team.' });
-          }
+  // ── Action Items Drawer Interactive Controls (Finance-Matched) ──
+  const bellBtn = container.querySelector('#fin-bell-btn');
+  const drawer = container.querySelector('#fin-notification-drawer');
+  const backdrop = container.querySelector('#fin-drawer-backdrop');
+  const closeBtn = container.querySelector('#fin-drawer-close');
+
+  const openDrawer = () => {
+    if (drawer) drawer.classList.add('open');
+    if (backdrop) backdrop.classList.add('open');
+    if (bellBtn) bellBtn.classList.add('drawer-open');
+  };
+
+  const closeDrawer = () => {
+    if (drawer) drawer.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+    if (bellBtn) bellBtn.classList.remove('drawer-open');
+  };
+
+  if (bellBtn) bellBtn.addEventListener('click', openDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+  // ── Action Cards Interactive Studio/Ticket Trigger ─────────────
+  container.querySelectorAll('.fin-action-card').forEach(card => {
+    const handleCardClick = () => {
+      const ticketId = card.dataset.ticketId;
+      const category = (card.dataset.category || '').toUpperCase();
+
+      closeDrawer();
+
+      if (ticketId) {
+        openTicketStudioModal(ticketId, () => {
+          router.push('/design');
         });
-      });
-    });
+      } else if (category === 'UNASSIGNED') {
+        router.push('/design/scheduling');
+      } else {
+        router.push('/design/tickets');
+      }
+    };
 
-    // View Spec
-    container.querySelectorAll('.btn-view-spec').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const name = btn.getAttribute('data-name');
-        Swal.fire({
-          title: name,
-          html: `
-            <div style="text-align:left; font-size:0.88rem; line-height:1.6;">
-              <p><strong>Design System Specification:</strong> Built with responsive flexbox and CSS variables. Complies with accessibility guidelines.</p>
-              <div style="background:#f1f5f9; padding:10px; border-radius:6px; font-family:monospace; margin-top:8px;">
-                border-radius: var(--radius-lg);<br>
-                box-shadow: 0 4px 16px rgba(0,0,0,0.03);<br>
-                transition: transform 0.2s ease;
-              </div>
-            </div>
-          `,
-          confirmButtonColor: '#059669'
-        });
-      });
+    card.addEventListener('click', handleCardClick);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCardClick();
+      }
     });
-  }
+  });
 
-  render();
   return container;
 }
 

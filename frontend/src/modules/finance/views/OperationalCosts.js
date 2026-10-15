@@ -377,6 +377,8 @@ export async function OperationalCosts(route, router) {
             <option value="hosting" ${defaultType === 'hosting' ? 'selected' : ''}>Hosting / Server</option>
           </select>
         </div>
+        <div id="rr-pool-info" style="display:none; font-size:0.825rem; color:var(--text-muted); margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:var(--bg-light, #f8fafc); border-radius:6px; line-height:1.5;"></div>
+        <div id="rr-pool-warning" style="display:none; color:#dc2626; font-size:0.8rem; font-weight:500; margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:#fee2e2; border:1px solid #fca5a5; border-radius:6px;"></div>
         <div class="fin-form-group">
           <label>Amount ${isRenewal ? '(Renewal Amount)' : ''}</label>
           <input type="number" class="fin-input" id="rr-amount" step="0.01" required>
@@ -403,6 +405,46 @@ export async function OperationalCosts(route, router) {
     `;
     document.body.appendChild(modal);
 
+    const rrProjectSelect = modal.querySelector('#rr-project');
+    const rrAmountInput = modal.querySelector('#rr-amount');
+    const rrPoolInfoEl = modal.querySelector('#rr-pool-info');
+    const rrPoolWarningEl = modal.querySelector('#rr-pool-warning');
+
+    const updateRrPoolState = () => {
+      const selectedPfId = rrProjectSelect.value;
+      const selectedProj = validProjects.find(p => String(p.project_finance?.id) === String(selectedPfId));
+
+      if (!selectedProj || !selectedProj.project_finance) {
+        rrPoolInfoEl.style.display = 'none';
+        rrPoolWarningEl.style.display = 'none';
+        rrAmountInput.style.borderColor = '';
+        return;
+      }
+
+      const pf = selectedProj.project_finance;
+      const overheadBudget = parseFloat(pf.overhead_budget) || 0;
+      const consumedOverhead = parseFloat(pf.consumed_overhead) || 0;
+      const remainingOverhead = parseFloat(pf.remaining_overhead) || 0;
+
+      rrPoolInfoEl.innerHTML = `Overhead Budget Pool: <strong>${fmt(overheadBudget)}</strong> | Consumed: <span style="color:#ef4444;font-weight:600;">${fmt(consumedOverhead)}</span> | Remaining: <span style="color:#10b981;font-weight:600;">${fmt(remainingOverhead)}</span>`;
+      rrPoolInfoEl.style.display = 'block';
+
+      const enteredAmt = parseFloat(rrAmountInput.value);
+      if (!isNaN(enteredAmt) && enteredAmt > 0 && enteredAmt > remainingOverhead) {
+        const exceeded = enteredAmt - remainingOverhead;
+        rrPoolWarningEl.textContent = `⚠ Warning: Entered amount (${fmt(enteredAmt)}) exceeds remaining overhead budget pool (${fmt(remainingOverhead)}) by ${fmt(exceeded)}.`;
+        rrPoolWarningEl.style.display = 'block';
+        rrAmountInput.style.borderColor = '#ef4444';
+      } else {
+        rrPoolWarningEl.style.display = 'none';
+        rrAmountInput.style.borderColor = '';
+      }
+    };
+
+    rrProjectSelect.addEventListener('change', updateRrPoolState);
+    rrAmountInput.addEventListener('input', updateRrPoolState);
+    updateRrPoolState();
+
     modal.querySelector('#cancel-rr').addEventListener('click', () => modal.remove());
     modal.querySelector('#confirm-rr').addEventListener('click', async () => {
       const pfid = modal.querySelector('#rr-project').value;
@@ -420,8 +462,9 @@ export async function OperationalCosts(route, router) {
       confirmBtn.textContent = 'Saving...';
 
       try {
+        let res;
         if (isRenewal && hcid) {
-          await financeService.renewSsl(hcid, {
+          res = await financeService.renewSsl(hcid, {
             renewal_date: modal.querySelector('#rr-purchase').value,
             new_expiry_date: modal.querySelector('#rr-expiry').value,
             renewal_amount: amt,
@@ -429,7 +472,7 @@ export async function OperationalCosts(route, router) {
             remarks: 'Renewal'
           });
         } else {
-          await financeService.addResourceCost({
+          res = await financeService.addResourceCost({
             project_finance_id: pfid,
             charge_type: type,
             amount: amt,
@@ -437,6 +480,9 @@ export async function OperationalCosts(route, router) {
             expiry_date: modal.querySelector('#rr-expiry').value,
             reference_details: modal.querySelector('#rr-ref').value
           });
+        }
+        if (res?.overhead_check?.warning) {
+          alert(res.overhead_check.warning);
         }
         modal.remove();
         loadData();
@@ -464,6 +510,8 @@ export async function OperationalCosts(route, router) {
             ${validProjects.map(p => `<option value="${p.project_finance.id}">${p.title}</option>`).join('')}
           </select>
         </div>
+        <div id="rm-pool-info" style="display:none; font-size:0.825rem; color:var(--text-muted); margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:var(--bg-light, #f8fafc); border-radius:6px; line-height:1.5;"></div>
+        <div id="rm-pool-warning" style="display:none; color:#dc2626; font-size:0.8rem; font-weight:500; margin-bottom:0.75rem; padding:0.5rem 0.75rem; background:#fee2e2; border:1px solid #fca5a5; border-radius:6px;"></div>
         <div class="fin-form-group">
           <label>Amount</label>
           <input type="number" class="fin-input" id="rm-amount" step="0.01" required>
@@ -490,6 +538,46 @@ export async function OperationalCosts(route, router) {
     `;
     document.body.appendChild(modal);
 
+    const rmProjectSelect = modal.querySelector('#rm-project');
+    const rmAmountInput = modal.querySelector('#rm-amount');
+    const rmPoolInfoEl = modal.querySelector('#rm-pool-info');
+    const rmPoolWarningEl = modal.querySelector('#rm-pool-warning');
+
+    const updateRmPoolState = () => {
+      const selectedPfId = rmProjectSelect.value;
+      const selectedProj = validProjects.find(p => String(p.project_finance?.id) === String(selectedPfId));
+
+      if (!selectedProj || !selectedProj.project_finance) {
+        rmPoolInfoEl.style.display = 'none';
+        rmPoolWarningEl.style.display = 'none';
+        rmAmountInput.style.borderColor = '';
+        return;
+      }
+
+      const pf = selectedProj.project_finance;
+      const overheadBudget = parseFloat(pf.overhead_budget) || 0;
+      const consumedOverhead = parseFloat(pf.consumed_overhead) || 0;
+      const remainingOverhead = parseFloat(pf.remaining_overhead) || 0;
+
+      rmPoolInfoEl.innerHTML = `Overhead Budget Pool: <strong>${fmt(overheadBudget)}</strong> | Consumed: <span style="color:#ef4444;font-weight:600;">${fmt(consumedOverhead)}</span> | Remaining: <span style="color:#10b981;font-weight:600;">${fmt(remainingOverhead)}</span>`;
+      rmPoolInfoEl.style.display = 'block';
+
+      const enteredAmt = parseFloat(rmAmountInput.value);
+      if (!isNaN(enteredAmt) && enteredAmt > 0 && enteredAmt > remainingOverhead) {
+        const exceeded = enteredAmt - remainingOverhead;
+        rmPoolWarningEl.textContent = `⚠ Warning: Entered amount (${fmt(enteredAmt)}) exceeds remaining overhead budget pool (${fmt(remainingOverhead)}) by ${fmt(exceeded)}.`;
+        rmPoolWarningEl.style.display = 'block';
+        rmAmountInput.style.borderColor = '#ef4444';
+      } else {
+        rmPoolWarningEl.style.display = 'none';
+        rmAmountInput.style.borderColor = '';
+      }
+    };
+
+    rmProjectSelect.addEventListener('change', updateRmPoolState);
+    rmAmountInput.addEventListener('input', updateRmPoolState);
+    updateRmPoolState();
+
     modal.querySelector('#cancel-rm').addEventListener('click', () => modal.remove());
     modal.querySelector('#confirm-rm').addEventListener('click', async () => {
       const pfid = modal.querySelector('#rm-project').value;
@@ -500,18 +588,28 @@ export async function OperationalCosts(route, router) {
         return;
       }
 
+      const confirmBtn = modal.querySelector('#confirm-rm');
+      const originalText = confirmBtn.textContent;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Saving...';
+
       try {
-        await financeService.addMaintenanceCost({
+        const res = await financeService.addMaintenanceCost({
           project_finance_id: pfid,
           amount: amt,
           start_date: modal.querySelector('#rm-start').value,
           end_date: modal.querySelector('#rm-end').value || null,
           description: modal.querySelector('#rm-desc').value
         });
+        if (res?.overhead_check?.warning) {
+          alert(res.overhead_check.warning);
+        }
         modal.remove();
         loadData();
       } catch (err) {
         alert('Failed to save maintenance record: ' + err.message);
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = originalText;
       }
     });
   };

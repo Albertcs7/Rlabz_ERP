@@ -18,6 +18,8 @@ return new class extends Migration
             $table->text('remarks')->nullable();
             $table->foreignId('recorded_by')->constrained('users');
             $table->timestamps();
+
+            $table->index('payment_date', 'idx_clipay_payment_date');
         });
     }
 

@@ -19,6 +19,11 @@ return new class extends Migration
             $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
+
+            $table->index(['project_student_id', 'work_date'], 'idx_studwork_projstu_date');
+            $table->index(['task_id', 'work_date'], 'idx_studwork_task_date');
+            $table->index('approval_status', 'idx_studwork_approval_status');
+            $table->index('work_date', 'idx_studwork_work_date');
         });
     }
 

@@ -1002,6 +1002,62 @@ export function DeveloperHome(route, router) {
     parentHost.appendChild(popupOverlay);
   }
 
+  function setupFacultySearch(modalHost) {
+    const searchInput = modalHost.querySelector('.faculty-search-input');
+    const searchBtn = modalHost.querySelector('.btn-search-faculty');
+    const clearBtn = modalHost.querySelector('.btn-clear-faculty-search');
+    const countEl = modalHost.querySelector('.faculty-search-count');
+    const items = modalHost.querySelectorAll('.faculty-item');
+    const noResultsEl = modalHost.querySelector('.faculty-no-results');
+    const noResultsQuery = modalHost.querySelector('.faculty-no-results-query');
+
+    if (!searchInput) return;
+
+    const doSearch = () => {
+      const q = (searchInput.value || '').trim().toLowerCase();
+      if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+      let visible = 0;
+      items.forEach(item => {
+        const text = item.getAttribute('data-search-text') || '';
+        const match = !q || text.includes(q);
+        item.style.display = match ? 'flex' : 'none';
+        if (match) visible++;
+      });
+
+      if (noResultsEl) {
+        if (visible === 0 && q) {
+          noResultsEl.style.display = 'block';
+          if (noResultsQuery) noResultsQuery.textContent = searchInput.value.trim();
+        } else {
+          noResultsEl.style.display = 'none';
+        }
+      }
+
+      if (countEl) {
+        countEl.textContent = q ? `${visible} of ${items.length} faculty` : '';
+      }
+    };
+
+    searchInput.addEventListener('input', doSearch);
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doSearch();
+      }
+    });
+    searchBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      doSearch();
+      searchInput.focus();
+    });
+    clearBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      searchInput.value = '';
+      doSearch();
+      searchInput.focus();
+    });
+  }
+
   function showProposalModal(proposal, faculties) {
     const modalHost = container.querySelector('#director-modal-root');
     const defaultFacId = proposal.suggestedFaculty || (faculties[0] ? faculties[0].id : '');
@@ -1016,14 +1072,40 @@ export function DeveloperHome(route, router) {
             <p style="margin-bottom:0.5rem;"><strong>Description:</strong> ${proposal.description || 'Institutional proposal submission.'}</p>
             <p style="margin-bottom:1rem;"><strong>Client:</strong> ${proposal.clientName || 'Rajagiri Sponsor'} | <strong>Est. Budget:</strong> ₹${Number(proposal.estimatedBudget || 0).toLocaleString()}</p>
             
-            <label style="font-weight:600; font-size:0.875rem; margin-bottom:0.35rem; display:block;">Assign Lead Faculty:</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+              <label style="font-weight:600; font-size:0.875rem; margin:0; display:block;">Assign Lead Faculty:</label>
+              <span class="faculty-search-count" style="font-size:0.75rem; color:#6b7280; font-weight:500;"></span>
+            </div>
+            <div class="faculty-search-bar" style="display:flex; gap:0.4rem; margin-bottom:0.5rem;">
+              <div style="position:relative; flex:1;">
+                <svg style="position:absolute; left:0.65rem; top:50%; transform:translateY(-50%); color:#9ca3af; pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  class="faculty-search-input" 
+                  placeholder="Search faculty by name or department..." 
+                  style="width:100%; box-sizing:border-box; padding:0.45rem 1.8rem 0.45rem 2.1rem; font-size:0.82rem; border:1px solid #d1d5db; border-radius:6px; outline:none; font-family:inherit; background:#ffffff;"
+                />
+                <button type="button" class="btn-clear-faculty-search" style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:#9ca3af; cursor:pointer; font-size:0.85rem; padding:2px;" title="Clear search">✕</button>
+              </div>
+              <button type="button" class="btn-director btn-director-outline btn-search-faculty" style="padding:0.45rem 0.85rem; font-size:0.82rem; display:inline-flex; align-items:center; gap:0.35rem; white-space:nowrap; cursor:pointer; font-weight:600;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Search</span>
+              </button>
+            </div>
             <div class="faculty-selection-list" style="display:flex; flex-direction:column; gap:0.5rem; max-height:220px; overflow-y:auto; padding:0.25rem; border:1px solid #d1d5db; border-radius:8px; background:#f9fafb;">
+              <div class="faculty-no-results" style="display:none; text-align:center; padding:1.25rem 0.5rem; color:#6b7280; font-size:0.82rem; background:#ffffff; border-radius:6px; border:1px dashed #d1d5db;">
+                No faculty members found matching "<span class="faculty-no-results-query"></span>"
+              </div>
               ${faculties.map(f => {
                 const projectsList = f.activeProjects || [];
                 const count = f.activeProjectsCount !== undefined ? f.activeProjectsCount : projectsList.length;
                 const isSelected = String(f.id) === String(defaultFacId);
+                const searchText = `${f.name || ''} ${f.department || ''} ${f.email || ''}`.toLowerCase();
                 return `
-                  <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:#ffffff; border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
+                  <div class="faculty-item" data-search-text="${searchText}" style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:#ffffff; border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
                       <input type="radio" name="proposal_home_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
@@ -1054,6 +1136,8 @@ export function DeveloperHome(route, router) {
         </div>
       </div>
     `;
+
+    setupFacultySearch(modalHost);
 
     modalHost.querySelector('.btn-close-modal').addEventListener('click', () => { modalHost.innerHTML = ''; });
     modalHost.querySelectorAll('.btn-view-faculty-projects').forEach(btn => {

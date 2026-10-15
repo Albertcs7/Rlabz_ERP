@@ -18,6 +18,9 @@ return new class extends Migration
             $table->foreignId('verified_by')->nullable()->constrained('users');
             $table->timestamp('verified_at')->nullable();
             $table->timestamps();
+
+            $table->index('is_verified', 'idx_ghrepos_is_verified');
+            $table->index('repository_name', 'idx_ghrepos_repo_name');
         });
     }
 

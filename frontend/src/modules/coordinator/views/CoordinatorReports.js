@@ -193,12 +193,54 @@ async function downloadReportPdf(project, btn) {
   }
 }
 
+// Timestamp of expected_timeline, or null when missing/unparseable.
+function timelineValue(project) {
+  if (!project.expected_timeline) return null;
+  const time = new Date(project.expected_timeline).getTime();
+  return Number.isNaN(time) ? null : time;
+}
+
+// Compares two possibly-missing values so missing ones always sort last,
+// whichever direction is chosen.
+function compareMissingLast(a, b, compare) {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return compare(a, b);
+}
+
+function sortProjects(data, sortBy) {
+  const copy = [...data];
+  const client = (p) => (String(p.client_name || '').trim() || null);
+  copy.sort((a, b) => {
+    switch (sortBy) {
+      case 'title_desc':
+        return String(b.title || '').localeCompare(String(a.title || ''));
+      case 'client_asc':
+        return compareMissingLast(client(a), client(b), (x, y) => x.localeCompare(y));
+      case 'timeline_newest':
+        return compareMissingLast(timelineValue(a), timelineValue(b), (x, y) => y - x);
+      case 'timeline_oldest':
+        return compareMissingLast(timelineValue(a), timelineValue(b), (x, y) => x - y);
+      case 'progress_high':
+        return getCompletion(b).percent - getCompletion(a).percent;
+      case 'progress_low':
+        return getCompletion(a).percent - getCompletion(b).percent;
+      case 'title_asc':
+      default:
+        return String(a.title || '').localeCompare(String(b.title || ''));
+    }
+  });
+  return copy;
+}
+
 export function CoordinatorReports(route, router) {
   const container = document.createElement('div');
 
   let projects = [];
   let finalDocuments = [];
   let loadError = null;
+  let currentSort = 'title_asc';
 
   function render() {
     container.innerHTML = `
@@ -236,7 +278,20 @@ export function CoordinatorReports(route, router) {
               <h2>Project Documentation</h2>
               <p>Download a PDF report generated from live project data.</p>
             </div>
-            <input type="text" id="report-search" placeholder="Search projects..." />
+          </div>
+
+          <div class="app-list-toolbar">
+            <input type="search" id="report-search" class="app-search-input" placeholder="Search by project or client name..." aria-label="Search reports by project or client name" autocomplete="off" />
+            <select id="report-sort" class="app-select" aria-label="Sort reports">
+              <option value="title_asc">Sort: Project name (A–Z)</option>
+              <option value="title_desc">Sort: Project name (Z–A)</option>
+              <option value="client_asc">Sort: Client name (A–Z)</option>
+              <option value="timeline_newest">Sort: Expected timeline (newest first)</option>
+              <option value="timeline_oldest">Sort: Expected timeline (oldest first)</option>
+              <option value="progress_high">Sort: Progress (highest first)</option>
+              <option value="progress_low">Sort: Progress (lowest first)</option>
+            </select>
+            <span class="app-list-toolbar-count" id="report-result-count" aria-live="polite"></span>
           </div>
 
           <div class="cert-table-wrapper">
@@ -291,7 +346,7 @@ export function CoordinatorReports(route, router) {
       .then((data) => {
         projects = data;
         updateStats(projects);
-        renderReports(projects);
+        applyFiltersAndSort();
       })
       .catch((err) => {
         loadError = err.message || 'Failed to load projects';
@@ -309,13 +364,21 @@ export function CoordinatorReports(route, router) {
         if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:#b91c1c;">${err.message || 'Failed to load final project reports.'}</td></tr>`;
       });
 
-    container.querySelector('#report-search')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
+    function applyFiltersAndSort() {
+      const search = (container.querySelector('#report-search')?.value || '').trim().toLowerCase();
       const filtered = projects.filter((p) =>
         (p.title || '').toLowerCase().includes(search) ||
         (p.client_name || '').toLowerCase().includes(search)
       );
-      renderReports(filtered);
+      renderReports(sortProjects(filtered, currentSort));
+      const countEl = container.querySelector('#report-result-count');
+      if (countEl) countEl.textContent = `Showing ${filtered.length} of ${projects.length} projects`;
+    }
+
+    container.querySelector('#report-search')?.addEventListener('input', applyFiltersAndSort);
+    container.querySelector('#report-sort')?.addEventListener('change', (e) => {
+      currentSort = e.target.value;
+      applyFiltersAndSort();
     });
   }
 

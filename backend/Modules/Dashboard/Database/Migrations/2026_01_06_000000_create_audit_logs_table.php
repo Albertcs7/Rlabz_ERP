@@ -14,6 +14,9 @@ return new class extends Migration
             $table->string('action', 100);
             $table->text('description')->nullable();
             $table->timestamp('created_at');
+
+            $table->index('created_at', 'idx_audit_logs_created_at');
+            $table->index('action', 'idx_audit_logs_action');
         });
     }
 

@@ -28,6 +28,7 @@ class Project extends Model
         'budget',
         'priority',
         'status',
+        'drive_link',
         'created_by',
     ];
 

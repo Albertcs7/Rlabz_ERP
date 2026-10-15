@@ -230,15 +230,23 @@ export function DeveloperProjects(route, router) {
                     ₹${formatMoney(p.spent)} / ₹${formatMoney(p.budget)}
                   </td>
                   <td>
-                    ${isDirector ? `
-                      <button class="btn-director btn-director-outline" disabled style="opacity:0.5; cursor:not-allowed;" title="Director has read-only access to faculty assignment">
-                        Reassign Faculty
-                      </button>
-                    ` : `
-                      <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
-                        Reassign Faculty
-                      </button>
-                    `}
+                    <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                      ${p.drive_link || p.driveLink ? `
+                        <a href="${p.drive_link || p.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director btn-director-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.65rem; color:#2563eb; border-color:#93c5fd;" title="Open Project Drive" onclick="event.stopPropagation();">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                          <span>Drive</span>
+                        </a>
+                      ` : ''}
+                      ${isDirector ? `
+                        <button class="btn-director btn-director-outline" disabled style="opacity:0.5; cursor:not-allowed;" title="Director has read-only access to faculty assignment">
+                          Reassign Faculty
+                        </button>
+                      ` : `
+                        <button class="btn-director btn-director-outline btn-assign-faculty" data-id="${p.id}">
+                          Reassign Faculty
+                        </button>
+                      `}
+                    </div>
                   </td>
                 </tr>
               `).join('')}
@@ -271,6 +279,7 @@ export function DeveloperProjects(route, router) {
                   <th>Faculty Lead</th>
                   <th>Progress</th>
                   <th>Budget</th>
+                  <th>Drive</th>
                 </tr>
               </thead>
               <tbody>
@@ -282,6 +291,14 @@ export function DeveloperProjects(route, router) {
                     <td>${p.facultyName || 'Unassigned'}</td>
                     <td>${p.progress ?? 0}%</td>
                     <td>₹${formatMoney(p.budget)}</td>
+                    <td>
+                      ${p.drive_link || p.driveLink ? `
+                        <a href="${p.drive_link || p.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director btn-director-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; padding:0.25rem 0.6rem; font-size:0.75rem; color:#2563eb; border-color:#93c5fd;" title="Open Project Drive" onclick="event.stopPropagation();">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                          <span>Drive</span>
+                        </a>
+                      ` : '<span style="color:#9ca3af; font-size:0.78rem;">—</span>'}
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -342,6 +359,30 @@ export function DeveloperProjects(route, router) {
               <div class="director-progress-bar-bg" style="height:8px;">
                 <div class="director-progress-bar-fill" style="width: ${project.progress ?? 0}%"></div>
               </div>
+            </div>
+
+            <div style="background:${project.drive_link || project.driveLink ? '#eff6ff' : '#f9fafb'}; border:1px solid ${project.drive_link || project.driveLink ? '#bfdbfe' : '#e5e7eb'}; border-radius:8px; padding:0.75rem 0.9rem; display:flex; align-items:center; justify-content:space-between; gap:0.75rem;">
+              <div style="display:flex; align-items:center; gap:0.6rem; min-width:0;">
+                <div style="width:32px; height:32px; border-radius:6px; background:${project.drive_link || project.driveLink ? '#dbeafe' : '#f3f4f6'}; display:flex; align-items:center; justify-content:center; color:${project.drive_link || project.driveLink ? '#1d4ed8' : '#9ca3af'}; flex-shrink:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>
+                <div style="min-width:0;">
+                  <strong style="color:${project.drive_link || project.driveLink ? '#1e40af' : '#4b5563'}; font-size:0.85rem; display:block;">Project Drive Folder</strong>
+                  <span style="color:${project.drive_link || project.driveLink ? '#3b82f6' : '#9ca3af'}; font-size:0.75rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px;">
+                    ${project.drive_link || project.driveLink || 'No drive or cloud folder linked to this project'}
+                  </span>
+                </div>
+              </div>
+              ${project.drive_link || project.driveLink ? `
+                <a href="${project.drive_link || project.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director" style="background:#2563eb; color:#ffffff; padding:0.4rem 0.85rem; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; border-radius:6px; font-weight:600; white-space:nowrap;">
+                  <span>Open Drive</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+              ` : `
+                <span style="font-size:0.75rem; color:#9ca3af; font-weight:500; background:#f3f4f6; padding:0.3rem 0.65rem; border-radius:5px; border:1px solid #e5e7eb; white-space:nowrap;">Not Linked</span>
+              `}
             </div>
 
             ${project.description ? `
@@ -476,6 +517,62 @@ export function DeveloperProjects(route, router) {
     parentHost.appendChild(popupOverlay);
   }
 
+  function setupFacultySearch(modalHost) {
+    const searchInput = modalHost.querySelector('.faculty-search-input');
+    const searchBtn = modalHost.querySelector('.btn-search-faculty');
+    const clearBtn = modalHost.querySelector('.btn-clear-faculty-search');
+    const countEl = modalHost.querySelector('.faculty-search-count');
+    const items = modalHost.querySelectorAll('.faculty-item');
+    const noResultsEl = modalHost.querySelector('.faculty-no-results');
+    const noResultsQuery = modalHost.querySelector('.faculty-no-results-query');
+
+    if (!searchInput) return;
+
+    const doSearch = () => {
+      const q = (searchInput.value || '').trim().toLowerCase();
+      if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+      let visible = 0;
+      items.forEach(item => {
+        const text = item.getAttribute('data-search-text') || '';
+        const match = !q || text.includes(q);
+        item.style.display = match ? 'flex' : 'none';
+        if (match) visible++;
+      });
+
+      if (noResultsEl) {
+        if (visible === 0 && q) {
+          noResultsEl.style.display = 'block';
+          if (noResultsQuery) noResultsQuery.textContent = searchInput.value.trim();
+        } else {
+          noResultsEl.style.display = 'none';
+        }
+      }
+
+      if (countEl) {
+        countEl.textContent = q ? `${visible} of ${items.length} faculty` : '';
+      }
+    };
+
+    searchInput.addEventListener('input', doSearch);
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doSearch();
+      }
+    });
+    searchBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      doSearch();
+      searchInput.focus();
+    });
+    clearBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      searchInput.value = '';
+      doSearch();
+      searchInput.focus();
+    });
+  }
+
   function showProposalModal(proposal, faculties) {
     const modalHost = container.querySelector('#proposal-modal-container');
     const defaultFacId = proposal.suggestedFaculty || (faculties[0] ? faculties[0].id : '');
@@ -490,14 +587,53 @@ export function DeveloperProjects(route, router) {
             <p style="margin-bottom:0.5rem;"><strong>Description:</strong> ${proposal.description}</p>
             <p style="margin-bottom:1rem;"><strong>Source:</strong> ${proposal.source} (${proposal.sourceName}) | <strong>Client:</strong> ${proposal.clientName} | <strong>Est. Budget:</strong> ₹${proposal.estimatedBudget.toLocaleString()}</p>
             
-            <label style="font-weight:600; font-size:0.875rem; margin-bottom:0.35rem; display:block;">Assign Lead Faculty:</label>
+            ${proposal.drive_link || proposal.driveLink ? `
+              <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.6rem 0.85rem; margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem; min-width:0;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  <span style="font-size:0.82rem; color:#1e40af; font-weight:600;">Proposal Documents / Drive Folder</span>
+                </div>
+                <a href="${proposal.drive_link || proposal.driveLink}" target="_blank" rel="noopener noreferrer" class="btn-director" style="background:#2563eb; color:#ffffff; padding:0.3rem 0.75rem; font-size:0.78rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; border-radius:5px; font-weight:600;">
+                  <span>Open Drive</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+              </div>
+            ` : ''}
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+              <label style="font-weight:600; font-size:0.875rem; margin:0; display:block;">Assign Lead Faculty:</label>
+              <span class="faculty-search-count" style="font-size:0.75rem; color:#6b7280; font-weight:500;"></span>
+            </div>
+            <div class="faculty-search-bar" style="display:flex; gap:0.4rem; margin-bottom:0.5rem;">
+              <div style="position:relative; flex:1;">
+                <svg style="position:absolute; left:0.65rem; top:50%; transform:translateY(-50%); color:#9ca3af; pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  class="faculty-search-input" 
+                  placeholder="Search faculty by name or department..." 
+                  style="width:100%; box-sizing:border-box; padding:0.45rem 1.8rem 0.45rem 2.1rem; font-size:0.82rem; border:1px solid #d1d5db; border-radius:6px; outline:none; font-family:inherit; background:#ffffff;"
+                />
+                <button type="button" class="btn-clear-faculty-search" style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:#9ca3af; cursor:pointer; font-size:0.85rem; padding:2px;" title="Clear search">✕</button>
+              </div>
+              <button type="button" class="btn-director btn-director-outline btn-search-faculty" style="padding:0.45rem 0.85rem; font-size:0.82rem; display:inline-flex; align-items:center; gap:0.35rem; white-space:nowrap; cursor:pointer; font-weight:600;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Search</span>
+              </button>
+            </div>
             <div class="faculty-selection-list" style="display:flex; flex-direction:column; gap:0.5rem; max-height:220px; overflow-y:auto; padding:0.25rem; border:1px solid #d1d5db; border-radius:8px; background:#f9fafb;">
+              <div class="faculty-no-results" style="display:none; text-align:center; padding:1.25rem 0.5rem; color:#6b7280; font-size:0.82rem; background:#ffffff; border-radius:6px; border:1px dashed #d1d5db;">
+                No faculty members found matching "<span class="faculty-no-results-query"></span>"
+              </div>
               ${faculties.map(f => {
                 const projectsList = f.activeProjects || [];
                 const count = f.activeProjectsCount !== undefined ? f.activeProjectsCount : projectsList.length;
                 const isSelected = String(f.id) === String(defaultFacId);
+                const searchText = `${f.name || ''} ${f.department || ''} ${f.email || ''}`.toLowerCase();
                 return `
-                  <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
+                  <div class="faculty-item" data-search-text="${searchText}" style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
                       <input type="radio" name="proposal_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
@@ -528,6 +664,8 @@ export function DeveloperProjects(route, router) {
         </div>
       </div>
     `;
+
+    setupFacultySearch(modalHost);
 
     modalHost.querySelector('.btn-close-modal').addEventListener('click', () => { modalHost.innerHTML = ''; });
     modalHost.querySelectorAll('.btn-view-faculty-projects').forEach(btn => {
@@ -577,15 +715,41 @@ export function DeveloperProjects(route, router) {
           </div>
           <div class="director-modal-body">
             <p style="margin-bottom:0.75rem;">Current Lead Faculty: <strong>${project.facultyName || 'Unassigned'}</strong></p>
-            <label style="font-weight:600; font-size:0.875rem; margin-bottom:0.35rem; display:block;">Select New Lead Faculty:</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+              <label style="font-weight:600; font-size:0.875rem; margin:0; display:block;">Select New Lead Faculty:</label>
+              <span class="faculty-search-count" style="font-size:0.75rem; color:#6b7280; font-weight:500;"></span>
+            </div>
+            <div class="faculty-search-bar" style="display:flex; gap:0.4rem; margin-bottom:0.5rem;">
+              <div style="position:relative; flex:1;">
+                <svg style="position:absolute; left:0.65rem; top:50%; transform:translateY(-50%); color:#9ca3af; pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  class="faculty-search-input" 
+                  placeholder="Search faculty by name or department..." 
+                  style="width:100%; box-sizing:border-box; padding:0.45rem 1.8rem 0.45rem 2.1rem; font-size:0.82rem; border:1px solid #d1d5db; border-radius:6px; outline:none; font-family:inherit; background:#ffffff;"
+                />
+                <button type="button" class="btn-clear-faculty-search" style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:#9ca3af; cursor:pointer; font-size:0.85rem; padding:2px;" title="Clear search">✕</button>
+              </div>
+              <button type="button" class="btn-director btn-director-outline btn-search-faculty" style="padding:0.45rem 0.85rem; font-size:0.82rem; display:inline-flex; align-items:center; gap:0.35rem; white-space:nowrap; cursor:pointer; font-weight:600;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Search</span>
+              </button>
+            </div>
             
             <div class="faculty-selection-list" style="display:flex; flex-direction:column; gap:0.5rem; max-height:220px; overflow-y:auto; padding:0.25rem; border:1px solid #d1d5db; border-radius:8px; background:#f9fafb;">
+              <div class="faculty-no-results" style="display:none; text-align:center; padding:1.25rem 0.5rem; color:#6b7280; font-size:0.82rem; background:#ffffff; border-radius:6px; border:1px dashed #d1d5db;">
+                No faculty members found matching "<span class="faculty-no-results-query"></span>"
+              </div>
               ${faculties.map(f => {
                 const projectsList = f.activeProjects || [];
                 const count = f.activeProjectsCount !== undefined ? f.activeProjectsCount : projectsList.length;
                 const isSelected = String(f.id) === String(defaultFacId);
+                const searchText = `${f.name || ''} ${f.department || ''} ${f.email || ''}`.toLowerCase();
                 return `
-                  <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
+                  <div class="faculty-item" data-search-text="${searchText}" style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.75rem; background:var(--surface-card); border:1px solid ${isSelected ? 'var(--primary-accent)' : '#e5e7eb'}; border-radius:6px;">
                     <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex:1; margin:0;">
                       <input type="radio" name="project_faculty_choice" value="${f.id}" ${isSelected ? 'checked' : ''} ${isDirector ? 'disabled' : ''} />
                       <div>
@@ -613,6 +777,8 @@ export function DeveloperProjects(route, router) {
         </div>
       </div>
     `;
+
+    setupFacultySearch(modalHost);
 
     modalHost.querySelectorAll('.btn-close-modal').forEach(b => b.addEventListener('click', () => { modalHost.innerHTML = ''; }));
     modalHost.querySelectorAll('.btn-view-faculty-projects').forEach(btn => {

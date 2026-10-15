@@ -3,6 +3,8 @@ import { API_BASE } from '@/core/config/api.js';
 import Swal from 'sweetalert2';
 import { renderStudentSidebar, updateStudentNavbarAvatar, updateTopBarAvatar } from '@/modules/student/views/StudentSidebar.js';
 import { getStudentProfilePhoto, saveStudentProfilePhoto, removeStudentProfilePhoto } from '@/modules/student/views/studentStore.js';
+import { profilePhotoUrl } from '@/core/shared/profilePhoto.js';
+import { mountProfilePhotoEditor } from '@/core/shared/components/ProfilePhotoEditor.js';
 import '../userProfile.css';
 
 export async function UserProfile(route, router) {
@@ -39,7 +41,11 @@ export async function UserProfile(route, router) {
     bio: authStore.user?.bio || '',
     location: authStore.user?.location || 'Kochi, Kerala, India',
     department: authStore.user?.department || (authStore.role === 'finance' ? 'Finance & Accounts' : ''),
-    avatar: studentInitialPhoto || authStore.user?.avatar || null,
+    // Students keep their existing photo source; every other role uses only the
+    // server-side profile photo (users.profile_photo_path), never users.avatar.
+    avatar: isStudentRole
+      ? (studentInitialPhoto || authStore.user?.avatar || null)
+      : (authStore.user?.profile_photo_url || null),
     created_at: authStore.user?.created_at || null,
   };
 
@@ -63,6 +69,11 @@ export async function UserProfile(route, router) {
           profileUser = { ...profileUser, ...liveUser };
           if (studentInitialPhoto) {
             profileUser.avatar = studentInitialPhoto;
+          }
+          if (!isStudentRole) {
+            profileUser.avatar = 'profile_photo_path' in liveUser
+              ? profilePhotoUrl(liveUser.profile_photo_path)
+              : (authStore.user?.profile_photo_url || null);
           }
         }
         if (body.user?.role !== 'finance' && body.teams && body.teams.length > 0) {
@@ -109,12 +120,17 @@ export async function UserProfile(route, router) {
       <div class="profile-hero-card">
         <div class="profile-hero-top">
           <div class="profile-hero-user">
-            <div class="profile-avatar-wrap">
-              ${profileUser.avatar
-                ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
-                : `<span class="profile-avatar-fallback">${initials}</span>`
-              }
-              <span class="profile-avatar-badge" title="Online & Active"></span>
+            <div class="profile-avatar-container" style="position: relative; width: 90px; height: 90px; flex-shrink: 0;">
+              <div class="profile-avatar-wrap" id="user-avatar-wrap" title="Click to change photo in Edit Details" style="cursor: pointer; width: 100%; height: 100%;">
+                ${profileUser.avatar
+                  ? `<img src="${profileUser.avatar}" alt="${profileUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="profile-avatar-fallback" style="display:none;">${initials}</span>`
+                  : `<span class="profile-avatar-fallback">${initials}</span>`
+                }
+                <span class="profile-avatar-badge" title="Online & Active"></span>
+              </div>
+              <button type="button" class="profile-avatar-camera-btn" id="btn-hero-cam" title="Change Profile Photo (Edit Details)" style="position: absolute; bottom: 0; right: 0; width: 28px; height: 28px; border-radius: 50%; background: #009688; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.18); padding: 0; z-index: 2;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              </button>
             </div>
             <div class="profile-hero-details">
               <h1>${profileUser.name}</h1>
@@ -298,20 +314,22 @@ export async function UserProfile(route, router) {
                 <input type="text" id="edit-department" value="${profileUser.department || ''}" />
               </div>
 
-              <div class="profile-field form-group-full">
-                <label for="edit-avatar">Profile Photo</label>
+              <div class="profile-field form-group-full" style="background: var(--bg-surface, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; padding: 14px;">
+                <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Change Image: Upload or Link</label>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                  <input type="text" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="Enter image URL or upload image file..." style="flex: 1; min-width: 220px;" />
                   <button type="button" class="prof-btn secondary" id="btn-browse-photo" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 0.95rem; font-size: 0.82rem; white-space: nowrap;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Upload Image
                   </button>
+                  <span style="font-size: 0.82rem; color: var(--text-muted, #64748b); font-weight: 500;">or</span>
+                  <input type="text" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="Paste image link (https://...)" style="flex: 1; min-width: 220px; padding: 0.5rem 0.75rem; font-size: 0.84rem; border: 1px solid var(--border-color, #cbd5e1); border-radius: 6px;" />
                   ${profileUser.avatar ? `
                     <button type="button" class="prof-btn secondary" id="btn-remove-avatar-edit" style="color: #dc2626; border-color: #fecaca; padding: 0.55rem 0.95rem; font-size: 0.82rem; white-space: nowrap;">
                       Remove Photo
                     </button>
                   ` : ''}
                 </div>
+                <small style="color: var(--text-muted, #64748b); font-size: 0.75rem; margin-top: 6px; display: block;">Choose <strong>Upload Image</strong> to pick a local file or paste a direct <strong>Image Link</strong>.</small>
               </div>
 
               <div class="profile-field form-group-full">
@@ -485,11 +503,23 @@ export async function UserProfile(route, router) {
       });
     }
 
+    // Non-student roles: the shared, validated uploader (POST /api/auth/profile-photo
+    // → users.profile_photo_path). It also refreshes the header avatar itself.
+    if (!isStudentRole) {
+      mountProfilePhotoEditor(container.querySelector('#profile-photo-slot'), {
+        name: profileUser.name,
+        layout: 'stacked',
+        onChange: (url) => { profileUser.avatar = url; },
+      });
+    }
+
     // Quick Profile Photo Upload Handler
     async function applyProfilePhoto(photoDataUrl) {
       profileUser.avatar = photoDataUrl;
+      rememberProfilePhoto(photoDataUrl);
       if (authStore.user) {
         authStore.user.avatar = photoDataUrl;
+        authStore.user.profile_photo_url = photoDataUrl;
         localStorage.setItem('user', JSON.stringify(authStore.user));
       }
 
@@ -502,22 +532,32 @@ export async function UserProfile(route, router) {
       }
 
       // Sync topbar & popover avatars immediately
+      applyHeaderAvatar(document, photoDataUrl, profileUser.name);
       updateTopBarAvatar(photoDataUrl, profileUser.name);
       updateStudentNavbarAvatar();
 
       // Persist to backend
       if (token) {
         try {
-          const endpoint = authStore.role === 'student' ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
-          await fetch(endpoint, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ avatar: photoDataUrl })
-          });
+          if (photoDataUrl) {
+            await fetch(`${API_BASE}/auth/profile-photo`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ photo_url: photoDataUrl })
+            });
+          } else {
+            await fetch(`${API_BASE}/auth/profile-photo`, {
+              method: 'DELETE',
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+          }
         } catch (err) {
           console.warn('Could not persist avatar to server:', err);
         }
@@ -527,21 +567,88 @@ export async function UserProfile(route, router) {
     }
 
     const fileInput = container.querySelector('#hero-avatar-file-input');
-    const triggerUpload = () => fileInput?.click();
+
+    async function promptImageUrl() {
+      const { value: url } = await Swal.fire({
+        title: 'Image Link (URL)',
+        input: 'url',
+        inputLabel: 'Paste the direct web link to your photo (HTTPS/HTTP):',
+        inputPlaceholder: 'https://images.unsplash.com/... or https://...',
+        inputValue: (profileUser.avatar && !profileUser.avatar.startsWith('data:')) ? profileUser.avatar : '',
+        showCancelButton: true,
+        confirmButtonText: 'Save Photo',
+        confirmButtonColor: '#009688',
+        cancelButtonText: 'Cancel',
+        inputValidator: (val) => {
+          if (!val || !val.trim()) {
+            return 'Please enter a valid image URL!';
+          }
+          if (!val.startsWith('http://') && !val.startsWith('https://')) {
+            return 'Image URL must start with http:// or https://';
+          }
+        }
+      });
+
+      if (url && url.trim()) {
+        await applyProfilePhoto(url.trim());
+        Swal.fire({
+          icon: 'success',
+          title: 'Profile Picture Updated!',
+          text: 'Your new photo link has been updated.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    }
+
+    async function openChangeImageDialog() {
+      const hasPhoto = Boolean(profileUser.avatar);
+      const result = await Swal.fire({
+        title: 'Change Profile Photo',
+        text: 'Choose whether to upload an image from your device or use an image link:',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '📁 Upload Image',
+        denyButtonText: '🔗 Image Link',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#009688',
+        denyButtonColor: '#0284c7',
+        footer: hasPhoto ? '<button type="button" id="swal-remove-photo-btn" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.85rem;text-decoration:underline;">Remove current photo</button>' : '',
+        didOpen: () => {
+          document.getElementById('swal-remove-photo-btn')?.addEventListener('click', async () => {
+            Swal.close();
+            await applyProfilePhoto(null);
+            Swal.fire({
+              icon: 'success',
+              title: 'Photo Removed',
+              text: 'Default initials avatar restored.',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          });
+        }
+      });
+
+      if (result.isConfirmed) {
+        fileInput?.click();
+      } else if (result.isDenied) {
+        await promptImageUrl();
+      }
+    }
 
     container.querySelector('#user-avatar-wrap')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      triggerUpload();
+      openChangeImageDialog();
     });
 
     container.querySelector('#btn-hero-cam')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      triggerUpload();
+      openChangeImageDialog();
     });
 
     container.querySelector('#btn-browse-photo')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      triggerUpload();
+      fileInput?.click();
     });
 
     if (fileInput) {
@@ -578,7 +685,7 @@ export async function UserProfile(route, router) {
         icon: 'success',
         title: 'Profile Picture Removed',
         text: 'Default initials avatar restored.',
-        timer: 2000,
+        timer: 1500,
         showConfirmButton: false
       });
     });
@@ -592,13 +699,15 @@ export async function UserProfile(route, router) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
 
+        const avatarVal = container.querySelector('#edit-avatar')?.value.trim() || null;
         const updatedData = {
           name: container.querySelector('#edit-name').value.trim(),
           phone: container.querySelector('#edit-phone').value.trim(),
           location: container.querySelector('#edit-location').value.trim(),
           department: container.querySelector('#edit-department').value.trim(),
-          avatar: container.querySelector('#edit-avatar').value.trim() || null,
           bio: container.querySelector('#edit-bio').value.trim(),
+          avatar: avatarVal,
+          photo_url: avatarVal,
         };
 
         try {
@@ -618,16 +727,41 @@ export async function UserProfile(route, router) {
               const err = await res.json().catch(() => ({}));
               throw new Error(err.message || 'Failed to update profile.');
             }
+
+            // Also persist to /api/auth/profile-photo if photo_url changed
+            if (avatarVal !== profileUser.avatar) {
+              if (avatarVal) {
+                await fetch(`${API_BASE}/auth/profile-photo`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ photo_url: avatarVal })
+                }).catch(() => {});
+              } else {
+                await fetch(`${API_BASE}/auth/profile-photo`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  }
+                }).catch(() => {});
+              }
+            }
           }
 
           // Update local state and authStore
-          profileUser = { ...profileUser, ...updatedData };
+          profileUser = { ...profileUser, ...updatedData, avatar: avatarVal };
+          rememberProfilePhoto(avatarVal);
           if (authStore.user) {
             authStore.user.name = updatedData.name;
             authStore.user.phone = updatedData.phone;
             authStore.user.location = updatedData.location;
             authStore.user.department = updatedData.department;
-            authStore.user.avatar = updatedData.avatar;
+            authStore.user.avatar = avatarVal;
+            authStore.user.profile_photo_url = avatarVal;
             authStore.user.bio = updatedData.bio;
             localStorage.setItem('user', JSON.stringify(authStore.user));
           }
@@ -642,13 +776,8 @@ export async function UserProfile(route, router) {
           }
 
           // Update header display if present
-          const headerName = document.querySelector('#user-profile-header .user-name') || document.querySelector('#finance-user-profile-header .user-name');
-          if (headerName) headerName.textContent = updatedData.name;
-          const popoverName = document.querySelector('#popover-name') || document.querySelector('#finance-popover-name');
-          if (popoverName) popoverName.textContent = updatedData.name;
-
-          // Update topbar avatar immediately
-          updateTopBarAvatar(updatedData.avatar, updatedData.name);
+          applyHeaderAvatar(document, avatarVal, updatedData.name);
+          updateTopBarAvatar(avatarVal, updatedData.name);
           updateStudentNavbarAvatar();
 
           Swal.fire({

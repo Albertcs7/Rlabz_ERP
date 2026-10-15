@@ -56,16 +56,14 @@ export function FacultyVerifyTasks() {
                     <h1>Verify Task</h1>
                     <p>Select an assigned project to review student work logs and verify task completions.</p>
                 </div>
-                <div style="position: relative; width: 320px; max-width: 100%;">
-                    <input 
-                        type="text" 
-                        id="input-search-verify-project" 
-                        class="premium-input" 
-                        placeholder="Search project by name..." 
-                        value="${searchQuery}" 
-                        style="padding-left: 2.25rem; font-size: 0.88rem; height: 40px; border-radius: 8px;"
+                <div style="width: 320px; max-width: 100%;">
+                    <input
+                        type="text"
+                        id="input-search-verify-project"
+                        class="app-search-input"
+                        placeholder="Search project by name..."
+                        value="${searchQuery}"
                     />
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: var(--text-secondary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
             </div>
 

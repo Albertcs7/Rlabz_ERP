@@ -28,6 +28,7 @@ return new class extends Migration
             }
             if (!Schema::hasColumn('users', 'department')) {
                 $table->string('department', 150)->nullable()->after('avatar');
+                $table->index('department', 'idx_users_department');
             }
         });
     }
@@ -39,6 +40,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (Schema::hasColumn('users', 'department')) {
+                $table->dropIndex('idx_users_department');
                 $table->dropColumn('department');
             }
             if (Schema::hasColumn('users', 'avatar')) {

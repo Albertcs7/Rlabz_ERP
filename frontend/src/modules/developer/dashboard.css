@@ -457,6 +457,19 @@
   box-shadow: 0 14px 28px rgba(99, 102, 241, 0.42) !important;
 }
 
+/* Vibrant Blue (Disbursed Expenditures) */
+.director-kpi-card.kpi-blue {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 24px -4px rgba(2, 132, 199, 0.32) !important;
+}
+
+.director-kpi-card.kpi-blue:hover {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 14px 28px rgba(2, 132, 199, 0.42) !important;
+}
+
 /* Card 4: Warm Amber/Orange (Sanctioned Capital) */
 .director-kpi-card.kpi-amber {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
@@ -483,8 +496,30 @@
   box-shadow: 0 14px 28px rgba(239, 68, 68, 0.42) !important;
 }
 
-/* Universal High-Contrast Inner Typography & Readability */
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .director-kpi-title {
+/* Base High-Contrast Fallback for Plain Unstyled Cards */
+.director-kpi-card .director-kpi-title {
+  color: var(--text-muted, #4b5563);
+  font-size: 0.90rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.director-kpi-card .director-kpi-value {
+  color: var(--text-main, #111827);
+  font-size: 2.15rem;
+  font-weight: 850;
+  line-height: 1.15;
+  margin: 0.45rem 0 0.25rem 0;
+  letter-spacing: -0.02em;
+}
+.director-kpi-card .director-kpi-subtext {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+/* Universal High-Contrast Inner Typography & Readability for Gradient KPI Cards */
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .director-kpi-title {
   color: #ffffff !important;
   font-size: 0.90rem !important;
   font-weight: 750 !important;
@@ -494,7 +529,7 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45) !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-micro-pill {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-micro-pill {
   background: rgba(0, 0, 0, 0.24) !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.45) !important;
@@ -508,7 +543,7 @@
   white-space: nowrap !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .director-kpi-icon {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .director-kpi-icon {
   background: rgba(255, 255, 255, 0.18) !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
@@ -519,7 +554,7 @@
   backdrop-filter: blur(4px) !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .director-kpi-value {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .director-kpi-value {
   color: #ffffff !important;
   font-size: 2.15rem !important;
   font-weight: 850 !important;
@@ -529,7 +564,7 @@
   letter-spacing: -0.02em !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-value-denominator {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-value-denominator {
   color: rgba(255, 255, 255, 0.95) !important;
   font-size: 1.05rem !important;
   font-weight: 700 !important;
@@ -537,7 +572,7 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-callout-box {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-callout-box {
   background: rgba(0, 0, 0, 0.24) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   color: #ffffff !important;
@@ -548,22 +583,22 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-meter-bar,
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-segmented-bar {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-meter-bar,
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-segmented-bar {
   background: rgba(0, 0, 0, 0.32) !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
   height: 8px !important;
   border-radius: 9999px !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-meter-fill {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-meter-fill {
   background: var(--surface-card) !important;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.85) !important;
   height: 100% !important;
   border-radius: 9999px !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-meter-legend {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-meter-legend {
   color: #ffffff !important;
   font-weight: 750 !important;
   font-size: 0.78rem !important;
@@ -572,7 +607,7 @@
   opacity: 1 !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-chip {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-chip {
   background: rgba(0, 0, 0, 0.24) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   color: #ffffff !important;
@@ -589,16 +624,16 @@
   gap: 0.2rem !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-chip strong {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-chip strong {
   font-weight: 800 !important;
   color: #ffffff !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-segment.nova { background: #d8b4fe !important; }
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-segment.orbit { background: #80CBC4 !important; }
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .kpi-segment.spark { background: #E0F2F1 !important; }
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-segment.nova { background: #d8b4fe !important; }
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-segment.orbit { background: #80CBC4 !important; }
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .kpi-segment.spark { background: #E0F2F1 !important; }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .track-badge-micro {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .track-badge-micro {
   background: rgba(0, 0, 0, 0.25) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   color: #ffffff !important;
@@ -614,17 +649,17 @@
   justify-content: center !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .track-badge-micro.nova {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .track-badge-micro.nova {
   border-bottom: 2.5px solid #d8b4fe !important;
 }
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .track-badge-micro.orbit {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .track-badge-micro.orbit {
   border-bottom: 2.5px solid #7dd3fc !important;
 }
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .track-badge-micro.spark {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .track-badge-micro.spark {
   border-bottom: 2.5px solid #86efac !important;
 }
 
-:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card[class*="kpi-"]) .director-kpi-subtext {
+:is(.director-kpi-grid > .director-kpi-card:first-child, .director-kpi-card.kpi-sidebar-primary, .director-kpi-card.kpi-teal, .director-kpi-card.kpi-blue, .director-kpi-card.kpi-indigo, .director-kpi-card.kpi-amber, .director-kpi-card.kpi-crimson, .director-kpi-card[class*=" kpi-"]) .director-kpi-subtext {
   color: #ffffff !important;
   font-weight: 600 !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;

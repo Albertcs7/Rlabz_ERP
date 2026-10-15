@@ -54,6 +54,11 @@ const routes = [
         path: 'notifications',
         name: 'coordinator-notifications',
         component: () => import('./views/CoordinatorNotifications.js').then(m => m.CoordinatorNotifications)
+      },
+      {
+        path: 'profile',
+        name: 'coordinator-profile',
+        component: () => import('./views/CoordinatorProfile.js')
       }
     ]
   }

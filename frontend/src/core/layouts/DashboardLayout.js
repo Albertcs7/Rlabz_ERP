@@ -1,6 +1,14 @@
-import { useAuthStore } from '../stores/auth.js';
+﻿import { useAuthStore } from '../stores/auth.js';
 import { modules } from '../../module-manifest.js';
 import { API_BASE } from '../config/api.js';
+import { profilePhotoUrl, applyHeaderAvatar, rememberProfilePhoto } from '../shared/profilePhoto.js';
+
+// Primary profile page per role; roles without their own page use the shared /profile.
+const ROLE_PROFILE_ROUTES = {
+  coordinator: '/coordinator/profile',
+  faculty: '/faculty/profile',
+  student: '/student/profile',
+};
 
 const BELL_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
 
@@ -28,18 +36,57 @@ async function fetchNotifications() {
 
 function renderNotificationList(notifications) {
   if (!notifications.length) {
-    return `<p class="noti-empty">No notifications.</p>`;
+    return `<div style="text-align:center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.9rem;">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">ðŸ””</div>
+      <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">No notifications</div>
+      <div style="font-size: 0.78rem;">All pending updates and system alerts will appear here.</div>
+    </div>`;
   }
 
   return notifications.map((n) => {
     const unread = !n.is_read;
+    const isUrgent = n.urgency === 'urgent' || n.urgency === 'high';
+    const rawType = (n.type || (n.category || 'general')).toLowerCase();
+    
+    let catBadgeClass = 'fin-cat-info';
+    let catLabel = 'General';
+    if (rawType.includes('ssl')) {
+      catBadgeClass = 'fin-cat-ssl';
+      catLabel = 'SSL';
+    } else if (rawType.includes('domain')) {
+      catBadgeClass = 'fin-cat-domain';
+      catLabel = 'Domain';
+    } else if (rawType.includes('bill') || rawType.includes('invoice') || rawType.includes('finance')) {
+      catBadgeClass = 'fin-cat-billing';
+      catLabel = 'Billing';
+    } else if (rawType.includes('proj')) {
+      catBadgeClass = 'fin-cat-project';
+      catLabel = 'Project';
+    } else if (rawType.includes('task') || rawType.includes('sprint')) {
+      catBadgeClass = 'fin-cat-task';
+      catLabel = 'Task';
+    }
+
+    const countdownTag = isUrgent 
+      ? `<span class="fin-countdown-tag tag-red">Urgent Action</span>`
+      : (unread 
+        ? `<span class="fin-countdown-tag tag-amber">Unread</span>`
+        : `<span class="fin-countdown-tag tag-slate">Info</span>`);
+
     return `
-      <div class="noti-item" data-id="${n.id}" data-unread="${unread ? '1' : '0'}" data-urgency="${n.urgency || ''}">
-        <span class="noti-item-dot"></span>
-        <span>
-          <span class="noti-item-message">${n.message}</span>
-          <span class="noti-item-meta">${n.project?.title ? `${n.project.title} &bull; ` : ''}${formatNotificationTime(n.created_at)}</span>
-        </span>
+      <div class="fin-action-card ${isUrgent ? 'card-overdue' : (unread ? 'card-upcoming' : 'card-info')}" data-id="${n.id}" data-unread="${unread ? '1' : '0'}" role="button" tabindex="0">
+        <div class="fin-card-header-row">
+          <span class="fin-cat-badge ${catBadgeClass}">${n.category || catLabel}</span>
+          ${countdownTag}
+        </div>
+        <div class="fin-card-msg">${n.message}</div>
+        <div class="fin-card-meta">
+          <span class="fin-project-name">${n.project?.title || 'Academic ERP'}</span>
+          <span class="fin-card-time" style="display: flex; align-items: center; gap: 5px;">
+            ${unread ? '<span style="width: 7px; height: 7px; border-radius: 50%; background: #00897B; display: inline-block;"></span>' : ''}
+            ${formatNotificationTime(n.created_at)}
+          </span>
+        </div>
       </div>
     `;
   }).join('');
@@ -54,12 +101,15 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
   const isDeveloper = authStore.role === 'developer' || currentPath.startsWith('/developer');
   const isDirector = authStore.role === 'director' || currentPath.startsWith('/director');
   const isDesignHead = authStore.role === 'design_head' || currentPath.startsWith('/design');
+  const isAdmin = authStore.role === 'admin' || currentPath.startsWith('/admin');
 
   let targetPortal = 'default';
   if (isFaculty) {
     targetPortal = 'faculty';
   } else if (isStudent && isStudentPortal) {
     targetPortal = 'student';
+  } else if (isAdmin) {
+    targetPortal = 'admin';
   } else if (isDeveloper) {
     targetPortal = 'developer';
   } else if (isDirector) {
@@ -220,7 +270,7 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
       const iconCommunication = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
 
       const navItems = [
-        { title: 'Design Studio & Figma', path: '/design', icon: iconStudio },
+        { title: 'Design Studio', path: '/design', icon: iconStudio },
         { title: 'Projects & Prototypes', path: '/projects', icon: iconProjects },
         { title: 'Team Communication', path: '/communication', icon: iconCommunication },
         { title: 'My Profile & Security', path: '/profile', icon: iconProfile }
@@ -241,45 +291,9 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           `).join('')}
         </ul>
       `;
-    } else if (targetPortal === 'faculty') {
-      const iconDashboard = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`;
-      const iconProfile = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
-      const iconChat = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-      const iconStudents = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
-      const iconSprints = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
-      const iconVerifyTask = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`;
-      const iconMeetings = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
-      const iconReport = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
-      const iconNotifications = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
-
-      const navItems = [
-        { title: 'Dashboard', path: '/faculty', icon: iconDashboard },
-        { title: 'Profile', path: '/faculty/profile', icon: iconProfile },
-        { title: 'My Project', path: '/faculty/projects', icon: iconProjects },
-        { title: 'Chat', path: '/faculty/chat', icon: iconChat },
-        { title: 'Students', path: '/faculty/students', icon: iconStudents },
-        { title: 'Assign Module & Task', path: '/faculty/sprints', icon: iconSprints },
-        { title: 'Verify Task', path: '/faculty/verify-tasks', icon: iconVerifyTask },
-        { title: 'Meetings', path: '/faculty/meetings', icon: iconMeetings },
-        { title: 'Report', path: '/faculty/reports', icon: iconReport },
-        { title: 'Notifications', path: '/faculty/notifications', icon: iconNotifications }
-      ];
-
-      sidebarNav.innerHTML = `
-        <ul>
-          ${navItems.map(item => `
-            <li>
-              <a href="${item.path}">
-                ${item.icon}
-                <span>${item.title}</span>
-              </a>
-            </li>
-          `).join('')}
-        </ul>
-      `;
     } else {
       const iconsMap = {
+        IconAdmin: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
         IconDashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>`,
         IconCoordinator: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
         IconFaculty: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
@@ -323,12 +337,14 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
     const href = a.getAttribute('href');
     if (href) {
       let isActive = false;
-      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard' || href === '/faculty') {
+      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
         isActive = currentPath === href || currentPath === href + '/';
       } else if (href === '/faculty/profile') {
         isActive = currentPath === '/faculty/profile' || currentPath.startsWith('/faculty/profile/') || currentPath === '/profile' || currentPath.startsWith('/profile/');
       } else {
         isActive = currentPath === href || currentPath.startsWith(href + '/') ||
+          (href === '/projects' && (currentPath.startsWith('/projects') || currentPath.startsWith('/admin/projects'))) ||
+          (href === '/admin/students' && (currentPath.startsWith('/admin/students') || currentPath.startsWith('/director/students'))) ||
           (href.startsWith('/developer/') && currentPath.startsWith(href.replace('/developer', '/dashboard'))) ||
           (href.startsWith('/director/') && currentPath.startsWith(href.replace('/director', '/dashboard')));
       }
@@ -348,6 +364,59 @@ export function updateSidebar(currentPath) {
   populateSidebarNav(sidebarNav, currentPath, authStore);
 }
 
+
+export function updateTopBarAvatar(photoUrl, name) {
+  const authStore = useAuthStore();
+  const displayName =
+    name || authStore.user?.name || authStore.user?.username || 'User';
+  const initial = displayName.charAt(0).toUpperCase() || 'U';
+
+  const avatarTargets = document.querySelectorAll(
+    '#user-profile-header .avatar, #finance-user-profile-header .avatar, .topbar .avatar, .user-profile .avatar, .user-avatar, .topbar-avatar, #topbar-user-avatar'
+  );
+
+  avatarTargets.forEach(avatarEl => {
+    if (photoUrl) {
+      avatarEl.style.padding = '0';
+      avatarEl.style.overflow = 'hidden';
+
+      // Update an existing image when the target itself is an img element.
+      if (avatarEl.tagName === 'IMG') {
+        avatarEl.src = photoUrl;
+        avatarEl.alt = displayName;
+      } else {
+        avatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+      }
+    } else {
+      avatarEl.style.padding = '';
+      avatarEl.style.overflow = '';
+
+      if (avatarEl.tagName === 'IMG') {
+        avatarEl.removeAttribute('src');
+        avatarEl.alt = displayName;
+      } else {
+        avatarEl.textContent = initial;
+      }
+    }
+  });
+
+  const popoverAvatarTargets = document.querySelectorAll(
+    '#popover-avatar, #finance-popover-avatar, .profile-popover-avatar'
+  );
+
+  popoverAvatarTargets.forEach(popAvatarEl => {
+    if (photoUrl) {
+      popAvatarEl.style.padding = '0';
+      popAvatarEl.style.overflow = 'hidden';
+      popAvatarEl.innerHTML = `<img src="${photoUrl}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />`;
+    } else {
+      popAvatarEl.style.padding = '';
+      popAvatarEl.style.overflow = '';
+      popAvatarEl.textContent = initial;
+    }
+  });
+}
+
 export async function DashboardLayout(contentChild, route, router) {
   const authStore = useAuthStore();
   const currentPath = window.location.pathname;
@@ -362,14 +431,13 @@ export async function DashboardLayout(contentChild, route, router) {
   const studentIdentifier = user ? (user.id || user.email || user.username || user.name) : null;
   const studentPhoto = (isStudent && studentIdentifier)
     ? (localStorage.getItem(`student_profile_photo_${String(studentIdentifier).toLowerCase().trim()}`) || user?.avatar || null)
-    : null;
-  const facultyPhoto = isFacultyUser
-    ? (localStorage.getItem('faculty_profile_photo') || user?.photo || user?.avatar || null)
-    : null;
-  const userPhoto = studentPhoto || facultyPhoto || user?.avatar || user?.photo || null;
+    : (user?.avatar || null);
   const displayName = user?.name || user?.username || 'User';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'MEMBER';
   const initial = displayName.charAt(0).toUpperCase();
+  // Other roles use the server-side profile photo (users.profile_photo_path):
+  // render the cached URL immediately, then refresh it from the API below.
+  const headerPhoto = isStudent ? studentPhoto : (user?.profile_photo_url || null);
 
   const designation = user?.designation || (isStudent ? 'Nova' : roleName);
   const email = user?.email || 'student@rajagiri.edu';
@@ -398,7 +466,7 @@ export async function DashboardLayout(contentChild, route, router) {
   wrapper.innerHTML = `
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-logo">
+        <div class="sidebar-logo" id="sidebar-logo-link" role="link" tabindex="0" title="Go to dashboard" style="cursor: pointer;">
           <img src="/assets/Rlabz_Logo_dark.png" alt="RLabZ ERP" class="sidebar-watermark" style="height: 84px; width: auto;" />
         </div>
       </div>
@@ -427,8 +495,8 @@ export async function DashboardLayout(contentChild, route, router) {
           ` : ''}
 
         <div class="user-profile" id="user-profile-header">
-          <div class="avatar" style="${userPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-            ${userPhoto ? `<img src="${userPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+          <div class="avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+            ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
           </div>
           <div class="user-details">
             <span class="user-name">${displayName}</span>
@@ -438,8 +506,8 @@ export async function DashboardLayout(contentChild, route, router) {
           <!-- Floating Profile Popover -->
           <div class="profile-popover" id="profile-popover">
             <div class="profile-popover-header">
-              <div class="profile-popover-avatar" id="popover-avatar" style="${userPhoto ? 'padding: 0; overflow: hidden;' : ''}">
-                ${userPhoto ? `<img src="${userPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
+              <div class="profile-popover-avatar" id="popover-avatar" style="${headerPhoto ? 'padding: 0; overflow: hidden;' : ''}">
+                ${headerPhoto ? `<img src="${headerPhoto}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" />` : initial}
               </div>
               <div class="profile-popover-meta">
                 <span class="profile-popover-name" id="popover-name">${displayName}</span>
@@ -490,45 +558,94 @@ export async function DashboardLayout(contentChild, route, router) {
 
       <main class="content-outlet${isStudentPortal ? ' student-content-outlet' : ''}" id="layout-outlet"></main>
     </div>
+
+    <!-- Native Right Floating Bell & Slide-Out Drawer (Exact UI as Finance Dashboard) -->
+    <button class="fin-bell-trigger" id="fin-bell-btn" title="View Action Items & Notifications">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      <span class="fin-bell-badge" id="fin-bell-badge" style="display: none;"></span>
+    </button>
+
+    <!-- Drawer Backdrop -->
+    <div class="fin-drawer-backdrop" id="fin-drawer-backdrop"></div>
+
+    <!-- Notification Drawer -->
+    <div class="fin-notification-drawer" id="fin-notification-drawer">
+      <div class="fin-drawer-header">
+        <div class="fin-drawer-title-wrap">
+          <span class="fin-drawer-title">Action Items & Notifications</span>
+          <span class="fin-drawer-count" id="fin-drawer-count" style="display: none;">0</span>
+        </div>
+        <button class="fin-drawer-close" id="fin-drawer-close" title="Close Drawer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="fin-drawer-body" id="fin-drawer-body">
+        <div style="text-align:center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem;">Loading notifications...</div>
+      </div>
+    </div>
   `;
 
   // Populate sidebar navigation
   const sidebarNav = wrapper.querySelector('.sidebar-nav');
   populateSidebarNav(sidebarNav, currentPath, authStore);
 
-  // Notification bell — role-agnostic, reused across every dashboard layout.
-  const bellBtn = wrapper.querySelector('#noti-bell-btn');
-  const notiDropdown = wrapper.querySelector('#noti-dropdown');
-  const notiListContainer = wrapper.querySelector('#noti-list-container');
-  const notiBadge = wrapper.querySelector('#noti-badge');
+  // Native Notification Drawer Controls (Matching Finance Dashboard)
+  const bellBtn = wrapper.querySelector('#fin-bell-btn');
+  const drawer = wrapper.querySelector('#fin-notification-drawer');
+  const backdrop = wrapper.querySelector('#fin-drawer-backdrop');
+  const closeBtn = wrapper.querySelector('#fin-drawer-close');
+  const drawerBody = wrapper.querySelector('#fin-drawer-body');
+  const bellBadge = wrapper.querySelector('#fin-bell-badge');
+  const drawerCount = wrapper.querySelector('#fin-drawer-count');
+
+  const openDrawer = () => {
+    if (drawer) drawer.classList.add('open');
+    if (backdrop) backdrop.classList.add('open');
+    if (bellBtn) bellBtn.classList.add('drawer-open');
+  };
+
+  const closeDrawer = () => {
+    if (drawer) drawer.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+    if (bellBtn) bellBtn.classList.remove('drawer-open');
+  };
+
+  if (bellBtn) bellBtn.addEventListener('click', openDrawer);
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (backdrop) backdrop.addEventListener('click', closeDrawer);
 
   function updateBadge(notifications) {
     const unreadCount = notifications.filter((n) => !n.is_read).length;
-    if (unreadCount > 0) {
-      notiBadge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-      notiBadge.style.display = 'flex';
-    } else {
-      notiBadge.style.display = 'none';
+    if (bellBadge && drawerCount) {
+      if (unreadCount > 0) {
+        const text = unreadCount > 99 ? '99+' : String(unreadCount);
+        bellBadge.textContent = text;
+        bellBadge.style.display = 'block';
+        drawerCount.textContent = `${text} Unread`;
+        drawerCount.style.display = 'inline-block';
+        if (bellBtn) bellBtn.classList.add('fin-bell-shake');
+      } else {
+        bellBadge.style.display = 'none';
+        if (notifications.length > 0) {
+          drawerCount.textContent = `${notifications.length} Total`;
+          drawerCount.style.display = 'inline-block';
+        } else {
+          drawerCount.style.display = 'none';
+        }
+        if (bellBtn) bellBtn.classList.remove('fin-bell-shake');
+      }
     }
   }
 
-  function positionDropdown() {
-    const rect = bellBtn.getBoundingClientRect();
-    const dropdownWidth = notiDropdown.offsetWidth || 360;
-    // Anchor under the bell, right-aligned to it, clamped so it never runs off
-    // either edge of the viewport (important on narrow screens).
-    let left = rect.right - dropdownWidth;
-    left = Math.max(12, Math.min(left, window.innerWidth - dropdownWidth - 12));
-    notiDropdown.style.top = `${rect.bottom + 8}px`;
-    notiDropdown.style.left = `${left}px`;
-  }
-
-  function closeDropdown() {
-    notiDropdown.style.display = 'none';
-  }
-
   function bindNotificationItems(notifications) {
-    notiListContainer.querySelectorAll('.noti-item[data-unread="1"]').forEach((item) => {
+    if (!drawerBody) return;
+    drawerBody.querySelectorAll('.fin-action-card[data-unread="1"]').forEach((item) => {
       item.addEventListener('click', async () => {
         const id = item.dataset.id;
         const token = localStorage.getItem('token');
@@ -538,48 +655,23 @@ export async function DashboardLayout(contentChild, route, router) {
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', Authorization: `Bearer ${token}` },
           });
         } catch (e) {
-          // ignore — visual state still updates locally below
+          // ignore
         }
         const notification = notifications.find((n) => String(n.id) === String(id));
         if (notification) notification.is_read = true;
-        notiListContainer.innerHTML = renderNotificationList(notifications);
+        drawerBody.innerHTML = renderNotificationList(notifications);
         bindNotificationItems(notifications);
         updateBadge(notifications);
       });
     });
   }
 
-  if (bellBtn && notiDropdown) {
+  if (bellBtn && drawer) {
     fetchNotifications().then((notifications) => {
       updateBadge(notifications);
-      notiListContainer.innerHTML = renderNotificationList(notifications);
-      bindNotificationItems(notifications);
-    });
-
-    bellBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      closeDropdown();
-      const notiRoute = (currentPath.startsWith('/faculty') || authStore.role === 'faculty')
-        ? '/faculty/notifications'
-        : `/${authStore.role || 'faculty'}/notifications`;
-      if (router && typeof router.push === 'function') {
-        router.push(notiRoute);
-      } else {
-        window.location.href = notiRoute;
-      }
-    });
-
-    notiDropdown.addEventListener('click', (e) => e.stopPropagation());
-
-    // Bell position is static while the dropdown is open (the app shell doesn't
-    // scroll as a whole — only #layout-outlet does), so closing on resize avoids
-    // a stale, misplaced dropdown rather than needing continuous repositioning.
-    window.addEventListener('resize', closeDropdown);
-
-    document.addEventListener('click', (e) => {
-      if (notiDropdown.style.display === 'block' && !notiDropdown.contains(e.target) && e.target !== bellBtn) {
-        closeDropdown();
+      if (drawerBody) {
+        drawerBody.innerHTML = renderNotificationList(notifications);
+        bindNotificationItems(notifications);
       }
     });
   }
@@ -600,6 +692,29 @@ export async function DashboardLayout(contentChild, route, router) {
   logoutBtn?.addEventListener('click', () => {
     authStore.logout();
     router.push('/auth/login');
+  });
+
+  // Bind sidebar logo click â€” goes to the current role's own dashboard
+  // (same roleâ†’route mapping AuthController::respondWithToken() already
+  // sends down as `user.defaultRoute`), never a generic/other-role page.
+  const ROLE_HOME_ROUTES = {
+    director: '/dashboard',
+    coordinator: '/coordinator',
+    finance: '/finance',
+    faculty: '/faculty',
+    student: '/student',
+  };
+  const sidebarLogoLink = wrapper.querySelector('#sidebar-logo-link');
+  const goToDashboard = () => {
+    const target = authStore.user?.defaultRoute || ROLE_HOME_ROUTES[authStore.role] || '/';
+    router.push(target);
+  };
+  sidebarLogoLink?.addEventListener('click', goToDashboard);
+  sidebarLogoLink?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      goToDashboard();
+    }
   });
 
   // Bind User Profile Header Click
@@ -630,10 +745,11 @@ export async function DashboardLayout(contentChild, route, router) {
       popoverProfileLink.addEventListener('click', (e) => {
         e.preventDefault();
         profilePopover.style.display = 'none';
+        const profileRoute = ROLE_PROFILE_ROUTES[authStore.role] || '/profile';
         if (router && typeof router.push === 'function') {
-          router.push('/profile');
+          router.push(profileRoute);
         } else {
-          window.location.href = '/profile';
+          window.location.href = profileRoute;
         }
       });
     }
@@ -674,6 +790,14 @@ export async function DashboardLayout(contentChild, route, router) {
           if (p.designation) user.designation = p.designation;
           localStorage.setItem('user', JSON.stringify(user));
         }
+
+        // Non-student roles: the header photo comes only from profile_photo_path
+        // (returned by /auth/profile). Students keep their existing photo source.
+        if (!isStudent && 'profile_photo_path' in p) {
+          const photoUrl = profilePhotoUrl(p.profile_photo_path);
+          rememberProfilePhoto(photoUrl);
+          applyHeaderAvatar(wrapper, photoUrl, p.name || displayName);
+        }
       })
       .catch(() => {});
     }
@@ -682,9 +806,3 @@ export async function DashboardLayout(contentChild, route, router) {
   return wrapper;
 }
 
-export function updateTopBarAvatar(avatarUrl) {
-    const avatarImg = document.querySelector('.user-avatar, .topbar-avatar, #topbar-user-avatar');
-    if (avatarImg && avatarUrl) {
-        avatarImg.src = avatarUrl;
-    }
-}

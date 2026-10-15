@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Modules\Student\Models\StudentReport;
 
 class StudentController extends Controller
 {
@@ -562,6 +563,11 @@ class StudentController extends Controller
                     'weekEnd' => $r->week_end,
                     'weekLabel' => $weekLabel,
                     'workDone' => $r->work_done,
+                    'tasksCompleted' => $r->tasks_completed,
+                    'pendingWork' => $r->next_plan,
+                    'blockers' => $r->challenges,
+                    'remarks' => $r->remarks,
+                    'hoursWorked' => $r->hours_worked !== null ? (float) $r->hours_worked : null,
                     'status' => ucfirst($r->approval_status ?: 'pending'),
                     'feedback' => $r->feedback,
                     'reportFile' => $r->report_file,
@@ -594,11 +600,18 @@ class StudentController extends Controller
             'taskId' => 'required|integer',
             'date' => 'required|date',
             'workDone' => 'required|string|min:3',
+            'tasksCompleted' => 'nullable|string|max:5000',
+            'pendingWork' => 'nullable|string|max:5000',
+            'blockers' => 'nullable|string|max:5000',
+            'hoursWorked' => 'nullable|numeric|min:0|max:24',
+            'remarks' => 'nullable|string|max:5000',
+            'reportFile' => 'nullable|file|max:10240',
         ], [
             'projectId.required' => 'Please select a project.',
             'taskId.required' => 'Please select an assigned task.',
             'date.required' => 'Report date is required.',
             'workDone.required' => 'Work done description is required.',
+            'hoursWorked.max' => 'Hours worked cannot exceed 24 for a single day.',
         ]);
 
         if ($validator->fails()) {
@@ -614,6 +627,16 @@ class StudentController extends Controller
         $project = DB::table('projects')->where('id', $projectId)->first();
         if (!$project) {
             return response()->json(['error' => 'Selected project does not exist.'], 422);
+        }
+
+        // Verify the student is actually assigned to this project (project-level check,
+        // in addition to the task-level ownership check below).
+        $isAssignedToProject = DB::table('project_student')
+            ->where('project_id', $projectId)
+            ->where('student_id', $studentId)
+            ->exists();
+        if (!$isAssignedToProject) {
+            return response()->json(['error' => 'You are not assigned to this project.'], 403);
         }
 
         // Verify task exists, belongs to project, assigned to student, and is active or rework
@@ -636,6 +659,19 @@ class StudentController extends Controller
             return response()->json(['error' => 'This task is already completed and cannot accept reports unless rework is requested.'], 422);
         }
 
+        // Prevent an accidental duplicate submission for the same student+project+task+
+        // date. Different tasks on the same day remain allowed (existing per-task design).
+        $duplicate = DB::table('student_reports')
+            ->where('student_id', $studentId)
+            ->where('project_id', $projectId)
+            ->where('task_id', $taskId)
+            ->where('report_type', 'daily')
+            ->where('report_date', $reportDate)
+            ->exists();
+        if ($duplicate) {
+            return response()->json(['error' => 'You have already submitted a daily report for this task on this date.'], 422);
+        }
+
         // Update task's github repository and PR if provided in report submission
         $taskGithubUpdate = [];
         if ($request->has('githubRepositoryId') && $request->filled('githubRepositoryId')) {
@@ -654,6 +690,11 @@ class StudentController extends Controller
         $weekStart = $dateCarbon->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
         $weekEnd = $dateCarbon->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
 
+        $storedFilePath = null;
+        if ($request->hasFile('reportFile')) {
+            $storedFilePath = $request->file('reportFile')->store('reports', 'public');
+        }
+
         // Insert Daily Report
         $reportId = DB::table('student_reports')->insertGetId([
             'student_id' => $studentId,
@@ -665,7 +706,12 @@ class StudentController extends Controller
             'week_end' => $weekEnd,
             'weekly_key' => null, // Daily reports have NULL weekly_key
             'work_done' => $workDone,
-            'report_file' => null,
+            'tasks_completed' => $request->input('tasksCompleted') ?: null,
+            'next_plan' => $request->input('pendingWork') ?: null,
+            'challenges' => $request->input('blockers') ?: null,
+            'remarks' => $request->input('remarks') ?: null,
+            'hours_worked' => $request->filled('hoursWorked') ? (float) $request->input('hoursWorked') : null,
+            'report_file' => $storedFilePath,
             'approval_status' => 'pending',
             'feedback' => null,
             'submitted_at' => now(),
@@ -674,7 +720,7 @@ class StudentController extends Controller
         ]);
 
         // Automatically create or update the corresponding Weekly Progress Report
-        $this->syncWeeklyProgressReport($studentId, $projectId, $reportDate);
+        StudentReport::syncWeekly($studentId, $projectId, $reportDate);
 
         if (Schema::hasTable('notifications')) {
             DB::table('notifications')->insert([
@@ -692,129 +738,6 @@ class StudentController extends Controller
             'report_id' => $reportId,
             'message' => "Daily report submitted successfully and weekly progress updated.",
         ]);
-    }
-
-    /**
-     * Automatically creates or updates the Weekly Progress Report for a student, project, and week.
-     * Prevents duplicates with a database-level unique constraint on weekly_key.
-     */
-    private function syncWeeklyProgressReport($studentId, $projectId, $reportDate)
-    {
-        $dateCarbon = Carbon::parse($reportDate);
-        $weekStart = $dateCarbon->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
-        $weekEnd = $dateCarbon->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
-        $weeklyKey = "std_{$studentId}_proj_{$projectId}_wk_{$weekStart}";
-
-        // Fetch all daily reports for this student, project, and week range
-        $dailyReports = DB::table('student_reports')
-            ->leftJoin('tasks', 'tasks.id', '=', 'student_reports.task_id')
-            ->leftJoin('github_repositories', 'github_repositories.id', '=', 'tasks.github_repository_id')
-            ->where('student_reports.student_id', $studentId)
-            ->where('student_reports.project_id', $projectId)
-            ->where('student_reports.report_type', 'daily')
-            ->whereBetween('student_reports.report_date', [$weekStart, $weekEnd])
-            ->select(
-                'student_reports.id',
-                'student_reports.report_date',
-                'student_reports.work_done',
-                'student_reports.task_id',
-                'tasks.title as task_title',
-                'tasks.status as task_status',
-                'tasks.github_pr_url',
-                'github_repositories.branch_name',
-                'github_repositories.branch_url'
-            )
-            ->orderBy('student_reports.report_date', 'asc')
-            ->orderBy('student_reports.id', 'asc')
-            ->get();
-
-        if ($dailyReports->isEmpty()) {
-            return;
-        }
-
-        // Group daily reports by task
-        $tasksGrouped = [];
-        foreach ($dailyReports as $dr) {
-            $tId = $dr->task_id ?: 'general';
-            if (!isset($tasksGrouped[$tId])) {
-                $statusMap = [
-                    'todo' => 'Todo',
-                    'in_progress' => 'In Progress',
-                    'completed' => 'Completed',
-                    'blocked' => 'Blocked',
-                ];
-                $tasksGrouped[$tId] = [
-                    'taskId' => $dr->task_id,
-                    'taskCode' => $dr->task_id ? 'T-' . $dr->task_id : 'General',
-                    'taskTitle' => $dr->task_title ?: 'General Work',
-                    'taskStatus' => $statusMap[strtolower($dr->task_status ?: 'todo')] ?? ucfirst($dr->task_status ?: 'Todo'),
-                    'branchName' => $dr->branch_name,
-                    'branchUrl' => $dr->branch_url,
-                    'githubPrUrl' => $dr->github_pr_url,
-                    'entries' => [],
-                ];
-            }
-            $tasksGrouped[$tId]['entries'][] = [
-                'date' => $dr->report_date,
-                'work' => $dr->work_done,
-            ];
-        }
-
-        // Generate formatted readable text summary
-        $formattedText = "Tasks Worked On:\n\n";
-        foreach ($tasksGrouped as $tg) {
-            $formattedText .= "{$tg['taskCode']} — {$tg['taskTitle']}\n";
-            $formattedText .= "Status: {$tg['taskStatus']}\n";
-            if (!empty($tg['branchName'])) {
-                $formattedText .= "Branch: {$tg['branchName']}\n";
-            }
-            if (!empty($tg['githubPrUrl'])) {
-                $formattedText .= "PR: {$tg['githubPrUrl']}\n";
-            }
-            foreach ($tg['entries'] as $entry) {
-                $formattedDate = date('M j', strtotime($entry['date']));
-                $formattedText .= "• [{$formattedDate}] {$entry['work']}\n";
-            }
-            $formattedText .= "\n";
-        }
-        $formattedText = trim($formattedText);
-
-        // Check if weekly report already exists for this weekly_key
-        $existingWeekly = DB::table('student_reports')
-            ->where('weekly_key', $weeklyKey)
-            ->first();
-
-        if ($existingWeekly) {
-            // Update existing weekly report
-            DB::table('student_reports')
-                ->where('id', $existingWeekly->id)
-                ->update([
-                    'work_done' => $formattedText,
-                    'report_date' => $weekEnd,
-                    'week_start' => $weekStart,
-                    'week_end' => $weekEnd,
-                    'updated_at' => now(),
-                ]);
-        } else {
-            // Insert new weekly report
-            DB::table('student_reports')->insert([
-                'student_id' => $studentId,
-                'project_id' => $projectId,
-                'task_id' => null,
-                'report_type' => 'weekly',
-                'report_date' => $weekEnd,
-                'week_start' => $weekStart,
-                'week_end' => $weekEnd,
-                'weekly_key' => $weeklyKey,
-                'work_done' => $formattedText,
-                'report_file' => null,
-                'approval_status' => 'pending',
-                'feedback' => null,
-                'submitted_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
     }
 
     public function downloadReportFile(Request $request, $id)
@@ -2443,136 +2366,9 @@ class StudentController extends Controller
     }
 
     /**
-     * Get the student's latest password change request status.
-     * Reuses existing notifications & audit_logs tables.
-     */
-    public function getPasswordRequestStatus(Request $request)
-    {
-        $studentId = $this->getStudentId($request);
-        if (!$studentId) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        // Query the latest password change notification/record for this student
-        $latest = DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->whereIn('type', ['password_change_request', 'password_change_approved', 'password_change_rejected'])
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if (!$latest || $latest->urgency === 'completed' || $latest->urgency === 'cancelled') {
-            return response()->json([
-                'has_request' => false,
-                'status' => 'none',
-                'request' => null,
-            ]);
-        }
-
-        // Determine status from notification type and urgency
-        $status = 'pending';
-        if ($latest->type === 'password_change_approved' || $latest->urgency === 'approved') {
-            $status = 'approved';
-        } elseif ($latest->type === 'password_change_rejected' || $latest->urgency === 'rejected') {
-            $status = 'rejected';
-        } elseif ($latest->urgency === 'pending' || $latest->type === 'password_change_request') {
-            $status = 'pending';
-        }
-
-        return response()->json([
-            'has_request' => true,
-            'status' => $status,
-            'request' => [
-                'id' => $latest->id,
-                'status' => $status,
-                'message' => $latest->message,
-                'created_at' => $latest->created_at,
-                'updated_at' => $latest->updated_at,
-            ],
-        ]);
-    }
-
-    /**
-     * Submit a request to coordinator for password change access.
-     * Reuses existing notifications & audit_logs tables.
-     */
-    public function requestPasswordChange(Request $request)
-    {
-        $studentId = $this->getStudentId($request);
-        if (!$studentId) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        $user = DB::table('users')->where('id', $studentId)->first();
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
-
-        // Check for an existing pending request
-        $existingPending = DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->where('type', 'password_change_request')
-            ->where('urgency', 'pending')
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($existingPending) {
-            return response()->json([
-                'error' => 'Your password change request is awaiting coordinator approval. Please wait for review before submitting another request.',
-                'status' => 'pending',
-            ], 400);
-        }
-
-        // Create notification record for the student representing their request state
-        $notifId = DB::table('notifications')->insertGetId([
-            'user_id' => $studentId,
-            'project_id' => null,
-            'type' => 'password_change_request',
-            'urgency' => 'pending',
-            'message' => 'Your password change request is awaiting coordinator approval.',
-            'is_read' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // Notify coordinators
-        $coordinatorIds = DB::table('users')->where('role', 'coordinator')->pluck('id')->toArray();
-        foreach ($coordinatorIds as $coordId) {
-            DB::table('notifications')->insert([
-                'user_id' => $coordId,
-                'project_id' => null,
-                'type' => 'password_change_request',
-                'urgency' => 'high',
-                'message' => "Student {$user->name} ({$user->email}) has submitted a request to change their account password.",
-                'is_read' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        // Record audit log
-        if (Schema::hasTable('audit_logs')) {
-            DB::table('audit_logs')->insert([
-                'user_id' => $studentId,
-                'action' => 'Password Change Request Submitted',
-                'description' => "Student {$user->name} submitted a password change access request to coordinator.",
-                'created_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Password change access request submitted successfully. Awaiting coordinator approval.',
-            'status' => 'pending',
-            'request' => [
-                'id' => $notifId,
-                'status' => 'pending',
-                'created_at' => now()->toDateTimeString(),
-            ],
-        ], 201);
-    }
-
-    /**
-     * Change password directly without requiring coordinator approval.
-     * Reuses existing users hashing & notifications/audit tables.
+     * Change the logged-in student's own password. Requires the current
+     * password — same pattern as Faculty/Coordinator changePassword(). The
+     * former request → coordinator approval step has been retired.
      */
     public function updatePassword(Request $request)
     {
@@ -2587,9 +2383,11 @@ class StudentController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
             'new_password' => 'required|string|min:6',
             'confirm_password' => 'required|string|same:new_password',
         ], [
+            'current_password.required' => 'Please enter your current password.',
             'new_password.required' => 'Please enter your new password.',
             'new_password.min' => 'Password must be at least 6 characters.',
             'confirm_password.required' => 'Please confirm your new password.',
@@ -2600,83 +2398,28 @@ class StudentController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
 
-        $newPassword = $request->input('new_password');
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            return response()->json(['error' => 'Current password is incorrect.'], 400);
+        }
 
         // Update password with Laravel's standard Hash::make
         DB::table('users')->where('id', $studentId)->update([
-            'password' => Hash::make($newPassword),
+            'password' => Hash::make($request->input('new_password')),
             'updated_at' => now(),
         ]);
-
-        // If there is any existing request notification, mark it completed
-        $latestRequest = DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->whereIn('type', ['password_change_request', 'password_change_approved'])
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($latestRequest) {
-            DB::table('notifications')->where('id', $latestRequest->id)->update([
-                'urgency' => 'completed',
-                'is_read' => 1,
-                'updated_at' => now(),
-            ]);
-        }
 
         // Record audit log
         if (Schema::hasTable('audit_logs')) {
             DB::table('audit_logs')->insert([
                 'user_id' => $studentId,
-                'action' => 'Password Changed Successfully',
-                'description' => "Student {$user->name} updated their account password.",
+                'action' => 'Password Changed',
+                'description' => "Student {$user->name} changed their account password.",
                 'created_at' => now(),
             ]);
         }
 
         return response()->json([
             'message' => 'Password changed successfully! You can now use your new password.'
-        ]);
-    }
-
-    /**
-     * Cancel / withdraw a pending or approved password change request.
-     */
-    public function cancelPasswordRequest(Request $request)
-    {
-        $studentId = $this->getStudentId($request);
-        if (!$studentId) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        $user = DB::table('users')->where('id', $studentId)->first();
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
-
-        DB::table('notifications')
-            ->where('user_id', $studentId)
-            ->whereIn('type', ['password_change_request', 'password_change_approved', 'password_change_rejected'])
-            ->where(function ($q) {
-                $q->whereNotIn('urgency', ['completed', 'cancelled'])
-                  ->orWhereNull('urgency');
-            })
-            ->update([
-                'urgency' => 'cancelled',
-                'is_read' => 1,
-                'updated_at' => now(),
-            ]);
-
-        if (Schema::hasTable('audit_logs')) {
-            DB::table('audit_logs')->insert([
-                'user_id' => $studentId,
-                'action' => 'Password Change Request Cancelled',
-                'description' => "Student {$user->name} cancelled their password change request.",
-                'created_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Password change request cancelled successfully.'
         ]);
     }
 
@@ -3039,5 +2782,54 @@ class StudentController extends Controller
         });
 
         return response()->json($events);
+    }
+
+    /**
+     * Retrieve Design tickets assigned to the authenticated student
+     * Enforces student-level access scoping (assigned_to = auth_user.id)
+     */
+    public function getDesignTickets(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if (!Schema::hasTable('design_tickets')) {
+            return response()->json(['status' => 'success', 'data' => []]);
+        }
+
+        $tickets = DB::table('design_tickets')
+            ->leftJoin('users as requesters', 'design_tickets.requester_id', '=', 'requesters.id')
+            ->leftJoin('projects', 'design_tickets.project_id', '=', 'projects.id')
+            ->leftJoin('design_versions', 'design_tickets.current_version_id', '=', 'design_versions.id')
+            ->where('design_tickets.assigned_to', $studentId)
+            ->select(
+                'design_tickets.id',
+                'design_tickets.ticket_number',
+                'design_tickets.title',
+                'design_tickets.work_type',
+                'design_tickets.priority',
+                'design_tickets.status',
+                'design_tickets.ball_is_with',
+                'design_tickets.committed_delivery_date',
+                'design_tickets.required_by',
+                'design_tickets.requesting_division',
+                'design_tickets.brand_kit_name',
+                'design_tickets.estimated_hours',
+                'design_tickets.actual_hours_logged',
+                'design_tickets.created_at',
+                'requesters.name as requester_name',
+                'projects.title as project_title',
+                'design_versions.version_number as current_version_number',
+                'design_versions.file_url as current_preview_url'
+            )
+            ->orderBy('design_tickets.committed_delivery_date', 'asc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $tickets
+        ]);
     }
 }

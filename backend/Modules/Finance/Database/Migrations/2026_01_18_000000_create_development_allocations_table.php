@@ -14,6 +14,8 @@ return new class extends Migration
             $table->enum('category', ['student', 'faculty', 'rlabz']);
             $table->decimal('amount', 12, 2);
             $table->timestamps();
+
+            $table->index('category', 'idx_devalloc_category');
         });
     }
 

@@ -21,6 +21,8 @@ return new class extends Migration
                 $table->foreignId('student_id')->unique()->constrained('users')->onDelete('cascade');
                 $table->enum('role', ['project_lead', 'developer', 'designer', 'tester', 'other']);
                 $table->timestamps();
+
+                $table->index('role', 'idx_studroles_role');
             });
         }
     }

@@ -15,6 +15,9 @@ return new class extends Migration
             $table->enum('role', ['project_lead', 'developer', 'designer', 'tester', 'other']);
             $table->date('assigned_date');
             $table->timestamps();
+
+            $table->index(['project_id', 'student_id'], 'idx_projstu_project_student');
+            $table->index('role', 'idx_projstu_role');
         });
     }
 

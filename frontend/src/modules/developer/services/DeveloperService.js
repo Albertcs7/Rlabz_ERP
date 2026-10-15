@@ -23,6 +23,13 @@ const initialData = {
   auditLogs: []
 };
 
+function extractList(result) {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.data?.data)) return result.data.data;
+  return [];
+}
+
 function loadState() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) {
@@ -163,7 +170,84 @@ export class DeveloperService {
 
   static async getProjectsAsync(forceFresh = false) {
     const fresh = await this.fetchProjectsRemote();
-2  }
+    if (fresh) return fresh;
+    return this.getProjects();
+  }
+
+  static async fetchProjectsRemote() {
+    try {
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/projects`, { headers });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/projects`, { headers });
+      }
+      if (response.ok) {
+        const result = await response.json();
+        const list = extractList(result);
+        if (list.length >= 0) {
+          const data = loadState();
+          data.projects = list;
+          saveState(data);
+          return list;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  static getProposals() {
+    return loadState().proposals;
+  }
+
+  static async getProposalsAsync(forceFresh = false) {
+    const fresh = await this.fetchProposalsRemote();
+    if (fresh) return fresh;
+    return this.getProposals();
+  }
+
+  static async fetchProposalsRemote() {
+    try {
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/proposals`, { headers });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/proposals`, { headers });
+      }
+      if (response.ok) {
+        const result = await response.json();
+        const list = extractList(result);
+        if (list.length >= 0) {
+          const data = loadState();
+          data.proposals = list;
+          saveState(data);
+          return list;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  static async getFinanceSummaryAsync() {
+    try {
+      let headers = await getAuthHeadersAsync();
+      let response = await fetch(`${API_BASE}/finance`, { headers });
+      if (response.status === 401) {
+        headers = await getAuthHeadersAsync(true);
+        response = await fetch(`${API_BASE}/finance`, { headers });
+      }
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const data = loadState();
+          data.financeSummary = result.data;
+          saveState(data);
+          return result.data;
+        }
+      }
+    } catch (e) {}
+    return this.getFinanceSummary();
+  }
 
   // proposalId here MUST be the real numeric database id (proposal.raw_id from the
   // API response), not the display-formatted "PROP-014" string.
@@ -311,8 +395,9 @@ export class DeveloperService {
       clearTimeout(timeoutId);
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data && result.data.length > 0) {
-          const facultiesList = result.data.map(f => ({
+        const rawFaculties = extractList(result);
+        if (rawFaculties.length > 0) {
+          const facultiesList = rawFaculties.map(f => ({
             id: String(f.id),
             name: f.name,
             email: f.email || 'faculty@rajagiri.edu',
@@ -379,8 +464,9 @@ export class DeveloperService {
       clearTimeout(timeoutId);
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data) {
-          const logs = result.data.map(l => ({
+        const rawLogs = extractList(result);
+        if (rawLogs.length >= 0) {
+          const logs = rawLogs.map(l => ({
             id: typeof l.id === 'string' && l.id.startsWith('LOG-') ? l.id : `LOG-${l.id}`,
             timestamp: l.timestamp || (l.created_at ? String(l.created_at).slice(0, 16) : new Date().toISOString().slice(0, 16)),
             user: l.user || 'Director',
@@ -467,8 +553,9 @@ export class DeveloperService {
       clearTimeout(timeoutId);
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'success' && result.data && result.data.length > 0) {
-          const students = result.data.map(s => ({
+        const rawStudents = extractList(result);
+        if (rawStudents.length > 0) {
+          const students = rawStudents.map(s => ({
             id: s.id,
             raw_id: s.raw_id,
             name: s.name,

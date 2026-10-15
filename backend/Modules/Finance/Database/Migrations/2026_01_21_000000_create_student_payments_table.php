@@ -19,6 +19,8 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->date('payment_date')->nullable();
             $table->timestamps();
+
+            $table->index('payment_date', 'idx_studpay_payment_date');
         });
     }
 

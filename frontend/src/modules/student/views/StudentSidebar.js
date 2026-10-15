@@ -1,7 +1,6 @@
 import { useAuthStore } from '@/core/stores/auth.js';
 import { getStudentProfilePhoto } from './studentStore.js';
 import { updateTopBarAvatar } from '@/core/layouts/DashboardLayout.js';
-export { updateTopBarAvatar } from '@/core/layouts/DashboardLayout.js';
 export { updateTopBarAvatar };
 
 export function updateStudentNavbarAvatar() {

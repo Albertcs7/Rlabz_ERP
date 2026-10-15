@@ -7,6 +7,9 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 use Modules\Auth\Models\User;
 use Modules\Coordinator\Models\ClientRequirement;
 use Modules\Coordinator\Models\ProjectClosure;
@@ -14,12 +17,15 @@ use Modules\Coordinator\Models\ProjectFaculty;
 use Modules\Coordinator\Models\ProjectStudent;
 use Modules\Coordinator\Models\RequirementChange;
 use Modules\Coordinator\Models\StudentRole;
-use Modules\Project\Models\Module;
 use Modules\Project\Models\Project;
 use Modules\Project\Models\Task;
+use Modules\Student\Models\StudentReport;
 
 class CoordinatorController extends Controller
 {
+    /** Roles the coordinator's Assign Student flow can set (project_student.role / student_roles.role). */
+    private const ASSIGNABLE_STUDENT_ROLES = ['nova', 'orbit', 'spark'];
+
     protected function currentUserId(?Request $request = null): ?int
     {
         $request = $request ?: request();
@@ -84,7 +90,11 @@ class CoordinatorController extends Controller
             }
         }
 
-        $completion = $taskCount > 0 ? round(($completedTaskCount / $taskCount) * 100, 2) : 0;
+        // Matches Modules\Faculty\Http\Controllers\FacultyController::getDashboardData()'s
+        // progress formula exactly: completed tasks / total tasks across all of the
+        // project's modules, rounded to a whole percent (no decimals) — same data
+        // source (modules.tasks), same ratio, same rounding.
+        $completion = $taskCount > 0 ? round(($completedTaskCount / $taskCount) * 100) : 0;
 
         return [
             'module_count' => $project->modules->count(),
@@ -101,7 +111,8 @@ class CoordinatorController extends Controller
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
-        $projects = Project::with([
+        $perPage = (int) $request->input('per_page', 20);
+        $paginator = Project::with([
             'creator',
             'students:id,name,email',
             'faculty:id,name,email',
@@ -109,15 +120,22 @@ class CoordinatorController extends Controller
             'modules.students:id,name,email',
             'requirements',
             'closure',
-        ])->latest()->get();
+        ])->latest()->paginate($perPage);
 
+        $projects = collect($paginator->items());
         $projects->each(function (Project $project) {
             $project->requirements_text = $project->getOriginal('requirements');
         });
 
         return response()->json([
             'data' => $projects,
-            'count' => $projects->count(),
+            'count' => $paginator->total(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
         ]);
     }
 
@@ -172,6 +190,7 @@ class CoordinatorController extends Controller
             'expected_timeline' => 'nullable|date',
             'budget' => 'nullable|numeric|min:0',
             'priority' => 'required|in:normal,urgent',
+            'drive_link' => 'nullable|string|max:2048',
         ]);
 
         $validated['created_by'] = $this->currentUserId($request) ?? $request->user()?->id;
@@ -200,7 +219,7 @@ class CoordinatorController extends Controller
 
         $validated = $request->validate([
             'student_id' => ['required', 'integer', 'exists:users,id'],
-            'role' => 'required|in:project_lead,developer,designer,tester,other',
+            'role' => 'required|in:' . implode(',', self::ASSIGNABLE_STUDENT_ROLES),
             'assigned_date' => 'nullable|date',
         ]);
 
@@ -220,7 +239,14 @@ class CoordinatorController extends Controller
         // A student's project role is global (set once, reused everywhere) — see
         // StudentRole. If they already have one, it overrides whatever was submitted;
         // a mismatched submission is rejected rather than silently accepted.
+        // Exception: a legacy role (project_lead/developer/designer/tester/other)
+        // can no longer be chosen in Assign Student, so it would block the student
+        // from ever being assigned again — it is replaced by the submitted
+        // Nova/Orbit/Spark role instead. Existing project_student rows are untouched.
         $existingRole = StudentRole::where('student_id', $validated['student_id'])->first();
+        if ($existingRole && !in_array($existingRole->role, self::ASSIGNABLE_STUDENT_ROLES, true)) {
+            $existingRole->update(['role' => $validated['role']]);
+        }
         if ($existingRole && $existingRole->role !== $validated['role']) {
             $label = ucwords(str_replace('_', ' ', $existingRole->role));
             return response()->json([
@@ -294,6 +320,39 @@ class CoordinatorController extends Controller
         return response()->json(['data' => $students]);
     }
 
+    /**
+     * The given student's current (non-closed, non-rejected) project
+     * assignments — a student can be on more than one project at once, so
+     * this returns an array, not a single project. "Current" mirrors the
+     * same definition CoordinatorHome.js already uses for "active projects"
+     * (status in proposed/accepted/in_progress). Used by the Assign Student
+     * side panel so the coordinator can see what a student is already
+     * working on before assigning them to something new.
+     */
+    public function studentCurrentProjects(Request $request, $studentId)
+    {
+        if (!$this->isAuthorized($request, ['view-coordinator', 'view-student'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $projects = DB::table('project_student')
+            ->join('projects', 'projects.id', '=', 'project_student.project_id')
+            ->where('project_student.student_id', $studentId)
+            ->whereIn('projects.status', ['proposed', 'accepted', 'in_progress'])
+            ->select(
+                'projects.id',
+                'projects.title',
+                'projects.client_name',
+                'projects.status',
+                'project_student.role',
+                'project_student.assigned_date'
+            )
+            ->orderBy('project_student.assigned_date', 'desc')
+            ->get();
+
+        return response()->json(['data' => $projects]);
+    }
+
     public function removeStudent(Request $request, Project $project, $studentId)
     {
         if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
@@ -314,159 +373,15 @@ class CoordinatorController extends Controller
     // The Project::faculty() relationship and project_faculty table remain untouched and
     // are still used above (index/show) to let the Coordinator VIEW assigned faculty.
 
-    /**
-     * Assign a student to a module (module_student). The student must already be
-     * assigned to the module's parent project via project_student.
-     */
-    public function assignStudentToModule(Request $request, Project $project, Module $module)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        if ((int) $module->project_id !== (int) $project->id) {
-            return response()->json(['error' => 'Selected module does not belong to this project'], 422);
-        }
-
-        $validated = $request->validate([
-            'student_id' => ['required', 'integer', 'exists:users,id'],
-            'assigned_date' => 'nullable|date',
-        ]);
-
-        $onProject = $project->students()->where('student_id', $validated['student_id'])->exists();
-        if (!$onProject) {
-            return response()->json(['error' => 'Student must be assigned to this project before being assigned to a module'], 422);
-        }
-
-        if ($module->students()->where('student_id', $validated['student_id'])->exists()) {
-            return response()->json(['error' => 'Student is already assigned to this module'], 422);
-        }
-
-        $module->students()->attach($validated['student_id'], [
-            'assigned_date' => $validated['assigned_date'] ?? now()->toDateString(),
-        ]);
-
-        if (Schema::hasTable('notifications')) {
-            DB::table('notifications')->insert([
-                'user_id' => $validated['student_id'],
-                'type' => 'module_assigned',
-                'message' => "Coordinator assigned you to module '{$module->module_name}' in project '{$project->title}'.",
-                'is_read' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        $record = $module->students()->where('users.id', $validated['student_id'])->first();
-
-        return response()->json([
-            'message' => 'Student assigned to module successfully',
-            'data' => $record,
-        ], 201);
-    }
-
-    public function storeModule(Request $request, Project $project)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        $validated = $request->validate([
-            'module_name' => 'required|string|max:150',
-            'description' => 'nullable|string',
-            'weight_percentage' => 'nullable|numeric|min:0|max:100',
-            'status' => 'nullable|in:not_started,in_progress,completed',
-        ]);
-
-        $module = Module::create([
-            'project_id' => $project->id,
-            'module_name' => $validated['module_name'],
-            'description' => $validated['description'] ?? null,
-            'weight_percentage' => $validated['weight_percentage'] ?? null,
-            'status' => $validated['status'] ?? 'not_started',
-            'created_by' => $this->currentUserId($request) ?? $request->user()?->id,
-        ]);
-
-        return response()->json([
-            'message' => 'Module created successfully',
-            'data' => $module,
-        ], 201);
-    }
-
-    public function updateModule(Request $request, Project $project, Module $module)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        if ((int) $module->project_id !== (int) $project->id) {
-            return response()->json(['error' => 'Selected module does not belong to this project'], 422);
-        }
-
-        $validated = $request->validate([
-            'module_name' => 'sometimes|required|string|max:150',
-            'description' => 'nullable|string',
-            'weight_percentage' => 'nullable|numeric|min:0|max:100',
-            'status' => 'sometimes|required|in:not_started,in_progress,completed',
-        ]);
-
-        $module->update($validated);
-
-        return response()->json([
-            'message' => 'Module updated successfully',
-            'data' => $module->fresh(),
-        ]);
-    }
-
-    public function storeTask(Request $request, Project $project, Module $module)
-    {
-        if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
-        if ((int) $module->project_id !== (int) $project->id) {
-            return response()->json(['error' => 'Selected module does not belong to this project'], 422);
-        }
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'assigned_to' => ['required', 'integer', 'exists:users,id'],
-            'status' => 'nullable|in:todo,in_progress,completed,blocked',
-            'due_date' => 'nullable|date',
-        ]);
-
-        $assigneeOnProject = $project->students()->where('users.id', $validated['assigned_to'])->exists();
-        if (!$assigneeOnProject) {
-            return response()->json(['error' => 'Task can only be assigned to a student already assigned to this project'], 422);
-        }
-
-        $task = Task::create([
-            'module_id' => $module->id,
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'assigned_to' => $validated['assigned_to'],
-            'status' => $validated['status'] ?? 'todo',
-            'due_date' => $validated['due_date'] ?? null,
-            'created_by' => $this->currentUserId($request) ?? $request->user()?->id,
-        ]);
-
-        if (Schema::hasTable('notifications')) {
-            DB::table('notifications')->insert([
-                'user_id' => $validated['assigned_to'],
-                'type' => 'task_assigned',
-                'message' => "Coordinator assigned you task '{$validated['title']}' under module '{$module->module_name}'.",
-                'is_read' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Task created successfully',
-            'data' => $task,
-        ], 201);
-    }
+    // Module/task creation, editing, and student-to-module assignment (previously
+    // storeModule/updateModule/assignStudentToModule/storeTask) have been removed —
+    // that is a Faculty responsibility (Modules\Faculty\Http\Controllers\FacultyController,
+    // which owns module_student and task assignment). Their routes were also removed
+    // from Modules\Coordinator\Routes\api.php, so this isn't just a hidden UI control —
+    // the endpoints no longer exist for the Coordinator. Read-only access to module/task
+    // data (module status, tasks, assigned students) is preserved via GET
+    // /coordinator/projects/{project} (show(), which eager-loads modules.tasks and
+    // modules.students below).
 
     public function requirements(Request $request, Project $project)
     {
@@ -557,17 +472,17 @@ class CoordinatorController extends Controller
             return response()->json(['error' => 'Selected requirement does not belong to this project'], 422);
         }
 
-        $userId = $this->currentUserId($request) ?? $request->user()?->id ?? 1;
+        $userId = $this->currentUserId($request) ?? $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['error' => 'Unable to identify current user'], 400);
+        }
 
-        $changeData = [
+        $change = RequirementChange::create([
             'client_requirement_id' => $requirement->id,
+            'previous_value' => json_encode($requirement),
             'updated_value' => json_encode($validated),
             'changed_by' => $userId,
-        ];
-        if (\Illuminate\Support\Facades\Schema::hasColumn('requirement_changes', 'project_id')) {
-            $changeData['project_id'] = $project->id;
-        }
-        $change = RequirementChange::create($changeData);
+        ]);
 
         return response()->json([
             'message' => 'Requirement change recorded successfully',
@@ -621,22 +536,30 @@ class CoordinatorController extends Controller
                 'project_student.role',
                 'project_student.assigned_date',
                 'projects.id as project_id',
-                'projects.title as project_title'
+                'projects.title as project_title',
+                'projects.status as project_status'
             )
             ->get()
             ->groupBy('student_id');
 
-        $students = $users->map(function ($user) use ($assignmentsByStudent) {
-            $assignments = ($assignmentsByStudent->get($user->id) ?? collect())->map(function ($a) {
+        // "Current" assignment = same definition as studentCurrentProjects() and
+        // CoordinatorHome's active projects: project status proposed/accepted/in_progress.
+        $currentStatuses = ['proposed', 'accepted', 'in_progress'];
+
+        $students = $users->map(function ($user) use ($assignmentsByStudent, $currentStatuses) {
+            $assignments = ($assignmentsByStudent->get($user->id) ?? collect())->map(function ($a) use ($currentStatuses) {
                 return [
                     'project_id' => $a->project_id,
                     'project_title' => $a->project_title,
+                    'project_status' => $a->project_status,
+                    'is_current' => in_array($a->project_status, $currentStatuses, true),
                     'designation' => ucwords(str_replace('_', ' ', $a->role)),
                     'assigned_date' => $a->assigned_date,
                 ];
             })->values();
 
             $primary = $assignments->first();
+            $hasCurrentAssignment = $assignments->contains('is_current', true);
 
             return [
                 'id' => 'RLZ' . str_pad($user->id, 3, '0', STR_PAD_LEFT),
@@ -648,7 +571,7 @@ class CoordinatorController extends Controller
                 'designation' => $primary['designation'] ?? '—',
                 'assigned_date' => $primary['assigned_date'] ?? null,
                 'assignments' => $assignments,
-                'status' => $assignments->isEmpty() ? 'Unassigned' : 'Active',
+                'status' => $hasCurrentAssignment ? 'Active' : 'Unassigned',
             ];
         });
 
@@ -727,13 +650,16 @@ class CoordinatorController extends Controller
         }
 
         $meetings = DB::table('meetings')
-            ->join('projects', 'projects.id', '=', 'meetings.project_id')
+            // leftJoin (not join): meetings without a project must still be listed.
+            ->leftJoin('projects', 'projects.id', '=', 'meetings.project_id')
             ->select(
                 'meetings.id',
                 'meetings.title',
+                'meetings.meeting_type',
                 'projects.title as project',
                 'meetings.scheduled_at',
                 'meetings.location',
+                'meetings.mode',
                 'meetings.meeting_link',
                 'meetings.agenda',
                 'meetings.status'
@@ -756,8 +682,10 @@ class CoordinatorController extends Controller
                     'date' => $dt->format('d M Y'),
                     'time' => $dt->format('h:i A'),
                     'title' => $m->title,
+                    'meeting_type' => $m->meeting_type,
                     'project' => $m->project,
                     'location' => $m->location,
+                    'mode' => $m->mode,
                     'meeting_link' => $m->meeting_link,
                     'agenda' => $m->agenda,
                     'participants' => 'Coordinator, Students',
@@ -778,29 +706,47 @@ class CoordinatorController extends Controller
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
+        // A link only belongs to an Online meeting — drop any stale value left over
+        // from switching the form from Online to Offline before it is validated or saved.
+        if ($request->input('mode') !== 'Online') {
+            $request->merge(['meeting_link' => null]);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'project' => 'required|string',
+            'project' => 'nullable|string',
+            'meeting_type' => 'nullable|string|in:Faculty Meeting,Project Presentation',
             'date' => 'required|date',
             'time' => 'required|string',
             'participants' => 'nullable|string',
             'location' => 'nullable|string|max:255',
+            'mode' => 'nullable|string|in:Offline,Online',
             'agenda' => 'nullable|string',
-            'meeting_link' => 'nullable|string|max:500',
+            // Required (and must be an http/https URL) only for Online meetings.
+            'meeting_link' => ['nullable', 'required_if:mode,Online', 'string', 'max:500', 'url', 'regex:/^https?:\/\//i'],
+        ], [
+            'meeting_link.required_if' => 'A meeting link is required for online meetings.',
+            'meeting_link.url' => 'The meeting link must be a valid http:// or https:// URL.',
+            'meeting_link.regex' => 'The meeting link must be a valid http:// or https:// URL.',
         ]);
 
-        $proj = Project::where('title', $validated['project'])->first();
-        if (!$proj) {
-            return response()->json(['error' => 'Selected project not found'], 404);
+        $proj = null;
+        if (!empty($validated['project'])) {
+            $proj = Project::where('title', $validated['project'])->first();
+            if (!$proj) {
+                return response()->json(['error' => 'Selected project not found'], 404);
+            }
         }
 
         $scheduledAt = date('Y-m-d H:i:s', strtotime($validated['date'] . ' ' . $validated['time']));
 
         $meetingId = DB::table('meetings')->insertGetId([
-            'project_id' => $proj->id,
+            'project_id' => $proj?->id,
             'title' => $validated['title'],
+            'meeting_type' => $validated['meeting_type'] ?? null,
             'scheduled_at' => $scheduledAt,
             'location' => $validated['location'] ?? null,
+            'mode' => $validated['mode'] ?? null,
             'agenda' => $validated['agenda'] ?? null,
             'meeting_link' => $validated['meeting_link'] ?? null,
             'status' => 'scheduled',
@@ -809,34 +755,37 @@ class CoordinatorController extends Controller
             'updated_at' => now(),
         ]);
 
-        // Automatically invite and notify students of the project
-        $studentIds = DB::table('project_student')
-            ->where('project_id', $proj->id)
-            ->pluck('student_id');
+        // Automatically invite and notify students of the project (only when a
+        // project is attached — a project-less meeting has no student roster to notify).
+        if ($proj) {
+            $studentIds = DB::table('project_student')
+                ->where('project_id', $proj->id)
+                ->pluck('student_id');
 
-        if (Schema::hasTable('meeting_participants')) {
-            foreach ($studentIds as $sId) {
-                DB::table('meeting_participants')->insert([
-                    'meeting_id' => $meetingId,
-                    'user_id' => $sId,
-                    'attendance_status' => 'invited',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            if (Schema::hasTable('meeting_participants')) {
+                foreach ($studentIds as $sId) {
+                    DB::table('meeting_participants')->insert([
+                        'meeting_id' => $meetingId,
+                        'user_id' => $sId,
+                        'attendance_status' => 'invited',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
-        }
 
-        if (Schema::hasTable('notifications')) {
-            $formattedTime = date('M j, Y g:i A', strtotime($scheduledAt));
-            foreach ($studentIds as $sId) {
-                DB::table('notifications')->insert([
-                    'user_id' => $sId,
-                    'type' => 'meeting_scheduled',
-                    'message' => "New meeting scheduled by Coordinator for project '{$proj->title}': '{$validated['title']}' on {$formattedTime}.",
-                    'is_read' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            if (Schema::hasTable('notifications')) {
+                $formattedTime = date('M j, Y g:i A', strtotime($scheduledAt));
+                foreach ($studentIds as $sId) {
+                    DB::table('notifications')->insert([
+                        'user_id' => $sId,
+                        'type' => 'meeting_scheduled',
+                        'message' => "New meeting scheduled by Coordinator for project '{$proj->title}': '{$validated['title']}' on {$formattedTime}.",
+                        'is_read' => 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
 
@@ -849,8 +798,10 @@ class CoordinatorController extends Controller
                 'date' => $dt->format('d M Y'),
                 'time' => $dt->format('h:i A'),
                 'title' => $validated['title'],
-                'project' => $proj->title,
+                'meeting_type' => $validated['meeting_type'] ?? null,
+                'project' => $proj?->title,
                 'location' => $validated['location'] ?? null,
+                'mode' => $validated['mode'] ?? null,
                 'meeting_link' => $validated['meeting_link'] ?? null,
                 'participants' => $validated['participants'] ?? 'Coordinator, Students',
                 'status' => 'Scheduled',
@@ -924,6 +875,279 @@ class CoordinatorController extends Controller
             'success' => true,
             'message' => 'Meeting status updated to cancelled.',
             'status' => 'cancelled',
+        ]);
+    }
+
+    /**
+
+     * List student daily/weekly reports, optionally filtered by project, student,
+     * report type, approval status, and date range. Coordinators are global in this
+     * app (no per-coordinator project assignment table exists — every other
+     * coordinator endpoint is unscoped the same way), so this intentionally returns
+     * across all projects rather than a restricted subset.
+     */
+    public function reports(Request $request)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $query = DB::table('student_reports')
+            ->leftJoin('projects', 'projects.id', '=', 'student_reports.project_id')
+            ->leftJoin('users', 'users.id', '=', 'student_reports.student_id');
+
+        if ($request->filled('project_id')) {
+            $query->where('student_reports.project_id', $request->input('project_id'));
+        }
+        if ($request->filled('student_id')) {
+            $query->where('student_reports.student_id', $request->input('student_id'));
+        }
+        if ($request->filled('report_type')) {
+            $query->where('student_reports.report_type', strtolower($request->input('report_type')));
+        }
+        if ($request->filled('status')) {
+            $query->where('student_reports.approval_status', strtolower($request->input('status')));
+        }
+        if ($request->filled('date_from')) {
+            $query->where('student_reports.report_date', '>=', $request->input('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->where('student_reports.report_date', '<=', $request->input('date_to'));
+        }
+
+        $reports = $query->select(
+            'student_reports.id',
+            'student_reports.project_id',
+            'projects.title as project_title',
+            'student_reports.student_id',
+            'users.name as student_name',
+            'users.email as student_email',
+            'student_reports.report_type',
+            'student_reports.report_date',
+            'student_reports.week_start',
+            'student_reports.week_end',
+            'student_reports.work_done',
+            'student_reports.tasks_completed',
+            'student_reports.next_plan',
+            'student_reports.challenges',
+            'student_reports.remarks',
+            'student_reports.hours_worked',
+            'student_reports.report_file',
+            'student_reports.approval_status',
+            'student_reports.feedback',
+            'student_reports.submitted_at'
+        )
+        ->orderBy('student_reports.submitted_at', 'desc')
+        ->get()
+        ->map(function ($r) {
+            $fileName = $r->report_file ? basename($r->report_file) : null;
+
+            $dailyCount = null;
+            if (strtolower($r->report_type) === 'weekly' && $r->week_start && $r->week_end) {
+                $dailyCount = DB::table('student_reports')
+                    ->where('student_id', $r->student_id)
+                    ->where('project_id', $r->project_id)
+                    ->where('report_type', 'daily')
+                    ->whereBetween('report_date', [$r->week_start, $r->week_end])
+                    ->count();
+            }
+
+            return [
+                'id' => $r->id,
+                'project_id' => $r->project_id,
+                'project_title' => $r->project_title ?: 'General Project',
+                'student_id' => $r->student_id,
+                'student_name' => $r->student_name ?: 'Student',
+                'student_email' => $r->student_email ?: '',
+                'report_type' => ucfirst($r->report_type),
+                'report_date' => $r->report_date,
+                'week_start' => $r->week_start,
+                'week_end' => $r->week_end,
+                'daily_report_count' => $dailyCount,
+                'work_done' => $r->work_done,
+                'tasks_completed' => $r->tasks_completed,
+                'pending_work' => $r->next_plan,
+                'blockers' => $r->challenges,
+                'remarks' => $r->remarks,
+                'hours_worked' => $r->hours_worked !== null ? (float) $r->hours_worked : null,
+                'approval_status' => ucfirst($r->approval_status ?: 'pending'),
+                'feedback' => $r->feedback,
+                'submitted_at' => $r->submitted_at,
+                'report_file' => $r->report_file,
+                'file_name' => $fileName,
+                'file_url' => $r->report_file ? asset('storage/' . $r->report_file) : null,
+                'download_url' => $r->report_file ? url('api/coordinator/reports/' . $r->id . '/download') : null,
+            ];
+        });
+
+        return response()->json($reports);
+    }
+
+    /**
+     * Approve/reject/reset a student daily or weekly report, with optional remarks.
+     * Mirrors FacultyController::reviewReport() exactly.
+     */
+    public function reviewReport(Request $request, $id)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:approved,rejected,pending,Approved,Rejected,Pending',
+            'feedback' => 'nullable|string|max:2000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $report = DB::table('student_reports')->where('id', $id)->first();
+        if (!$report) {
+            return response()->json(['error' => 'Student report not found.'], 404);
+        }
+
+        $statusLower = strtolower($request->input('status'));
+
+        DB::table('student_reports')->where('id', $id)->update([
+            'approval_status' => $statusLower,
+            'feedback' => $request->filled('feedback') ? $request->input('feedback') : $report->feedback,
+            'updated_at' => now(),
+        ]);
+
+        if (Schema::hasTable('notifications')) {
+            $statusText = ucfirst($statusLower);
+            $reportType = ucfirst($report->report_type);
+            $msg = "Your {$reportType} Report for {$report->report_date} was {$statusText} by your coordinator.";
+            if ($request->filled('feedback')) {
+                $msg .= " Feedback: " . $request->input('feedback');
+            }
+
+            DB::table('notifications')->insert([
+                'user_id' => $report->student_id,
+                'type' => 'report_review',
+                'message' => $msg,
+                'is_read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Report status updated successfully.',
+            'status' => ucfirst($statusLower),
+            'feedback' => $request->input('feedback') ?: $report->feedback,
+        ]);
+    }
+
+    /**
+     * Download a report's attached file. Mirrors Faculty/Student downloadReportFile().
+     */
+    public function downloadReportFile(Request $request, $id)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $report = DB::table('student_reports')->where('id', $id)->first();
+        if (!$report || !$report->report_file) {
+            return response()->json(['error' => 'Report file not found'], 404);
+        }
+
+        if (!Storage::disk('public')->exists($report->report_file)) {
+            return response()->json(['error' => 'File not found on storage'], 404);
+        }
+
+        $filePath = Storage::disk('public')->path($report->report_file);
+        $ext = pathinfo($report->report_file, PATHINFO_EXTENSION);
+        $studentName = DB::table('users')->where('id', $report->student_id)->value('name') ?: 'Student';
+        $safeStudentName = preg_replace('/[^A-Za-z0-9_]/', '_', $studentName);
+        $downloadName = "Report_{$safeStudentName}_{$report->report_date}_{$report->id}.{$ext}";
+
+        return response()->download($filePath, $downloadName);
+    }
+
+    /**
+     * Explicitly generate (or refresh) a weekly report for a chosen student/project/
+     * week from their real daily reports. Reuses StudentReport::syncWeekly() — the
+     * same function the automatic per-submission rollup uses — so manual and
+     * automatic generation can never produce conflicting/duplicate weekly rows
+     * (enforced by the unique weekly_key constraint).
+     */
+    public function generateWeeklyReport(Request $request)
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'student_id' => 'required|integer|exists:users,id',
+            'project_id' => 'required|integer|exists:projects,id',
+            'week_start' => 'required|date',
+            'week_end' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $studentId = (int) $request->input('student_id');
+        $projectId = (int) $request->input('project_id');
+        $canonicalWeekStart = Carbon::parse($request->input('week_start'))->startOfWeek(Carbon::MONDAY);
+        $canonicalWeekEnd = $canonicalWeekStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        if ($request->filled('week_end')) {
+            $requestedWeekEnd = Carbon::parse($request->input('week_end'))->toDateString();
+            if ($requestedWeekEnd !== $canonicalWeekEnd->toDateString()) {
+                return response()->json([
+                    'error' => "Weeks must run Monday to Sunday. For week_start {$canonicalWeekStart->toDateString()}, week_end must be {$canonicalWeekEnd->toDateString()}."
+                ], 422);
+            }
+        }
+
+        $isAssigned = DB::table('project_student')
+            ->where('project_id', $projectId)
+            ->where('student_id', $studentId)
+            ->exists();
+        if (!$isAssigned) {
+            return response()->json(['error' => 'Selected student is not assigned to this project.'], 422);
+        }
+
+        $weekly = StudentReport::syncWeekly($studentId, $projectId, $canonicalWeekStart->toDateString());
+
+        if (!$weekly) {
+            return response()->json([
+                'success' => false,
+                'message' => "No daily reports found for this student/project between {$canonicalWeekStart->toDateString()} and {$canonicalWeekEnd->toDateString()}.",
+            ]);
+        }
+
+        $dailyCount = DB::table('student_reports')
+            ->where('student_id', $studentId)
+            ->where('project_id', $projectId)
+            ->where('report_type', 'daily')
+            ->whereBetween('report_date', [$canonicalWeekStart->toDateString(), $canonicalWeekEnd->toDateString()])
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Weekly report generated from {$dailyCount} daily report(s).",
+            'data' => [
+                'id' => $weekly->id,
+                'student_id' => $weekly->student_id,
+                'project_id' => $weekly->project_id,
+                'week_start' => $weekly->week_start,
+                'week_end' => $weekly->week_end,
+                'daily_report_count' => $dailyCount,
+                'work_done' => $weekly->work_done,
+                'tasks_completed' => $weekly->tasks_completed,
+                'pending_work' => $weekly->next_plan,
+                'blockers' => $weekly->challenges,
+                'remarks' => $weekly->remarks,
+                'hours_worked' => $weekly->hours_worked !== null ? (float) $weekly->hours_worked : null,
+                'approval_status' => ucfirst($weekly->approval_status ?: 'pending'),
+            ],
         ]);
     }
 
@@ -1002,5 +1226,149 @@ class CoordinatorController extends Controller
             ]);
 
         return response()->json(['success' => true]);
+
+    }
+
+    /**
+     * The authenticated coordinator's own profile details. Mirrors Faculty's
+     * getProfile() pattern (Modules\Faculty\Http\Controllers\FacultyController),
+     * but there is no coordinator-equivalent side table (no department/
+     * designation concept for this role in the current schema), so this is
+     * users-table fields only — nothing invented beyond what's there.
+     */
+    public function getProfile(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')
+            ->where('id', $userId)
+            ->select('id', 'name', 'email', 'phone', 'role', 'created_at')
+            ->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Coordinator user not found'], 404);
+        }
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'role' => ucfirst($user->role),
+            'created_at' => $user->created_at,
+        ]);
+    }
+
+    /**
+     * Update the authenticated coordinator's own name/email/phone. role and
+     * permissions are intentionally never accepted here — those stay
+     * controller-assigned, not self-editable.
+     */
+    public function updateProfile(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Coordinator user not found'], 404);
+        }
+
+        // Limits match the users columns (name varchar(150), phone varchar(20)).
+        // The email must end in @rajagiri.edu: login only accepts those
+        // (AuthController::login + LoginView), so any other address would lock
+        // the coordinator out of their own account.
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'email' => 'required|email|max:255|ends_with:@rajagiri.edu|unique:users,email,' . $userId,
+            'phone' => 'nullable|string|max:20',
+        ], [
+            'email.ends_with' => 'The email must be an @rajagiri.edu address — other addresses cannot be used to log in.',
+            'name.max' => 'The name must not be longer than 150 characters.',
+            'phone.max' => 'The phone number must not be longer than 20 characters.',
+        ]);
+
+        DB::table('users')->where('id', $userId)->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'id' => $userId,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'role' => ucfirst($user->role),
+            ],
+        ]);
+    }
+
+    /**
+     * Change password for the logged-in coordinator. Mirrors Faculty's
+     * changePassword() exactly — current-password verification, no approval
+     * step (unlike the Student flow, which is approval-gated and not
+     * appropriate for a coordinator changing their own password).
+     */
+    public function changePassword(Request $request)
+    {
+        $userId = $this->currentUserId($request);
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $currentPassword = $request->input('current_password');
+        $newPassword = $request->input('new_password');
+        $confirmPassword = $request->input('confirm_password') ?: $request->input('new_password_confirmation');
+
+        if (!$currentPassword) {
+            return response()->json(['error' => 'Current password is required.'], 422);
+        }
+        if (!$newPassword) {
+            return response()->json(['error' => 'New password is required.'], 422);
+        }
+        if (strlen($newPassword) < 6) {
+            return response()->json(['error' => 'New password must be at least 6 characters long.'], 422);
+        }
+        if ($newPassword !== $confirmPassword) {
+            return response()->json(['error' => 'New password and confirmation do not match.'], 422);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Coordinator account not found.'], 404);
+        }
+
+        if (!Hash::check($currentPassword, $user->password)) {
+            return response()->json(['error' => 'Current password is incorrect.'], 400);
+        }
+
+        DB::table('users')->where('id', $userId)->update([
+            'password' => Hash::make($newPassword),
+            'updated_at' => now(),
+        ]);
+
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $userId,
+                'action' => 'Password Changed',
+                'description' => "Coordinator {$user->name} changed their account password.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password updated successfully.',
+        ]);
     }
 }

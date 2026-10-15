@@ -60,8 +60,21 @@ class ProjectController extends Controller
             return response()->json(['status' => 'success', 'data' => []]);
         }
 
-        $projects = $query->orderBy('created_at', 'desc')->get();
-        return response()->json(['status' => 'success', 'data' => $projects]);
+        $perPage = (int) $request->input('per_page', 20);
+        $projects = $query->with(['faculty', 'students', 'modules'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $projects->items(),
+            'pagination' => [
+                'current_page' => $projects->currentPage(),
+                'last_page' => $projects->lastPage(),
+                'per_page' => $projects->perPage(),
+                'total' => $projects->total(),
+            ]
+        ]);
     }
 
     public function show(Request $request, $id)
@@ -114,7 +127,8 @@ class ProjectController extends Controller
             'budget' => 'nullable|numeric',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
-            'status' => 'nullable|string'
+            'status' => 'nullable|string',
+            'drive_link' => 'nullable|string|max:2048'
         ]);
 
         $validated['created_by'] = $this->getUserId($request) ?? 1;

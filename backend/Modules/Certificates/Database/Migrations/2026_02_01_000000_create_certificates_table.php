@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('certificate_file', 500)->nullable();
             $table->foreignId('issued_by')->constrained('users');
             // No timestamps specified in prompt, but let's add them for safety or omit? Prompt says "timestamps" for some, not for this. I will omit.
+
+            $table->index('issue_date', 'idx_certificates_issue_date');
         });
     }
 

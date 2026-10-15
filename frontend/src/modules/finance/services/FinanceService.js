@@ -42,8 +42,16 @@ class FinanceService {
     };
   }
 
+  _extractArray(res) {
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.data?.data)) return res.data.data;
+    return [];
+  }
+
   async getProjectFinances() {
-    return await this._fetch('/finance/projects') || [];
+    const res = await this._fetch('/finance/projects');
+    return this._extractArray(res);
   }
 
   async getProjectDetails(projectId) {
@@ -52,7 +60,8 @@ class FinanceService {
 
   async getStudentPayroll(projectId = null) {
     const url = projectId ? `/finance/student-payments?project_id=${projectId}` : '/finance/student-payments';
-    return await this._fetch(url) || [];
+    const res = await this._fetch(url);
+    return this._extractArray(res);
   }
 
   async getStudentPayrollByProject(projectId) {
@@ -64,15 +73,29 @@ class FinanceService {
   }
 
   async getFacultyCosts() {
-    return await this._fetch('/finance/faculty-payments') || [];
+    const res = await this._fetch('/finance/faculty-payments');
+    return this._extractArray(res);
   }
 
   async getInvoices() {
-    return await this._fetch('/finance/invoices') || [];
+    const res = await this._fetch('/finance/invoices');
+    return this._extractArray(res);
   }
 
-  async getTransactions() {
-    return await this._fetch('/finance/transactions') || [];
+  async getTransactions(params = {}) {
+    let query = '';
+    if (typeof params === 'object' && params !== null) {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          sp.append(k, v);
+        }
+      });
+      const qs = sp.toString();
+      if (qs) query = `?${qs}`;
+    }
+    const res = await this._fetch(`/finance/transactions${query}`);
+    return this._extractArray(res);
   }
   
   async addProjectFinance(data) {
@@ -99,6 +122,10 @@ class FinanceService {
     return this._fetch('/finance/maintenance-charges', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  async addMarketingExpense(data) {
+    return this._fetch('/finance/marketing-expenses', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   async createInvoice(data) {
     return this._fetch('/finance/invoices', { method: 'POST', body: JSON.stringify(data) });
   }
@@ -108,6 +135,11 @@ class FinanceService {
       total_development_amount: 0,
       remaining_dev_billable: 0,
       total_project_budget: 0,
+      overhead_budget: 0,
+      consumed_overhead: 0,
+      remaining_overhead: 0,
+      marketing_budget: 0,
+      marketing_expenses: [],
       hosting_charges: [],
       maintenance_charges: []
     };

@@ -17,6 +17,8 @@ return new class extends Migration
             $table->enum('status', ['not_started', 'in_progress', 'completed']);
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
+
+            $table->index(['project_id', 'status'], 'idx_modules_project_status');
         });
     }
 

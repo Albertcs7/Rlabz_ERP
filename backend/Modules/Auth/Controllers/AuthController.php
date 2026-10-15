@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class AuthController extends Controller
@@ -19,7 +20,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:150',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:director,coordinator,finance,faculty,student,developer,design_head',
+            'role' => 'required|in:director,coordinator,finance,faculty,student,developer,design_head,admin',
             'phone' => 'nullable|string|max:20',
         ]);
         $validated['password'] = Hash::make($validated['password']);
@@ -44,30 +45,26 @@ class AuthController extends Controller
         $email = $request->input('email');
         $password = $request->input('password');
 
-        if (!$email || !str_contains($email, '@rajagiri.edu')) {
-            if (\Illuminate\Support\Facades\Schema::hasTable('audit_logs')) {
-                DB::table('audit_logs')->insert([
-                    'user_id' => 1,
-                    'action' => 'Login Failed - Invalid Domain',
-                    'description' => "Failed login attempt for '{$email}'. Email must contain @rajagiri.edu.",
-                    'created_at' => now()
-                ]);
-            }
+        if (!is_string($email) || $email === '' || !str_contains($email, '@rajagiri.edu')) {
+            $this->recordFailedLogin(
+                $request,
+                is_string($email) ? $email : '',
+                'Login Failed - Invalid Domain',
+                'Email must contain @rajagiri.edu.'
+            );
             return response()->json(['error' => 'Email must contain @rajagiri.edu'], 401);
         }
 
         $user = DB::table('users')->where('email', $email)->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
-            if (\Illuminate\Support\Facades\Schema::hasTable('audit_logs')) {
-                DB::table('audit_logs')->insert([
-                    'user_id' => $user->id ?? 1,
-                    'action' => 'Login Failed - Invalid Credentials',
-                    'description' => "Failed login attempt for '{$email}'. Invalid credentials.",
-                    'created_at' => now()
-                ]);
-            }
+        if (!$user || !is_string($password) || !Hash::check($password, $user->password)) {
+            $this->recordFailedLogin($request, $email, 'Login Failed - Invalid Credentials', 'Invalid credentials.', $user->id ?? null);
             return response()->json(['error' => 'Invalid email or password.'], 401);
+        }
+
+        if (isset($user->status) && $user->status === 'suspended') {
+            $this->recordFailedLogin($request, $email, 'Login Failed - Account Suspended', 'Account is suspended.', $user->id ?? null);
+            return response()->json(['error' => 'Account is suspended. Please contact administrator.'], 403);
         }
 
         $token = $this->generateJwt($user);
@@ -83,6 +80,38 @@ class AuthController extends Controller
         }
 
         return $this->respondWithToken($token, $user);
+    }
+
+    /**
+     * Audit a failed login without ever failing the login request itself.
+     *
+     * audit_logs.user_id is NOT NULL with a foreign key to users, so a row can
+     * only be written when the attempt matches a real user (e.g. wrong
+     * password). Attempts with no matching user (unknown or non-@rajagiri.edu
+     * email) go to the application log instead — never a made-up user id.
+     * The password is never logged.
+     */
+    private function recordFailedLogin(Request $request, string $email, string $action, string $reason, ?int $userId = null): void
+    {
+        $description = "Failed login attempt for '{$email}'. {$reason}";
+
+        if ($userId === null) {
+            Log::notice($action, ['email' => $email, 'ip' => $request->ip()]);
+            return;
+        }
+
+        try {
+            if (Schema::hasTable('audit_logs')) {
+                DB::table('audit_logs')->insert([
+                    'user_id' => $userId,
+                    'action' => $action,
+                    'description' => $description,
+                    'created_at' => now(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Could not write failed-login audit row', ['email' => $email, 'error' => $e->getMessage()]);
+        }
     }
 
     /**
@@ -111,6 +140,7 @@ class AuthController extends Controller
         $role = $user->role ?? 'student';
         
         $defaultRoutes = [
+            'admin' => '/admin',
             'director' => '/director',
             'developer' => '/developer',
             'coordinator' => '/coordinator',
@@ -121,6 +151,7 @@ class AuthController extends Controller
         ];
         
         $modules = [
+            'admin' => ['admin', 'project', 'profile'],
             'director' => ['director', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication', 'design', 'profile'],
             'developer' => ['developer', 'dashboard', 'project', 'finance', 'github', 'audit-notifications', 'certificates', 'student', 'faculty', 'coordinator', 'communication', 'design', 'profile'],
             'coordinator' => ['coordinator', 'project', 'student', 'communication', 'github', 'certificates', 'design', 'profile'],
@@ -174,6 +205,7 @@ class AuthController extends Controller
             'sub' => $user->id,
             'email' => $user->email,
             'role' => $user->role,
+            'status' => $user->status ?? 'active',
             'permissions' => $permissions,
             'exp' => time() + 86400 * 30
         ]);
@@ -325,11 +357,12 @@ class AuthController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:150',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|string|max:20',
             'bio' => 'nullable|string|max:1000',
             'location' => 'nullable|string|max:150',
             'department' => 'nullable|string|max:150',
             'avatar' => 'nullable|string',
+            'photo_url' => 'nullable|string',
         ]);
 
         $updateData = [
@@ -341,7 +374,14 @@ class AuthController extends Controller
         if (Schema::hasColumn('users', 'bio')) $updateData['bio'] = $validated['bio'] ?? null;
         if (Schema::hasColumn('users', 'location')) $updateData['location'] = $validated['location'] ?? 'Kochi, India';
         if (Schema::hasColumn('users', 'department')) $updateData['department'] = $validated['department'] ?? null;
-        if (Schema::hasColumn('users', 'avatar')) $updateData['avatar'] = $validated['avatar'] ?? null;
+        
+        $photo = $validated['photo_url'] ?? ($validated['avatar'] ?? null);
+        if ($photo !== null && Schema::hasColumn('users', 'profile_photo_path')) {
+            $updateData['profile_photo_path'] = $photo ?: null;
+        }
+        if ($photo !== null && Schema::hasColumn('users', 'avatar')) {
+            $updateData['avatar'] = $photo ?: null;
+        }
 
         DB::table('users')->where('id', $userId)->update($updateData);
 

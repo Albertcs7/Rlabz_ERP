@@ -36,13 +36,24 @@ class FinanceController extends Controller
 
     public function getProjectDetails($id)
     {
-        $project = $this->financeService->getProjectFinanceDetails($id);
+        $projectFinance = $this->financeService->getProjectFinanceDetails($id);
 
-        if (!$project) {
-            return response()->json(['error' => 'Project not found'], 404);
+        if ($projectFinance) {
+            return response()->json($projectFinance);
         }
 
-        return response()->json($project);
+        // Check if the project exists in projects table (excluding proposed and rejected)
+        $project = Project::find($id);
+        if ($project && !in_array(strtolower($project->status ?? ''), ['proposed', 'rejected'])) {
+            $project->finance_lock = $this->financeService->buildFinanceLock($project);
+            return response()->json([
+                'initialized' => false,
+                'project'     => $project,
+                'message'     => 'Financial breakdown has not been initialized for this project yet.'
+            ], 200);
+        }
+
+        return response()->json(['error' => 'Project not found'], 404);
     }
 
     public function getStudentPayments(Request $request)
@@ -58,16 +69,46 @@ class FinanceController extends Controller
         return response()->json($payments);
     }
 
-    public function getInvoices()
+    public function getInvoices(Request $request)
     {
-        $invoices = $this->financeService->getAllInvoices();
-        return response()->json($invoices);
+        $perPage = (int) $request->input('per_page', 20);
+        $paginator = \Modules\Finance\Models\Invoice::with(['projectFinance.project', 'clientPayments', 'items'])
+            ->orderBy('id', 'desc')
+            ->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $paginator->items(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ]
+        ]);
     }
 
-    public function getTransactions()
+    public function getTransactions(Request $request)
     {
-        $transactions = $this->financeService->getAllTransactions();
-        return response()->json($transactions);
+        $sort = $request->query('sort');
+        $projectId = $request->query('project_id') ?: $request->query('projectId');
+        $all = collect($this->financeService->getAllTransactions($sort, $projectId));
+        
+        $perPage = (int) $request->query('per_page', 20);
+        $page = (int) $request->query('page', 1);
+        $total = $all->count();
+        $items = $all->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $items,
+            'pagination' => [
+                'current_page' => $page,
+                'last_page' => (int) ceil($total / max($perPage, 1)),
+                'per_page' => $perPage,
+                'total' => $total,
+            ]
+        ]);
     }
 
     public function updateAllocations(Request $request, $id)
@@ -117,6 +158,8 @@ class FinanceController extends Controller
             'dev_student'        => 'nullable|numeric|min:0',
             'dev_faculty'        => 'nullable|numeric|min:0',
             'dev_rlabz'          => 'nullable|numeric|min:0',
+            'marketing_budget'   => 'nullable|numeric|min:0',
+            'overhead_budget'    => 'nullable|numeric|min:0',
             'host_ssl'           => 'nullable|numeric|min:0',
             'host_domain'        => 'nullable|numeric|min:0',
             'host_api'           => 'nullable|numeric|min:0',
@@ -140,9 +183,20 @@ class FinanceController extends Controller
                   + ($validated['dev_faculty'] ?? 0)
                   + ($validated['dev_rlabz']   ?? 0);
 
+        $overheadBudget = isset($validated['overhead_budget']) && $validated['overhead_budget'] !== null
+            ? (float) $validated['overhead_budget']
+            : (
+                (float) ($validated['host_ssl'] ?? 0)
+              + (float) ($validated['host_domain'] ?? 0)
+              + (float) ($validated['host_api'] ?? 0)
+              + (float) ($validated['maintenance_support'] ?? 0)
+            );
+
         $pf = \Modules\Finance\Models\ProjectFinance::create([
             'project_id'               => $validated['project_id'],
             'total_development_amount' => $devTotal,
+            'marketing_budget'         => $validated['marketing_budget'] ?? 0.00,
+            'overhead_budget'          => $overheadBudget,
             'created_by'               => $this->currentUserId($request),
         ]);
 
@@ -155,26 +209,6 @@ class FinanceController extends Controller
         }
         if (!empty($allocations)) {
             DB::table('development_allocations')->insert($allocations);
-        }
-
-        // Hosting charges
-        foreach (['ssl' => 'host_ssl', 'domain' => 'host_domain', 'api' => 'host_api'] as $type => $key) {
-            if (!empty($validated[$key])) {
-                \Modules\Finance\Models\HostingCharge::create([
-                    'project_finance_id' => $pf->id,
-                    'charge_type'        => $type,
-                    'amount'             => $validated[$key],
-                    'purchase_date'      => now()->toDateString(),
-                ]);
-            }
-        }
-
-        // Maintenance & support
-        if (!empty($validated['maintenance_support'])) {
-            \Modules\Finance\Models\MaintenanceSupportCharge::create([
-                'project_finance_id' => $pf->id,
-                'amount'             => $validated['maintenance_support'],
-            ]);
         }
 
         return response()->json(['message' => 'Project finance record created successfully', 'data' => $pf->load('developmentAllocations')], 201);
@@ -286,6 +320,8 @@ class FinanceController extends Controller
 
         $hostingCharge = \Modules\Finance\Models\HostingCharge::findOrFail($hostingChargeId);
 
+        $overheadCheck = $this->financeService->evaluateOverheadCeiling((int) $hostingCharge->project_finance_id, (float) $validated['renewal_amount']);
+
         \DB::table('ssl_renewal_history')->insert([
             'hosting_charge_id' => $hostingCharge->id,
             'renewal_date' => $validated['renewal_date'],
@@ -302,7 +338,11 @@ class FinanceController extends Controller
         $hostingCharge->expiry_date = $validated['new_expiry_date'];
         $hostingCharge->save();
 
-        return response()->json(['message' => 'SSL renewed successfully', 'data' => $hostingCharge]);
+        return response()->json([
+            'message' => 'SSL renewed successfully',
+            'data' => $hostingCharge,
+            'overhead_check' => $overheadCheck
+        ]);
     }
 
     public function getSslRenewalHistory()

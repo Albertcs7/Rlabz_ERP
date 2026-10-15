@@ -14,6 +14,8 @@ return new class extends Migration
             $table->foreignId('sender_id')->constrained('users')->onDelete('cascade');
             $table->text('message');
             $table->timestamps();
+
+            $table->index(['chat_id', 'created_at'], 'idx_chatmsg_chat_created');
         });
     }
 

@@ -22,6 +22,10 @@ return new class extends Migration
             $table->enum('role', ['director', 'coordinator', 'finance', 'faculty', 'student', 'developer']);
             $table->json('permissions')->nullable();
             $table->timestamps();
+
+            $table->index('name', 'idx_users_name');
+            $table->fullText('name', 'ft_users_name');
+            $table->index(['role', 'name'], 'idx_users_role_name');
         });
     }
 
