@@ -77,19 +77,19 @@ export function CertificatesHome(route, router) {
 
           <div class="cert-stat-card">
             <span>Total Certificates</span>
-            <strong>${certificates.length}</strong>
+            <strong id="cert-stat-total">${certificates.length}</strong>
           </div>
 
           <div class="cert-stat-card">
             <span>Issued</span>
-            <strong>
+            <strong id="cert-stat-issued">
               ${certificates.filter(c => c.status === 'Issued').length}
             </strong>
           </div>
 
           <div class="cert-stat-card">
             <span>Pending</span>
-            <strong>
+            <strong id="cert-stat-pending">
               ${certificates.filter(c => c.status === 'Pending').length}
             </strong>
           </div>
@@ -144,7 +144,10 @@ export function CertificatesHome(route, router) {
     `;
 
     // fetch live certificates then render
-    fetchCertificates().then(() => renderCertificates(certificates)).catch((err) => {
+    fetchCertificates().then(() => {
+      updateStats();
+      renderCertificates(certificates);
+    }).catch((err) => {
       console.error(err);
       const tbody = container.querySelector('#certificate-table-body');
       if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#b91c1c;">${err.message}</td></tr>`;
@@ -168,6 +171,17 @@ export function CertificatesHome(route, router) {
     container
       .querySelector('#issue-certificate-btn')
       ?.addEventListener('click', showIssueModal);
+  }
+
+  // Summary cards always reflect the full list, not the search-filtered rows.
+  function updateStats() {
+    const setStat = (selector, value) => {
+      const el = container.querySelector(selector);
+      if (el) el.textContent = String(value);
+    };
+    setStat('#cert-stat-total', certificates.length);
+    setStat('#cert-stat-issued', certificates.filter(c => c.status === 'Issued').length);
+    setStat('#cert-stat-pending', certificates.filter(c => c.status === 'Pending').length);
   }
 
   function renderCertificates(data) {
@@ -557,6 +571,7 @@ export function CertificatesHome(route, router) {
           modalRoot.innerHTML = '';
           try {
             await fetchCertificates();
+            updateStats();
             renderCertificates(certificates);
           } catch (e) {
             console.error('Failed to refresh certificates', e);
