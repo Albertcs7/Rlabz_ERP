@@ -315,21 +315,22 @@ export async function UserProfile(route, router) {
                 <input type="text" id="edit-department" value="${profileUser.department || ''}" />
               </div>
 
-              <div class="profile-field form-group-full">
-                <label for="edit-avatar">Profile Photo (Image Link or File Upload)</label>
+              <div class="profile-field form-group-full" style="background: var(--bg-surface, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; padding: 14px;">
+                <label style="font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; display: block;">Change Image: Upload or Link</label>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                  <input type="text" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="Paste image URL (https://...) or upload an image file..." style="flex: 1; min-width: 220px;" />
                   <button type="button" class="prof-btn secondary" id="btn-browse-photo" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 0.95rem; font-size: 0.82rem; white-space: nowrap;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Upload Image
                   </button>
+                  <span style="font-size: 0.82rem; color: var(--text-muted, #64748b); font-weight: 500;">or</span>
+                  <input type="text" id="edit-avatar" value="${profileUser.avatar || ''}" placeholder="Paste image link (https://...)" style="flex: 1; min-width: 220px; padding: 0.5rem 0.75rem; font-size: 0.84rem; border: 1px solid var(--border-color, #cbd5e1); border-radius: 6px;" />
                   ${profileUser.avatar ? `
                     <button type="button" class="prof-btn secondary" id="btn-remove-avatar-edit" style="color: #dc2626; border-color: #fecaca; padding: 0.55rem 0.95rem; font-size: 0.82rem; white-space: nowrap;">
                       Remove Photo
                     </button>
                   ` : ''}
                 </div>
-                <small style="color: var(--text-muted, #64748b); font-size: 0.75rem; margin-top: 4px;">Paste any web image link (e.g. Unsplash, GitHub avatar, Google profile) or upload a file directly.</small>
+                <small style="color: var(--text-muted, #64748b); font-size: 0.75rem; margin-top: 6px; display: block;">Choose <strong>Upload Image</strong> to pick a local file or paste a direct <strong>Image Link</strong>.</small>
               </div>
 
               <div class="profile-field form-group-full">
@@ -567,21 +568,88 @@ export async function UserProfile(route, router) {
     }
 
     const fileInput = container.querySelector('#hero-avatar-file-input');
-    const triggerUpload = () => fileInput?.click();
+
+    async function promptImageUrl() {
+      const { value: url } = await Swal.fire({
+        title: 'Image Link (URL)',
+        input: 'url',
+        inputLabel: 'Paste the direct web link to your photo (HTTPS/HTTP):',
+        inputPlaceholder: 'https://images.unsplash.com/... or https://...',
+        inputValue: (profileUser.avatar && !profileUser.avatar.startsWith('data:')) ? profileUser.avatar : '',
+        showCancelButton: true,
+        confirmButtonText: 'Save Photo',
+        confirmButtonColor: '#009688',
+        cancelButtonText: 'Cancel',
+        inputValidator: (val) => {
+          if (!val || !val.trim()) {
+            return 'Please enter a valid image URL!';
+          }
+          if (!val.startsWith('http://') && !val.startsWith('https://')) {
+            return 'Image URL must start with http:// or https://';
+          }
+        }
+      });
+
+      if (url && url.trim()) {
+        await applyProfilePhoto(url.trim());
+        Swal.fire({
+          icon: 'success',
+          title: 'Profile Picture Updated!',
+          text: 'Your new photo link has been updated.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    }
+
+    async function openChangeImageDialog() {
+      const hasPhoto = Boolean(profileUser.avatar);
+      const result = await Swal.fire({
+        title: 'Change Profile Photo',
+        text: 'Choose whether to upload an image from your device or use an image link:',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '📁 Upload Image',
+        denyButtonText: '🔗 Image Link',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#009688',
+        denyButtonColor: '#0284c7',
+        footer: hasPhoto ? '<button type="button" id="swal-remove-photo-btn" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.85rem;text-decoration:underline;">Remove current photo</button>' : '',
+        didOpen: () => {
+          document.getElementById('swal-remove-photo-btn')?.addEventListener('click', async () => {
+            Swal.close();
+            await applyProfilePhoto(null);
+            Swal.fire({
+              icon: 'success',
+              title: 'Photo Removed',
+              text: 'Default initials avatar restored.',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          });
+        }
+      });
+
+      if (result.isConfirmed) {
+        fileInput?.click();
+      } else if (result.isDenied) {
+        await promptImageUrl();
+      }
+    }
 
     container.querySelector('#user-avatar-wrap')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      triggerUpload();
+      openChangeImageDialog();
     });
 
     container.querySelector('#btn-hero-cam')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      triggerUpload();
+      openChangeImageDialog();
     });
 
     container.querySelector('#btn-browse-photo')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      triggerUpload();
+      fileInput?.click();
     });
 
     if (fileInput) {
