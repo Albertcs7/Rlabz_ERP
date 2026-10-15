@@ -2383,7 +2383,7 @@ body:has(.student-portal-container) .noti-bell-btn {
   border-radius: 18px;
   padding: 28px;
   width: 95%;
-  max-width: 680px;
+  max-width: 860px; /* widened to fit the shared landscape certificate design */
   max-height: 90vh;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8);
   z-index: 1001;

@@ -80,12 +80,6 @@
   font-size: 1.1rem;
 }
 
-#certificate-search {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-}
-
 .cert-table-wrapper {
   overflow-x: auto;
 }
@@ -205,23 +199,52 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  /* "center" (not flex-start) distributes the box's leftover height evenly
+     above and below the content+footer group, instead of packing both at
+     the top and leaving one large empty band below the signatures. */
+  justify-content: center;
   padding: 28px 56px;
   box-sizing: border-box;
   text-align: center;
   font-family: 'Georgia', 'Times New Roman', serif;
+  position: relative;
 }
 
-.certificate-brand {
-  letter-spacing: 6px;
-  font-weight: 800;
-  color: #1e3a8a;
-  font-size: 0.9rem;
-  font-family: Arial, sans-serif;
+.certificate-logo {
+  position: absolute;
+  top: 16px;
+  left: 22px;
+  height: 44px;
+  width: auto;
+  z-index: 2;
+}
+
+/* Decorative side watermark — shows only the right half of the icon-only mark
+   (object-position shifts the crop), anchored to the left edge, low opacity
+   so it reads as a background element rather than competing with the text.
+   object-fit/object-position (not a CSS background-image) renders reliably
+   in html2canvas for the downloaded PDF as well as the live preview. */
+.certificate-watermark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 48%;
+  object-fit: cover;
+  object-position: right center;
+  opacity: 0.09;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.certificate-body {
+  margin-top: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .certificate-title {
-  font-size: 2.2rem;
+  font-size: 2.35rem;
   font-weight: 800;
   color: #111827;
   letter-spacing: 1.5px;
@@ -236,7 +259,7 @@
 }
 
 .certificate-student-name {
-  font-size: 1.9rem;
+  font-size: 2.05rem;
   font-weight: 700;
   color: #1e3a8a;
   margin-top: 4px;
@@ -245,7 +268,7 @@
 .certificate-sentence {
   max-width: 680px;
   margin: 14px auto 0;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   line-height: 1.7;
   color: #1f2937;
 }
@@ -255,8 +278,10 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-top: 16px;
+  margin-top: 32px;
   font-family: Arial, sans-serif;
+  position: relative;
+  z-index: 1;
 }
 
 .certificate-footer-col {
@@ -266,7 +291,7 @@
 
 .certificate-footer-center {
   flex: 1;
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   color: #4b5563;
   line-height: 1.6;
 }
@@ -277,15 +302,10 @@
   border-top: 1px solid #9ca3af;
 }
 
-.certificate-footer-label {
+.certificate-footer-role {
   font-weight: 700;
   color: #111827;
-  font-size: 0.88rem;
-}
-
-.certificate-footer-role {
-  font-size: 0.7rem;
-  color: #6b7280;
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 2px;

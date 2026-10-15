@@ -1,6 +1,6 @@
 import { authStore } from '@/core/stores/auth.js';
 import { API_BASE } from '@/core/config/api.js';
-import html2pdf from 'html2pdf.js';
+import { buildCertificateHtml, downloadCertificatePdf } from '../certificateTemplate.js';
 import '../certificates.css';
 
 export function CertificatesHome(route, router) {
@@ -48,18 +48,10 @@ export function CertificatesHome(route, router) {
       date: cert.issue_date,
       issuer: cert.issuer?.name || '',
       facultyNames: facultyList.map((f) => f.name).filter(Boolean).join(' and '),
+      teamMembers: Array.isArray(cert.team_members) ? cert.team_members : [],
+      developerName: cert.developer_name || null,
       status: 'Issued',
     };
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-    }[ch]));
   }
 
   function render() {
@@ -116,7 +108,9 @@ export function CertificatesHome(route, router) {
             <input
               type="text"
               id="certificate-search"
+              class="app-search-input"
               placeholder="Search student or project..."
+              style="max-width: 280px;"
             />
           </div>
 
@@ -256,14 +250,6 @@ export function CertificatesHome(route, router) {
     const modalRoot =
       container.querySelector('#certificate-modal-root');
 
-    const supervisionClause = certificate.facultyNames
-      ? ` under the supervision of ${escapeHtml(certificate.facultyNames)} and Co-ordinators`
-      : ' under the supervision of the project Co-ordinators';
-
-    const sentence = certificate.module
-      ? `Proudly presented to <strong>${escapeHtml(certificate.student)}</strong> for successfully completing the <strong>${escapeHtml(certificate.module)}</strong> module and actively contributing to the project <strong>${escapeHtml(certificate.project)}</strong>${supervisionClause}.`
-      : `Proudly presented to <strong>${escapeHtml(certificate.student)}</strong> for actively contributing to the project <strong>${escapeHtml(certificate.project)}</strong>${supervisionClause}.`;
-
     modalRoot.innerHTML = `
     <div class="director-modal-overlay">
       <div class="director-modal certificate-modal">
@@ -282,36 +268,7 @@ export function CertificatesHome(route, router) {
         <div class="director-modal-body">
 
           <div id="certificate-printable" class="certificate-sheet">
-            <div class="certificate-sheet-inner">
-
-              <div>
-                <div class="certificate-brand">RLABZ</div>
-                <div class="certificate-title">CERTIFICATE OF COMPLETION</div>
-                <div class="certificate-subtitle">This is to certify that</div>
-                <div class="certificate-student-name">${escapeHtml(certificate.student)}</div>
-                <div class="certificate-sentence">${sentence}</div>
-              </div>
-
-              <div class="certificate-footer">
-                <div class="certificate-footer-col">
-                  <div class="certificate-footer-line"></div>
-                  <div class="certificate-footer-label">${escapeHtml(certificate.facultyNames || '—')}</div>
-                  <div class="certificate-footer-role">Faculty / Supervisor</div>
-                </div>
-
-                <div class="certificate-footer-center">
-                  <div><strong>Certificate No:</strong> ${escapeHtml(certificate.certificateNumber || '—')}</div>
-                  <div><strong>Issue Date:</strong> ${escapeHtml(certificate.date)}</div>
-                </div>
-
-                <div class="certificate-footer-col">
-                  <div class="certificate-footer-line"></div>
-                  <div class="certificate-footer-label">${escapeHtml(certificate.issuer || 'Director')}</div>
-                  <div class="certificate-footer-role">Director / Issuing Authority</div>
-                </div>
-              </div>
-
-            </div>
+            ${buildCertificateHtml(certificate)}
           </div>
 
         </div>
@@ -360,14 +317,7 @@ export function CertificatesHome(route, router) {
 
         const printable = modalRoot.querySelector('#certificate-printable');
         try {
-          await html2pdf().set({
-            margin: 0.2,
-            filename: `Certificate_${String(certificate.student).replace(/\s+/g, '_')}_${String(certificate.module || certificate.project).replace(/\s+/g, '_')}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' },
-            pagebreak: { mode: ['avoid-all'] },
-          }).from(printable).save();
+          await downloadCertificatePdf(certificate, printable);
         } catch (err) {
           alert('Certificate download failed: ' + err.message);
         } finally {

@@ -14,6 +14,7 @@ let cachedGithub = [];
 let cachedGithubProjects = [];
 let cachedChatMessages = [];
 let cachedNotifications = [];
+let cachedCertificates = [];
 let cachedCalendarEvents = [];
 let cachedProfile = null;
 let cachedDashboard = null;
@@ -60,6 +61,7 @@ export async function ensureDataLoaded(force = false) {
     cachedGithub = [];
     cachedChatMessages = [];
     cachedNotifications = [];
+    cachedCertificates = [];
     cachedCalendarEvents = [];
     cachedProfile = null;
     cachedDashboard = null;
@@ -123,6 +125,16 @@ export async function ensureDataLoaded(force = false) {
     } catch (err) {
       console.warn('Could not load notifications:', err);
       cachedNotifications = [];
+    }
+
+    // 9. Fetch the authenticated student's own certificates (backend-scoped by
+    // the JWT subject — never trust a client-side project/name match).
+    try {
+      const certResponse = await apiFetch('/certificates/mine');
+      cachedCertificates = Array.isArray(certResponse?.data) ? certResponse.data : [];
+    } catch (err) {
+      console.warn('Could not load certificates:', err);
+      cachedCertificates = [];
     }
 
     // 10. Fetch unified dashboard (contains assigned tasks, projects, modules, meetings, stats)
@@ -194,6 +206,10 @@ export function getSprints() {
 
 export function getReports() {
   return cachedReports;
+}
+
+export function getCertificates() {
+  return cachedCertificates;
 }
 
 export function getWorkLogs() {
@@ -289,31 +305,10 @@ export async function fetchLiveStudentProfile() {
   }
 }
 
-export async function fetchPasswordRequestStatus() {
-  try {
-    return await apiFetch('/student/password-request-status');
-  } catch (e) {
-    console.error('Failed to fetch password request status:', e);
-    return { has_request: false, status: 'none', request: null };
-  }
-}
-
-export async function requestPasswordChangeAccess() {
-  return await apiFetch('/student/request-password-change', {
-    method: 'POST'
-  });
-}
-
-export async function cancelPasswordRequest() {
-  return await apiFetch('/student/cancel-password-request', {
-    method: 'POST'
-  });
-}
-
-export async function updateStudentPassword(new_password, confirm_password) {
+export async function updateStudentPassword(current_password, new_password, confirm_password) {
   return await apiFetch('/student/change-password', {
     method: 'POST',
-    body: JSON.stringify({ new_password, confirm_password })
+    body: JSON.stringify({ current_password, new_password, confirm_password })
   });
 }
 

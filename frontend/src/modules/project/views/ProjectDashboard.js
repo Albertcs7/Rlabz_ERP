@@ -20,16 +20,14 @@ export async function ProjectDashboard(route, router) {
         <p>${pageSubtitle}</p>
       </div>
       <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-        <div style="position: relative; width: 320px; max-width: 100%;">
-          <input 
-            type="text" 
-            id="input-search-projects" 
-            class="premium-input" 
-            placeholder="Search project by name..." 
-            value="${searchQuery}" 
-            style="padding-left: 2.25rem; font-size: 0.88rem; height: 40px; border-radius: 8px;"
+        <div style="width: 320px; max-width: 100%;">
+          <input
+            type="text"
+            id="input-search-projects"
+            class="app-search-input"
+            placeholder="Search project by name..."
+            value="${searchQuery}"
           />
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 13px; color: var(--text-secondary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
         ${(permissions.includes('project.create') || role === 'developer') && role !== 'director' ? '<button class="btn btn-primary shadow-hover" id="btn-create-project" style="width: auto; padding: 0 1.25rem; height: 40px; font-size: 0.88rem; font-family: var(--font-family); display: inline-flex; align-items: center; gap: 0.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>Create Project</span></button>' : ''}
       </div>
