@@ -54,6 +54,28 @@ async function fetchProjects() {
   return [];
 }
 
+async function startProject(projectId) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Authentication required. Please log in again.');
+  }
+
+  const response = await fetch(`${API_BASE}/coordinator/projects/${projectId}/start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.error || body.message || 'Failed to start project.');
+  }
+  return body;
+}
+
 // Priority/newest/oldest sorting uses the real fields already returned by the API
 // (projects.priority, projects.created_at) — no mock data, no invented fields.
 function sortProjects(data, sortBy) {
@@ -107,6 +129,9 @@ function renderRows(data) {
                 <span>Drive</span>
               </a>
             ` : ''}
+            ${status === 'accepted' ? `
+              <button class="coord-btn coord-btn-primary" data-action="start-project" data-id="${project.id}">Start Project</button>
+            ` : ''}
             <button class="coord-btn coord-btn-secondary" data-id="${project.id}">View details</button>
           </div>
         </td>
@@ -138,13 +163,13 @@ export async function CoordinatorProjects(route, router) {
       <div class="coordinator-kpi-grid">
         <div class="coordinator-kpi-card kpi-primary">
           <span>Total Projects</span>
-          <strong>${projects.length}</strong>
+          <strong id="kpi-total-projects">${projects.length}</strong>
           <small>All tracked projects</small>
         </div>
 
         <div class="coordinator-kpi-card kpi-teal">
           <span>In Progress</span>
-          <strong>${projects.filter((project) => String(project.status || '').toLowerCase() === 'in_progress').length}</strong>
+          <strong id="kpi-in-progress-projects">${projects.filter((project) => String(project.status || '').toLowerCase() === 'in_progress').length}</strong>
           <small>Current active work</small>
         </div>
 
@@ -215,7 +240,7 @@ export async function CoordinatorProjects(route, router) {
     function bindRowClicks() {
       container.querySelectorAll('#projects-table-body tr[data-project-id]').forEach((row) => {
         const navigateToProject = (e) => {
-          if (e.target.closest('a')) return;
+          if (e.target.closest('a, [data-action="start-project"]')) return;
           router.push(`/coordinator/projects/${row.dataset.projectId}`);
         };
         row.addEventListener('click', navigateToProject);
@@ -250,6 +275,42 @@ export async function CoordinatorProjects(route, router) {
       if (countEl) countEl.textContent = `Showing ${visible.length} of ${projects.length} projects`;
 
       bindRowClicks();
+      bindStartButtons();
+      updateKpis();
+    }
+
+    // KPI cards are rendered once with the page, so refresh the counts that a new
+    // project or a status change can affect whenever the list is re-rendered.
+    function updateKpis() {
+      const totalEl = container.querySelector('#kpi-total-projects');
+      const inProgressEl = container.querySelector('#kpi-in-progress-projects');
+      if (totalEl) totalEl.textContent = String(projects.length);
+      if (inProgressEl) {
+        inProgressEl.textContent = String(projects.filter((project) => String(project.status || '').toLowerCase() === 'in_progress').length);
+      }
+    }
+
+    function bindStartButtons() {
+      container.querySelectorAll('#projects-table-body [data-action="start-project"]').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const row = btn.closest('tr');
+          const title = row?.querySelector('strong')?.textContent?.trim() || 'this project';
+          if (!confirm(`Start "${title}"? Its status will change to In Progress.`)) return;
+
+          btn.disabled = true;
+          try {
+            await startProject(btn.dataset.id);
+            alert('Project started successfully.');
+            projects = await fetchProjects();
+            applySortAndFilter();
+          } catch (err) {
+            console.error(err);
+            alert(`Error: ${err.message || 'Failed to start project.'}`);
+            btn.disabled = false;
+          }
+        });
+      });
     }
 
     container.querySelector('#project-filter')?.addEventListener('change', applySortAndFilter);

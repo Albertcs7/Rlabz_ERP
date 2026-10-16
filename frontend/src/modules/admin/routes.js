@@ -26,6 +26,16 @@ const routes = [
         }
       },
       {
+        path: 'projects/:id',
+        name: 'admin-projects-detail',
+        component: () => import('@/modules/project/views/ProjectDetails.js'),
+        meta: {
+          requiresAuth: true,
+          moduleName: 'admin',
+          allowedRoles: ['admin'],
+        }
+      },
+      {
         path: 'students',
         name: 'admin-students',
         component: () => import('@/modules/director/views/DirectorStudents.js'),

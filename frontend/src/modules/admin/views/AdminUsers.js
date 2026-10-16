@@ -8,11 +8,13 @@ export function AdminUsers(route, router) {
   container.className = 'admin-container animate-fade-in';
 
   const authStore = useAuthStore();
-  const token = localStorage.getItem('token');
-  const headers = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  const getHeaders = () => {
+    const token = localStorage.getItem('token') || authStore.token;
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
   };
 
   // State
@@ -57,7 +59,7 @@ export function AdminUsers(route, router) {
   // Fetch overview stats
   async function loadOverview() {
     try {
-      const res = await fetch(`${API_BASE}/admin/overview`, { headers });
+      const res = await fetch(`${API_BASE}/admin/overview`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         overviewStats = body.data;
@@ -70,7 +72,7 @@ export function AdminUsers(route, router) {
   // Fetch catalog of permissions
   async function loadCatalog() {
     try {
-      const res = await fetch(`${API_BASE}/admin/permissions-catalog`, { headers });
+      const res = await fetch(`${API_BASE}/admin/permissions-catalog`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         catalog = body.catalog;
@@ -95,7 +97,7 @@ export function AdminUsers(route, router) {
       if (statusFilter) params.append('status', statusFilter);
       if (departmentFilter) params.append('department', departmentFilter);
 
-      const res = await fetch(`${API_BASE}/admin/users?${params.toString()}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users?${params.toString()}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         usersList = body.data || [];
@@ -115,7 +117,7 @@ export function AdminUsers(route, router) {
       const params = new URLSearchParams({ page: page.toString(), per_page: '20' });
       if (auditSearch) params.append('search', auditSearch);
 
-      const res = await fetch(`${API_BASE}/admin/audit-logs?${params.toString()}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/audit-logs?${params.toString()}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         auditLogs = body.data || [];
@@ -195,9 +197,6 @@ export function AdminUsers(route, router) {
 
       <!-- Tab Content: Users Directory -->
       ${activeTab === 'users' ? renderUsersTab() : renderAuditTab()}
-
-      <!-- Modals Outlet -->
-      <div id="admin-modal-root"></div>
     `;
 
     bindEvents();
@@ -281,7 +280,7 @@ export function AdminUsers(route, router) {
                 const initials = (u.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
                 const isCurrentAdmin = authStore.user?.id === u.id;
                 return `
-                  <tr>
+                  <tr class="admin-user-row-clickable" data-user-id="${u.id}" style="cursor: pointer; transition: background 0.15s ease;">
                     <td>
                       <div class="admin-user-cell">
                         <div class="admin-avatar">
@@ -523,7 +522,20 @@ export function AdminUsers(route, router) {
 
     // Action buttons inside table
     container.querySelectorAll('.btn-view-user').forEach(btn => {
-      btn.addEventListener('click', () => openUserDetails(btn.dataset.id));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openUserDetails(btn.dataset.id);
+      });
+    });
+
+    // Clicking anywhere on user row opens user details modal
+    container.querySelectorAll('.admin-user-row-clickable').forEach(row => {
+      row.addEventListener('click', (e) => {
+        // Prevent opening view modal if clicking an interactive button or control
+        if (e.target.closest('button, a, input, select')) return;
+        const userId = row.dataset.userId;
+        if (userId) openUserDetails(userId);
+      });
     });
 
     container.querySelectorAll('.btn-edit-user').forEach(btn => {
@@ -550,7 +562,7 @@ export function AdminUsers(route, router) {
   // Open User Details
   async function openUserDetails(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -565,7 +577,7 @@ export function AdminUsers(route, router) {
   // Open Edit User
   async function openEditUser(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -580,7 +592,7 @@ export function AdminUsers(route, router) {
   // Open Permissions Editor
   async function openPermissionsEditor(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -596,7 +608,7 @@ export function AdminUsers(route, router) {
   // Open Password Reset
   async function openPasswordReset(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -629,7 +641,7 @@ export function AdminUsers(route, router) {
     try {
       const res = await fetch(`${API_BASE}/admin/users/${id}/status`, {
         method: 'PUT',
-        headers,
+        headers: getHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
       const data = await res.json();
@@ -661,7 +673,7 @@ export function AdminUsers(route, router) {
     try {
       const res = await fetch(`${API_BASE}/admin/users/${id}`, {
         method: 'DELETE',
-        headers
+        headers: getHeaders()
       });
       const data = await res.json();
       if (res.ok) {
@@ -682,8 +694,12 @@ export function AdminUsers(route, router) {
 
   // Render Modal Windows
   function renderModal() {
-    const modalRoot = container.querySelector('#admin-modal-root');
-    if (!modalRoot) return;
+    let modalRoot = document.getElementById('admin-modal-root');
+    if (!modalRoot) {
+      modalRoot = document.createElement('div');
+      modalRoot.id = 'admin-modal-root';
+      document.body.appendChild(modalRoot);
+    }
 
     if (!activeModal) {
       modalRoot.innerHTML = '';
@@ -692,24 +708,33 @@ export function AdminUsers(route, router) {
 
     if (activeModal === 'create') {
       modalRoot.innerHTML = renderCreateUserModal();
-      bindCreateModalEvents();
+      bindCreateModalEvents(modalRoot);
     } else if (activeModal === 'edit' && selectedUser) {
       modalRoot.innerHTML = renderEditUserModal();
-      bindEditModalEvents();
+      bindEditModalEvents(modalRoot);
     } else if (activeModal === 'permissions' && selectedUser) {
       modalRoot.innerHTML = renderPermissionsModal();
-      bindPermissionsModalEvents();
+      bindPermissionsModalEvents(modalRoot);
     } else if (activeModal === 'password' && selectedUser) {
       modalRoot.innerHTML = renderPasswordModal();
-      bindPasswordModalEvents();
+      bindPasswordModalEvents(modalRoot);
     } else if (activeModal === 'view' && selectedUser) {
       modalRoot.innerHTML = renderViewModal();
-      bindViewModalEvents();
+      bindViewModalEvents(modalRoot);
     }
+
+    // Dismiss modal when clicking backdrop
+    modalRoot.querySelector('.admin-modal-overlay')?.addEventListener('click', (e) => {
+      if (e.target.classList.contains('admin-modal-overlay')) {
+        activeModal = null;
+        render();
+      }
+    });
   }
 
   // 1. Create User Modal
   function renderCreateUserModal() {
+    const initialRandomPassword = generateRandomPassword();
     return `
       <div class="admin-modal-overlay">
         <div class="admin-modal modal-lg">
@@ -748,7 +773,7 @@ export function AdminUsers(route, router) {
                 <div class="admin-form-group">
                   <label class="admin-form-label">Temporary Password *</label>
                   <div style="display:flex; gap:0.5rem;">
-                    <input type="text" name="password" id="input-create-pwd" class="admin-form-input" value="Welcome@123" required />
+                    <input type="text" name="password" id="input-create-pwd" class="admin-form-input" value="${escapeHtml(initialRandomPassword)}" required minlength="6" />
                     <button type="button" class="btn-admin btn-admin-outline" id="btn-gen-pwd" style="white-space:nowrap; font-size:0.8rem;">Generate</button>
                   </div>
                 </div>
@@ -804,18 +829,19 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindCreateModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-create')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindCreateModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-create')?.addEventListener('click', () => { activeModal = null; render(); });
 
-    container.querySelector('#btn-gen-pwd')?.addEventListener('click', () => {
+    root.querySelector('#btn-gen-pwd')?.addEventListener('click', () => {
       const pwd = generateRandomPassword();
-      const input = container.querySelector('#input-create-pwd');
+      const input = root.querySelector('#input-create-pwd');
       if (input) input.value = pwd;
     });
 
-    const roleSelect = container.querySelector('#create-role-select');
-    const profileSection = container.querySelector('#create-role-profile-section');
+    const roleSelect = root.querySelector('#create-role-select');
+    const profileSection = root.querySelector('#create-role-profile-section');
     if (roleSelect && profileSection) {
       roleSelect.addEventListener('change', () => {
         const val = roleSelect.value;
@@ -878,30 +904,60 @@ export function AdminUsers(route, router) {
       });
     }
 
-    const form = container.querySelector('#form-create-user');
+    const form = root.querySelector('#form-create-user');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(form);
         const payload = Object.fromEntries(fd.entries());
 
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const origBtnText = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = 'Provisioning...';
+        }
+
         try {
           const res = await fetch(`${API_BASE}/admin/users`, {
             method: 'POST',
-            headers,
+            headers: getHeaders(),
             body: JSON.stringify(payload)
           });
           const data = await res.json();
           if (res.ok) {
-            toast(data.message || 'User created successfully.');
+            Swal.fire({
+              title: 'Account Provisioned!',
+              html: `<p><strong>${escapeHtml(payload.name || '')}</strong> has been registered in the database.</p>
+                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.75rem; margin-top:0.75rem; text-align:left; font-size:0.85rem;">
+                       <div><strong>Email:</strong> ${escapeHtml(payload.email || '')}</div>
+                       <div><strong>Role:</strong> ${escapeHtml(payload.role || '')}</div>
+                       <div><strong>Temporary Password:</strong> <code style="color:#059669; font-weight:700;">${escapeHtml(payload.password || '')}</code></div>
+                     </div>`,
+              icon: 'success'
+            });
             activeModal = null;
             await loadOverview();
             await loadUsers(1);
           } else {
-            Swal.fire({ title: 'Validation Error', text: data.error || data.message || 'Please correct inputs.', icon: 'error' });
+            let errorMsg = data.error || data.message || '';
+            if (data.errors) {
+              const details = Object.entries(data.errors)
+                .map(([field, msgs]) => `• <strong>${escapeHtml(field)}:</strong> ${escapeHtml(Array.isArray(msgs) ? msgs.join(', ') : msgs)}`)
+                .join('<br>');
+              errorMsg = (errorMsg ? `<p>${escapeHtml(errorMsg)}</p>` : '') + `<div style="text-align:left; font-size:0.85rem;">${details}</div>`;
+            }
+            if (!errorMsg) errorMsg = 'Please check the required fields and ensure email has @rajagiri.edu.';
+            Swal.fire({ title: 'Cannot Provision User', html: errorMsg, icon: 'error' });
           }
         } catch (err) {
-          toast('Network error creating user.', 'error');
+          console.error('Error creating user:', err);
+          Swal.fire({ title: 'Request Failed', text: 'Network or server error encountered.', icon: 'error' });
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origBtnText;
+          }
         }
       });
     }
@@ -1028,11 +1084,12 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindEditModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-edit')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindEditModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-edit')?.addEventListener('click', () => { activeModal = null; render(); });
 
-    const form = container.querySelector('#form-edit-user');
+    const form = root.querySelector('#form-edit-user');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1042,7 +1099,7 @@ export function AdminUsers(route, router) {
         try {
           const res = await fetch(`${API_BASE}/admin/users/${selectedUser.user.id}`, {
             method: 'PUT',
-            headers,
+            headers: getHeaders(),
             body: JSON.stringify(payload)
           });
           const data = await res.json();
@@ -1133,12 +1190,13 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindPermissionsModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-perms')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindPermissionsModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-perms')?.addEventListener('click', () => { activeModal = null; render(); });
 
     // Track checkbox toggles
-    container.querySelectorAll('.chk-perm').forEach(chk => {
+    root.querySelectorAll('.chk-perm').forEach(chk => {
       chk.addEventListener('change', () => {
         const val = chk.value;
         if (chk.checked) {
@@ -1146,25 +1204,25 @@ export function AdminUsers(route, router) {
         } else {
           selectedUserPermissions = selectedUserPermissions.filter(p => p !== val);
         }
-        const counter = container.querySelector('#val-perm-count');
+        const counter = root.querySelector('#val-perm-count');
         if (counter) counter.textContent = selectedUserPermissions.length;
       });
     });
 
     // Reset to role defaults
-    container.querySelector('#btn-reset-role-defaults')?.addEventListener('click', () => {
+    root.querySelector('#btn-reset-role-defaults')?.addEventListener('click', () => {
       const defaults = selectedUser.role_defaults || [];
       selectedUserPermissions = [...defaults];
-      container.querySelectorAll('.chk-perm').forEach(chk => {
+      root.querySelectorAll('.chk-perm').forEach(chk => {
         chk.checked = defaults.includes(chk.value);
       });
-      const counter = container.querySelector('#val-perm-count');
+      const counter = root.querySelector('#val-perm-count');
       if (counter) counter.textContent = selectedUserPermissions.length;
       toast(`Permissions reset to standard defaults for ${selectedUser.user.role}.`);
     });
 
     // Select all / clear per group
-    container.querySelectorAll('.btn-perm-group-select').forEach(btn => {
+    root.querySelectorAll('.btn-perm-group-select').forEach(btn => {
       btn.addEventListener('click', () => {
         const group = btn.closest('.admin-perm-group');
         const checkboxes = group.querySelectorAll('.chk-perm');
@@ -1175,17 +1233,17 @@ export function AdminUsers(route, router) {
           if (action === 'all' && !selectedUserPermissions.includes(val)) selectedUserPermissions.push(val);
           if (action === 'none') selectedUserPermissions = selectedUserPermissions.filter(p => p !== val);
         });
-        const counter = container.querySelector('#val-perm-count');
+        const counter = root.querySelector('#val-perm-count');
         if (counter) counter.textContent = selectedUserPermissions.length;
       });
     });
 
     // Save permissions
-    container.querySelector('#btn-save-perms')?.addEventListener('click', async () => {
+    root.querySelector('#btn-save-perms')?.addEventListener('click', async () => {
       try {
         const res = await fetch(`${API_BASE}/admin/users/${selectedUser.user.id}/permissions`, {
           method: 'PUT',
-          headers,
+          headers: getHeaders(),
           body: JSON.stringify({ permissions: selectedUserPermissions })
         });
         const data = await res.json();
@@ -1221,7 +1279,7 @@ export function AdminUsers(route, router) {
               <div class="admin-form-group">
                 <label class="admin-form-label">New Temporary Password *</label>
                 <div style="display:flex; gap:0.5rem;">
-                  <input type="text" name="password" id="input-reset-pwd" class="admin-form-input" value="TempPass@${Math.floor(1000 + Math.random() * 9000)}" required minlength="6" />
+                  <input type="text" name="password" id="input-reset-pwd" class="admin-form-input" value="${escapeHtml(generateRandomPassword())}" required minlength="6" />
                   <button type="button" class="btn-admin btn-admin-outline" id="btn-gen-reset-pwd" style="white-space:nowrap; font-size:0.8rem;">Generate</button>
                 </div>
               </div>
@@ -1240,17 +1298,18 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindPasswordModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-pwd')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindPasswordModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-pwd')?.addEventListener('click', () => { activeModal = null; render(); });
 
-    container.querySelector('#btn-gen-reset-pwd')?.addEventListener('click', () => {
+    root.querySelector('#btn-gen-reset-pwd')?.addEventListener('click', () => {
       const pwd = generateRandomPassword();
-      const input = container.querySelector('#input-reset-pwd');
+      const input = root.querySelector('#input-reset-pwd');
       if (input) input.value = pwd;
     });
 
-    const form = container.querySelector('#form-reset-password');
+    const form = root.querySelector('#form-reset-password');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1260,7 +1319,7 @@ export function AdminUsers(route, router) {
         try {
           const res = await fetch(`${API_BASE}/admin/users/${selectedUser.user.id}/reset-password`, {
             method: 'POST',
-            headers,
+            headers: getHeaders(),
             body: JSON.stringify({ password })
           });
           const data = await res.json();
@@ -1370,9 +1429,10 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindViewModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-close-view')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindViewModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-close-view')?.addEventListener('click', () => { activeModal = null; render(); });
   }
 
   // Helpers

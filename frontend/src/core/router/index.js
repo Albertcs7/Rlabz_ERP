@@ -181,7 +181,7 @@ class VanillaRouter {
     } catch (e) {
       console.error('Error rendering component:', e);
       contentElement = document.createElement('div');
-      contentElement.innerHTML = `<div class="alert-error" style="margin: 2rem;">Failed to load view content.</div>`;
+      contentElement.innerHTML = `<div class="alert-error" style="margin: 2rem;"><strong>Failed to load view content:</strong><pre style="white-space: pre-wrap; font-size: 0.85rem; margin-top: 0.5rem;">${(e && e.stack) || (e && e.message) || String(e)}</pre></div>`;
     }
 
     if (this.navId !== currentNavId) return;

@@ -82,7 +82,7 @@ export async function ProjectDashboard(route, router) {
     projectsToRender.forEach(p => {
       const pStatus = (p.status || 'active').toLowerCase();
       html += `
-        <tr class="project-row-clickable" data-project-id="${p.id}" style="border-bottom: 1px solid var(--border-color, var(--border-subtle)); transition: background 0.15s ease;">
+        <tr class="project-row-clickable" data-project-id="${p.id}" style="border-bottom: 1px solid var(--border-color, var(--border-subtle)); cursor: pointer; transition: background 0.15s ease;">
           <td style="padding: 1.15rem 1.5rem; font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${p.title}</td>
           <td style="padding: 1.15rem 1.5rem; color: var(--text-main); font-size: 0.92rem;">${p.client_name || 'N/A'}</td>
           <td style="padding: 1.15rem 1.5rem;"><span style="color: var(--text-muted); font-size: 0.9rem;">${p.project_type || 'N/A'}</span></td>

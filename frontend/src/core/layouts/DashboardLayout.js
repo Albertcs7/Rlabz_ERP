@@ -320,6 +320,30 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
           `).join('')}
         </ul>
       `;
+    } else if (targetPortal === 'admin') {
+      const iconUsers = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      const iconProjects = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+
+      const navItems = [
+        { title: 'User Management', path: '/admin', icon: iconUsers },
+        { title: 'Projects', path: '/admin/projects', icon: iconProjects }
+      ];
+
+      sidebarNav.innerHTML = `
+        <div class="sidebar-section-title" style="padding: 0.75rem 1.25rem 0.25rem; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">
+          Administration
+        </div>
+        <ul>
+          ${navItems.map(item => `
+            <li>
+              <a href="${item.path}">
+                ${item.icon}
+                <span>${item.title}</span>
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      `;
     } else {
       const iconsMap = {
         IconAdmin: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
@@ -366,7 +390,7 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
     const href = a.getAttribute('href');
     if (href) {
       let isActive = false;
-      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard') {
+      if (href === '/developer' || href === '/director' || href === '/student' || href === '/' || href === '/dashboard' || href === '/admin') {
         isActive = currentPath === href || currentPath === href + '/';
       } else if (href === '/faculty/profile') {
         isActive = currentPath === '/faculty/profile' || currentPath.startsWith('/faculty/profile/') || currentPath === '/profile' || currentPath.startsWith('/profile/');
