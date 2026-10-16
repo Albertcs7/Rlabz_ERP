@@ -278,7 +278,7 @@ export function AdminUsers(route, router) {
                 const initials = (u.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
                 const isCurrentAdmin = authStore.user?.id === u.id;
                 return `
-                  <tr>
+                  <tr class="admin-user-row-clickable" data-user-id="${u.id}" style="cursor: pointer; transition: background 0.15s ease;">
                     <td>
                       <div class="admin-user-cell">
                         <div class="admin-avatar">
@@ -520,7 +520,20 @@ export function AdminUsers(route, router) {
 
     // Action buttons inside table
     container.querySelectorAll('.btn-view-user').forEach(btn => {
-      btn.addEventListener('click', () => openUserDetails(btn.dataset.id));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openUserDetails(btn.dataset.id);
+      });
+    });
+
+    // Clicking anywhere on user row opens user details modal
+    container.querySelectorAll('.admin-user-row-clickable').forEach(row => {
+      row.addEventListener('click', (e) => {
+        // Prevent opening view modal if clicking an interactive button or control
+        if (e.target.closest('button, a, input, select')) return;
+        const userId = row.dataset.userId;
+        if (userId) openUserDetails(userId);
+      });
     });
 
     container.querySelectorAll('.btn-edit-user').forEach(btn => {
