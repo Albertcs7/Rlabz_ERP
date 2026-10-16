@@ -109,7 +109,7 @@ export async function CoordinatorHome(route, router) {
     const rows = projects.slice(0, 4).map((project) => {
       const progress = getProjectProgress(project);
       return `
-        <tr>
+        <tr class="coordinator-row-clickable" data-project-id="${project.id}" tabindex="0">
           <td>
             <strong>${project.title || 'Untitled project'}</strong>
           </td>
@@ -237,9 +237,17 @@ export async function CoordinatorHome(route, router) {
       });
     });
 
-    container.querySelectorAll('[data-id]').forEach((button) => {
-      button.addEventListener('click', () => {
-        router.push(`/coordinator/projects/${button.dataset.id}`);
+    container.querySelectorAll('tr[data-project-id]').forEach((row) => {
+      const navigateToProject = (e) => {
+        if (e.target.closest('a')) return;
+        router.push(`/coordinator/projects/${row.dataset.projectId}`);
+      };
+      row.addEventListener('click', navigateToProject);
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigateToProject(e);
+        }
       });
     });
 
