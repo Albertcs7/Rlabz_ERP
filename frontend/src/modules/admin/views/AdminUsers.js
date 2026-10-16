@@ -8,11 +8,13 @@ export function AdminUsers(route, router) {
   container.className = 'admin-container animate-fade-in';
 
   const authStore = useAuthStore();
-  const token = localStorage.getItem('token');
-  const headers = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  const getHeaders = () => {
+    const token = localStorage.getItem('token') || authStore.token;
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
   };
 
   // State
@@ -57,7 +59,7 @@ export function AdminUsers(route, router) {
   // Fetch overview stats
   async function loadOverview() {
     try {
-      const res = await fetch(`${API_BASE}/admin/overview`, { headers });
+      const res = await fetch(`${API_BASE}/admin/overview`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         overviewStats = body.data;
@@ -70,7 +72,7 @@ export function AdminUsers(route, router) {
   // Fetch catalog of permissions
   async function loadCatalog() {
     try {
-      const res = await fetch(`${API_BASE}/admin/permissions-catalog`, { headers });
+      const res = await fetch(`${API_BASE}/admin/permissions-catalog`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         catalog = body.catalog;
@@ -95,7 +97,7 @@ export function AdminUsers(route, router) {
       if (statusFilter) params.append('status', statusFilter);
       if (departmentFilter) params.append('department', departmentFilter);
 
-      const res = await fetch(`${API_BASE}/admin/users?${params.toString()}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users?${params.toString()}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         usersList = body.data || [];
@@ -115,7 +117,7 @@ export function AdminUsers(route, router) {
       const params = new URLSearchParams({ page: page.toString(), per_page: '20' });
       if (auditSearch) params.append('search', auditSearch);
 
-      const res = await fetch(`${API_BASE}/admin/audit-logs?${params.toString()}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/audit-logs?${params.toString()}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         auditLogs = body.data || [];
@@ -560,7 +562,7 @@ export function AdminUsers(route, router) {
   // Open User Details
   async function openUserDetails(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -575,7 +577,7 @@ export function AdminUsers(route, router) {
   // Open Edit User
   async function openEditUser(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -590,7 +592,7 @@ export function AdminUsers(route, router) {
   // Open Permissions Editor
   async function openPermissionsEditor(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -606,7 +608,7 @@ export function AdminUsers(route, router) {
   // Open Password Reset
   async function openPasswordReset(id) {
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users/${id}`, { headers: getHeaders() });
       if (res.ok) {
         const body = await res.json();
         selectedUser = body;
@@ -639,7 +641,7 @@ export function AdminUsers(route, router) {
     try {
       const res = await fetch(`${API_BASE}/admin/users/${id}/status`, {
         method: 'PUT',
-        headers,
+        headers: getHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
       const data = await res.json();
@@ -671,7 +673,7 @@ export function AdminUsers(route, router) {
     try {
       const res = await fetch(`${API_BASE}/admin/users/${id}`, {
         method: 'DELETE',
-        headers
+        headers: getHeaders()
       });
       const data = await res.json();
       if (res.ok) {
@@ -909,24 +911,53 @@ export function AdminUsers(route, router) {
         const fd = new FormData(form);
         const payload = Object.fromEntries(fd.entries());
 
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const origBtnText = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = 'Provisioning...';
+        }
+
         try {
           const res = await fetch(`${API_BASE}/admin/users`, {
             method: 'POST',
-            headers,
+            headers: getHeaders(),
             body: JSON.stringify(payload)
           });
           const data = await res.json();
           if (res.ok) {
-            toast(data.message || 'User created successfully.');
+            Swal.fire({
+              title: 'Account Provisioned!',
+              html: `<p><strong>${escapeHtml(payload.name || '')}</strong> has been registered in the database.</p>
+                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.75rem; margin-top:0.75rem; text-align:left; font-size:0.85rem;">
+                       <div><strong>Email:</strong> ${escapeHtml(payload.email || '')}</div>
+                       <div><strong>Role:</strong> ${escapeHtml(payload.role || '')}</div>
+                       <div><strong>Temporary Password:</strong> <code style="color:#059669; font-weight:700;">${escapeHtml(payload.password || '')}</code></div>
+                     </div>`,
+              icon: 'success'
+            });
             activeModal = null;
             await loadOverview();
             await loadUsers(1);
           } else {
-            const errorMsg = data.error || (data.errors ? Object.values(data.errors).flat().join('<br>') : data.message) || 'Please correct inputs.';
-            Swal.fire({ title: 'Validation Error', html: errorMsg, icon: 'error' });
+            let errorMsg = data.error || data.message || '';
+            if (data.errors) {
+              const details = Object.entries(data.errors)
+                .map(([field, msgs]) => `• <strong>${escapeHtml(field)}:</strong> ${escapeHtml(Array.isArray(msgs) ? msgs.join(', ') : msgs)}`)
+                .join('<br>');
+              errorMsg = (errorMsg ? `<p>${escapeHtml(errorMsg)}</p>` : '') + `<div style="text-align:left; font-size:0.85rem;">${details}</div>`;
+            }
+            if (!errorMsg) errorMsg = 'Please check the required fields and ensure email has @rajagiri.edu.';
+            Swal.fire({ title: 'Cannot Provision User', html: errorMsg, icon: 'error' });
           }
         } catch (err) {
-          toast('Network error creating user.', 'error');
+          console.error('Error creating user:', err);
+          Swal.fire({ title: 'Request Failed', text: 'Network or server error encountered.', icon: 'error' });
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origBtnText;
+          }
         }
       });
     }
@@ -1068,7 +1099,7 @@ export function AdminUsers(route, router) {
         try {
           const res = await fetch(`${API_BASE}/admin/users/${selectedUser.user.id}`, {
             method: 'PUT',
-            headers,
+            headers: getHeaders(),
             body: JSON.stringify(payload)
           });
           const data = await res.json();
@@ -1212,7 +1243,7 @@ export function AdminUsers(route, router) {
       try {
         const res = await fetch(`${API_BASE}/admin/users/${selectedUser.user.id}/permissions`, {
           method: 'PUT',
-          headers,
+          headers: getHeaders(),
           body: JSON.stringify({ permissions: selectedUserPermissions })
         });
         const data = await res.json();
@@ -1248,7 +1279,7 @@ export function AdminUsers(route, router) {
               <div class="admin-form-group">
                 <label class="admin-form-label">New Temporary Password *</label>
                 <div style="display:flex; gap:0.5rem;">
-                  <input type="text" name="password" id="input-reset-pwd" class="admin-form-input" value="TempPass@${Math.floor(1000 + Math.random() * 9000)}" required minlength="6" />
+                  <input type="text" name="password" id="input-reset-pwd" class="admin-form-input" value="${escapeHtml(generateRandomPassword())}" required minlength="6" />
                   <button type="button" class="btn-admin btn-admin-outline" id="btn-gen-reset-pwd" style="white-space:nowrap; font-size:0.8rem;">Generate</button>
                 </div>
               </div>
@@ -1288,7 +1319,7 @@ export function AdminUsers(route, router) {
         try {
           const res = await fetch(`${API_BASE}/admin/users/${selectedUser.user.id}/reset-password`, {
             method: 'POST',
-            headers,
+            headers: getHeaders(),
             body: JSON.stringify({ password })
           });
           const data = await res.json();
