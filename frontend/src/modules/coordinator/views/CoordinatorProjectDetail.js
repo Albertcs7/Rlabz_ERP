@@ -96,6 +96,7 @@ export async function CoordinatorProjectDetail(route, router) {
 
         <div class="coordinator-header-actions">
           <button class="coord-btn coord-btn-secondary" data-action="back">Back to projects</button>
+          ${project.status === 'accepted' ? '<button class="coord-btn coord-btn-primary" id="start-project-btn">Start Project</button>' : ''}
           <button class="coord-btn coord-btn-primary" id="assign-student-btn">Assign Student</button>
           <button class="coord-btn coord-btn-secondary" id="add-requirement-btn">Add Requirement</button>
           <button class="coord-btn coord-btn-secondary" id="change-requirement-btn">Change Requirement</button>
@@ -682,6 +683,20 @@ export async function CoordinatorProjectDetail(route, router) {
     });
 
     // Close project
+    container.querySelector('#start-project-btn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (!confirm(`Start "${project.title || 'this project'}"? Its status will change to In Progress.`)) return;
+      btn.disabled = true;
+      try {
+        await postJson(`${API_BASE}/coordinator/projects/${projectId}/start`, {});
+        alert('Project started successfully.');
+        window.location.reload();
+      } catch (err) {
+        alert(err.message || 'Failed to start project');
+        btn.disabled = false;
+      }
+    });
+
     container.querySelector('#close-project-btn')?.addEventListener('click', () => {
       const html = `
         <div class="coordinator-modal-header">

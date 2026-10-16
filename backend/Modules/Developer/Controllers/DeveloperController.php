@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\Schema;
 
 class DeveloperController extends Controller
 {
+    private function canWriteProjects(Request $request): bool
+    {
+        return ($request->input('auth_user')['role'] ?? null) === 'developer';
+    }
+
     private function currentUserId(Request $request): ?int
     {
         return $request->input('auth_user')['sub'] ?? null;
@@ -770,6 +775,10 @@ class DeveloperController extends Controller
      */
     public function startProject(Request $request, $projectId)
     {
+        if (!$this->canWriteProjects($request)) {
+            return response()->json(['error' => 'Forbidden: only Developer can start a project'], 403);
+        }
+
         $project = DB::table('projects')->where('id', $projectId)->first();
         if (!$project) {
             return response()->json(['error' => 'Project not found'], 404);
