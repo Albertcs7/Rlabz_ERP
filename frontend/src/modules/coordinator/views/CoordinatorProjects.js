@@ -74,7 +74,7 @@ function renderRows(data) {
     const progress = getProjectProgress(project);
     const status = String(project.status || 'in_progress');
     return `
-      <tr data-status="${status}">
+      <tr class="coordinator-row-clickable" data-project-id="${project.id}" data-status="${status}" tabindex="0">
         <td>
           <strong>${project.title || 'Untitled project'}</strong>
         </td>
@@ -212,10 +212,18 @@ export async function CoordinatorProjects(route, router) {
       <div id="project-modal-root"></div>
     `;
 
-    function bindDetailButtons() {
-      container.querySelectorAll('#projects-table-body [data-id]').forEach((button) => {
-        button.addEventListener('click', () => {
-          router.push(`/coordinator/projects/${button.dataset.id}`);
+    function bindRowClicks() {
+      container.querySelectorAll('#projects-table-body tr[data-project-id]').forEach((row) => {
+        const navigateToProject = (e) => {
+          if (e.target.closest('a')) return;
+          router.push(`/coordinator/projects/${row.dataset.projectId}`);
+        };
+        row.addEventListener('click', navigateToProject);
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            navigateToProject(e);
+          }
         });
       });
     }
@@ -241,7 +249,7 @@ export async function CoordinatorProjects(route, router) {
       const countEl = container.querySelector('#project-result-count');
       if (countEl) countEl.textContent = `Showing ${visible.length} of ${projects.length} projects`;
 
-      bindDetailButtons();
+      bindRowClicks();
     }
 
     container.querySelector('#project-filter')?.addEventListener('change', applySortAndFilter);
