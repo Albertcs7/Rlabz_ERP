@@ -270,7 +270,7 @@ class DesignController extends Controller
                 'requesting_division' => $standardDivision,
                 'target_audience' => $validated['target_audience'] ?? null,
                 'publishing_channel' => $validated['publishing_channel'] ?? null,
-                'required_by' => Carbon::parse($validated['required_by']),
+                'required_by' => Carbon::parse($validated['required_by'])->endOfDay(),
                 'committed_delivery_date' => null,
                 'priority' => $validated['priority'],
                 'final_copy' => $validated['final_copy'] ?? null,
@@ -568,6 +568,23 @@ class DesignController extends Controller
                 'status' => 'error',
                 'message' => "A stated reason is mandatory when placing a ticket {$validated['status']}.",
             ], 422);
+        }
+
+        $auth = $request->attributes->get('auth_user');
+        // Designers cannot close or approve their own tickets
+        if (in_array($validated['status'], ['Approved', 'Closed'])) {
+            if ($auth && $auth->role === 'student') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Forbidden: Designers cannot approve or close creative tickets.',
+                ], 403);
+            }
+            if ($auth && $ticket->assigned_to && $auth->id == $ticket->assigned_to) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Forbidden: Assigned designers cannot approve or close their own tickets.',
+                ], 403);
+            }
         }
 
         $ballMap = [
@@ -1175,10 +1192,10 @@ class DesignController extends Controller
         // Queue of unassigned requests, sortable by required-by date and priority (PDF Module 4)
         $unassignedQueue = DB::table('design_tickets')
             ->leftJoin('users', 'design_tickets.requester_id', '=', 'users.id')
-            ->whereNull('assigned_to')
-            ->whereNotIn('status', ['Closed', 'Cancelled'])
+            ->whereNull('design_tickets.assigned_to')
+            ->whereNotIn('design_tickets.status', ['Closed', 'Cancelled'])
             ->select('design_tickets.*', 'users.name as requester_name')
-            ->orderBy('required_by', 'asc')
+            ->orderBy('design_tickets.required_by', 'asc')
             ->get();
 
         return response()->json([
@@ -1205,8 +1222,8 @@ class DesignController extends Controller
         $deliveries = DB::table('design_tickets')
             ->leftJoin('users as designers', 'design_tickets.assigned_to', '=', 'designers.id')
             ->leftJoin('users as requesters', 'design_tickets.requester_id', '=', 'requesters.id')
-            ->whereBetween('committed_delivery_date', [$startDate, $endDate])
-            ->whereNotIn('status', ['Cancelled'])
+            ->whereBetween('design_tickets.committed_delivery_date', [$startDate, $endDate])
+            ->whereNotIn('design_tickets.status', ['Cancelled'])
             ->select(
                 'design_tickets.id',
                 'design_tickets.ticket_number',
@@ -1220,21 +1237,21 @@ class DesignController extends Controller
                 'designers.name as assigned_to_name',
                 'requesters.name as requester_name'
             )
-            ->orderBy('committed_delivery_date', 'asc')
+            ->orderBy('design_tickets.committed_delivery_date', 'asc')
             ->get();
 
         // Overdue tickets (committed date passed or required-by passed without approval/closure)
         $now = Carbon::now();
         $overdueTickets = DB::table('design_tickets')
             ->leftJoin('users as designers', 'design_tickets.assigned_to', '=', 'designers.id')
-            ->whereNotIn('status', ['Approved', 'Closed', 'Cancelled'])
+            ->whereNotIn('design_tickets.status', ['Approved', 'Closed', 'Cancelled'])
             ->where(function ($q) use ($now) {
                 $q->where(function ($sub) use ($now) {
-                    $sub->whereNotNull('committed_delivery_date')
-                        ->where('committed_delivery_date', '<', $now);
+                    $sub->whereNotNull('design_tickets.committed_delivery_date')
+                        ->where('design_tickets.committed_delivery_date', '<', $now);
                 })->orWhere(function ($sub) use ($now) {
-                    $sub->whereNull('committed_delivery_date')
-                        ->where('required_by', '<', $now);
+                    $sub->whereNull('design_tickets.committed_delivery_date')
+                        ->where('design_tickets.required_by', '<', $now);
                 });
             })
             ->select(
@@ -1253,8 +1270,8 @@ class DesignController extends Controller
         // Uncommitted active tickets
         $uncommittedTickets = DB::table('design_tickets')
             ->leftJoin('users as designers', 'design_tickets.assigned_to', '=', 'designers.id')
-            ->whereNull('committed_delivery_date')
-            ->whereNotIn('status', ['Approved', 'Closed', 'Cancelled'])
+            ->whereNull('design_tickets.committed_delivery_date')
+            ->whereNotIn('design_tickets.status', ['Approved', 'Closed', 'Cancelled'])
             ->select(
                 'design_tickets.id',
                 'design_tickets.ticket_number',
@@ -1863,6 +1880,23 @@ class DesignController extends Controller
      */
     public function updateUserProfile(Request $request, $id)
     {
+        $auth = $request->attributes->get('auth_user');
+        if ($auth && $auth->role === 'student') {
+            if ($auth->id != $id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Forbidden: Students cannot edit other team members.'
+                ], 403);
+            }
+            // Students can maintain their own skill tags, but cannot elevate access or alter administrative capacity/division
+            if ($request->has('is_active') || $request->has('division') || $request->has('weekly_capacity_hours')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Forbidden: Students cannot modify administrative workspace access, division, or capacity allocation.'
+                ], 403);
+            }
+        }
+
         $validated = $request->validate([
             'skill_tags' => 'nullable|array',
             'weekly_capacity_hours' => 'nullable|integer|min:0|max:80',

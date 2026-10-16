@@ -189,47 +189,73 @@ export async function DesignBrandKit(route, router) {
         </div>
 
         <!-- Logo Usage Rules & Guidelines -->
-        ${(b.guidelines && b.guidelines.length > 0) ? `
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem 0; color: #0f172a;">Logo Usage Rules &amp; Creative Do's / Don'ts</h3>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem 0; color: #0f172a;">Logo Usage Rules &amp; Creative Do's / Don'ts</h3>
+          ${(b.guidelines && b.guidelines.length > 0) ? `
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
-              ${b.guidelines.map(g => `
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-                  <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 4px;">
-                    <span>📌</span>
-                    <span>${g.topic}</span>
+              ${b.guidelines.map(g => {
+                const topic = (typeof g === 'object' && g && g.topic) ? g.topic : 'Brand Standard';
+                const rule = (typeof g === 'object' && g && g.rule) ? g.rule : (typeof g === 'string' ? g : '');
+                return `
+                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 4px;">
+                      <span>📌</span>
+                      <span>${topic}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #475569; line-height: 1.45;">${rule}</div>
                   </div>
-                  <div style="font-size: 0.8rem; color: #475569; line-height: 1.4;">${g.rule}</div>
-                </div>
-              `).join('')}
+                `;
+              }).join('')}
             </div>
-          </div>
-        ` : ''}
+          ` : `
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.85rem;">
+              No specific usage rules recorded for this brand kit yet.
+            </div>
+          `}
+        </div>
 
         <!-- Downloadable Master Kits -->
-        <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem 0; color: #0f172a;">Downloadable Official Asset Packages</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
-          ${(b.downloadableKits || []).map(k => `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-              <div>
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                  <h4 style="margin: 0 0 0.35rem 0; font-size: 0.95rem; font-weight: 700;">${k.title}</h4>
-                  ${k.is_available ? `<span class="fin-badge success">Verified</span>` : `<span class="fin-badge neutral">Available Soon</span>`}
-                </div>
-                <p style="font-size: 0.78rem; color: #64748b; margin: 0;">${k.format} · ${k.file_size}</p>
-                ${k.note ? `<div style="font-size: 0.72rem; color: #d97706; margin-top: 5px; font-weight: 600;">${k.note}</div>` : ''}
-              </div>
-              ${k.is_available && k.url ? `
-                <a href="${k.url}" download target="_blank" class="fin-btn primary sm" style="margin-top: 1rem; width: 100%; text-align: center; justify-content: center;">
-                  Download Asset Package
-                </a>
-              ` : `
-                <button disabled class="fin-btn outline sm" style="margin-top: 1rem; width: 100%; opacity: 0.6; cursor: not-allowed; justify-content: center;">
-                  Pending Upload
-                </button>
-              `}
+        <div style="margin-bottom: 2rem;">
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem 0; color: #0f172a;">Downloadable Official Asset Packages</h3>
+          ${(b.downloadableKits && b.downloadableKits.length > 0) ? `
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+              ${b.downloadableKits.map(k => {
+                const title = (typeof k === 'object' && k && k.title) ? k.title : (typeof k === 'string' ? k : 'Official Asset Package');
+                const format = (typeof k === 'object' && k && k.format) ? k.format : '';
+                const fileSize = (typeof k === 'object' && k && k.file_size) ? k.file_size : '';
+                const meta = [format, fileSize].filter(Boolean).join(' · ') || 'Digital Asset';
+                const isAvailable = Boolean(typeof k === 'object' && k && k.is_available && k.url);
+                const note = (typeof k === 'object' && k && k.note) ? k.note : '';
+                const url = (typeof k === 'object' && k && k.url) ? k.url : null;
+
+                return `
+                  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                        <h4 style="margin: 0 0 0.35rem 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">${title}</h4>
+                        ${isAvailable ? `<span class="fin-badge success">Verified</span>` : `<span class="fin-badge neutral">Available Soon</span>`}
+                      </div>
+                      <p style="font-size: 0.78rem; color: #64748b; margin: 0;">${meta}</p>
+                      ${note ? `<div style="font-size: 0.72rem; color: #d97706; margin-top: 5px; font-weight: 600;">${note}</div>` : ''}
+                    </div>
+                    ${isAvailable && url ? `
+                      <a href="${url}" download target="_blank" class="fin-btn primary sm" style="margin-top: 1rem; width: 100%; text-align: center; justify-content: center; text-decoration: none;">
+                        Download Asset Package
+                      </a>
+                    ` : `
+                      <button disabled class="fin-btn outline sm" style="margin-top: 1rem; width: 100%; opacity: 0.6; cursor: not-allowed; justify-content: center;">
+                        Pending Upload
+                      </button>
+                    `}
+                  </div>
+                `;
+              }).join('')}
             </div>
-          `).join('')}
+          ` : `
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 2rem; text-align: center; color: #64748b; font-size: 0.85rem;">
+              No downloadable official asset packages uploaded for this brand kit yet.
+            </div>
+          `}
         </div>
       </div>
     `;
@@ -263,12 +289,12 @@ export async function DesignBrandKit(route, router) {
           html: `
             <div style="display:flex; flex-direction:column; gap:10px; text-align:left;">
               <div>
-                <label style="font-size:0.8rem; font-weight:700;">Brand Kit Name *</label>
+                <label style="font-size:0.8rem; font-weight:700;">Brand Kit Name <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <input id="swal-bk-name" class="swal2-input" placeholder="e.g. Acme Health Client Brand Kit" style="margin:0; width:100%;">
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <div>
-                  <label style="font-size:0.8rem; font-weight:700;">Institution / External Client *</label>
+                  <label style="font-size:0.8rem; font-weight:700;">Institution / External Client <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input id="swal-bk-client" class="swal2-input" placeholder="e.g. Acme Health Solutions" style="margin:0; width:100%;">
                 </div>
                 <div>

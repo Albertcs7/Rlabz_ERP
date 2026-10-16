@@ -31,6 +31,7 @@ export async function DesignRequests(route, router) {
     project_id: '',
     brand_kit_name: 'RLabZ Core Platform Brand Kit',
     title: '',
+    purpose: '',
     requesting_person: storedUser.name || 'Staff / Student Requester',
     requesting_division: 'Teaching & Academics',
     target_audience: '',
@@ -151,11 +152,16 @@ export async function DesignRequests(route, router) {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <!-- Request Title (Single Header) -->
+            <!-- Request Title & Purpose -->
             <div class="form-group">
-              <label style="font-weight:700;">Request Title (Used as deliverable heading) *</label>
+              <label style="font-weight:700;">Request Title (Used as deliverable heading) <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
               <input type="text" id="intake-title" class="design-input" placeholder="e.g. National Cyber Symposium 2026 Keynote Poster" value="${intakeForm.title}">
               <small style="color: #64748b; font-size: 0.74rem;">This title will appear as the headline on ticket cards and the studio preview.</small>
+            </div>
+
+            <div class="form-group">
+              <label style="font-weight:700;">Request Purpose / Objective (Optional)</label>
+              <input type="text" id="intake-purpose" class="design-input" placeholder="e.g. Promote symposium registrations and spotlight guest speakers" value="${intakeForm.purpose || ''}">
             </div>
 
             <!-- Requester & Division -->
@@ -166,7 +172,7 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Requesting Division *</label>
+                <label style="font-weight:700;">Requesting Division <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <select id="intake-division" class="design-select">
                   <option value="Teaching & Academics" ${intakeForm.requesting_division === 'Teaching & Academics' ? 'selected' : ''}>Teaching &amp; Academics</option>
                   <option value="Training & Placement" ${intakeForm.requesting_division === 'Training & Placement' ? 'selected' : ''}>Training &amp; Placement</option>
@@ -179,7 +185,7 @@ export async function DesignRequests(route, router) {
             <!-- Brand Kit & Priority -->
             <div class="form-grid-2">
               <div class="form-group">
-                <label style="font-weight:700;">Applicable Brand Kit *</label>
+                <label style="font-weight:700;">Applicable Brand Kit <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <select id="intake-brand-kit" class="design-select">
                   ${availableBrandKits.length === 0 ? `
                     <option value="RLabZ Core Platform Brand Kit">RLabZ Core Platform Brand Kit</option>
@@ -192,7 +198,7 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Priority Flag *</label>
+                <label style="font-weight:700;">Priority Flag <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <select id="intake-priority" class="design-select">
                   <option value="normal" ${intakeForm.priority === 'normal' ? 'selected' : ''}>Normal Priority (Standard Queue)</option>
                   <option value="high" ${intakeForm.priority === 'high' ? 'selected' : ''}>High Priority (48h Turnaround)</option>
@@ -214,12 +220,12 @@ export async function DesignRequests(route, router) {
               </div>
             </div>
 
-            <!-- Required-by Date and Branding Constraints -->
+            <!-- Required-by Date (Date Only, No Time Picker) and Branding Constraints -->
             <div class="form-grid-2">
               <div class="form-group">
-                <label style="font-weight:700;">Required-by Date &amp; Time *</label>
-                <input type="datetime-local" id="intake-required-by" class="design-input" value="${intakeForm.required_by}">
-                <small style="color: #64748b; font-size: 0.74rem;">Lead will review and confirm committed date with designer.</small>
+                <label style="font-weight:700;">Required-by Date <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
+                <input type="date" id="intake-required-by" class="design-input" value="${intakeForm.required_by}">
+                <small style="color: #64748b; font-size: 0.74rem;">Requester deadline date. The Design Lead sets the committed delivery date during assignment.</small>
               </div>
 
               <div class="form-group">
@@ -228,22 +234,24 @@ export async function DesignRequests(route, router) {
               </div>
             </div>
 
-            <!-- Final Copy / Text Content -->
+            <!-- Exact Text to Include in the Design (Renamed with clear instruction) -->
             <div class="form-group">
-              <label style="font-weight:700;">Final Copy / Text to Appear in Design</label>
-              <textarea id="intake-copy" class="form-textarea" placeholder="Enter headline, dates, speaker names, registration links, or full copy exactly as it must appear on the design...">${intakeForm.final_copy}</textarea>
-              <small style="color: #64748b; font-size: 0.74rem;">Distinct from title. Paste exact wording so designers can copy-paste without spelling or date discrepancies.</small>
+              <label style="font-weight:700;">
+                Exact Text to Include in the Design ${['poster', 'social_creative', 'presentation'].includes(intakeForm.work_type) ? '<span class="required" style="color: #dc2626; font-weight:800;">*</span>' : '<span style="font-weight:400; color:#64748b; font-size:0.8rem;">(Optional)</span>'}
+              </label>
+              <textarea id="intake-copy" class="form-textarea" placeholder="Paste exact headline, body copy, dates, speaker names, venue, and registration links exactly as they must appear inside the deliverable...">${intakeForm.final_copy}</textarea>
+              <small style="color: #64748b; font-size: 0.74rem;">Distinct from request title. Provide the exact wording, names, dates, event details, and other text to appear inside the deliverable so designers can copy-paste without spelling or date discrepancies.</small>
             </div>
 
             <!-- Reference Links & Requester Attachments -->
             <div class="form-grid-2">
               <div class="form-group">
-                <label style="font-weight:700;">Reference Links / Visual Moodboard</label>
+                <label style="font-weight:700;">Reference Links / Visual Moodboard (Optional)</label>
                 <input type="text" id="intake-ref" class="design-input" placeholder="https://dribbble.com/... or Figma board link" value="${intakeForm.reference_links}">
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Requester Attachments</label>
+                <label style="font-weight:700;">Requester Attachments (Optional)</label>
                 <input type="text" id="intake-attachments" class="design-input" placeholder="https://drive.google.com/... cloud folder link" value="${intakeForm.requester_attachments}">
                 <small style="color: #64748b; font-size: 0.74rem;">Logos, speaker photos, raw footage. Deliverables are submitted separately.</small>
               </div>
@@ -267,11 +275,11 @@ export async function DesignRequests(route, router) {
             ${intakeForm.work_type === 'poster' ? `
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label style="font-weight:700;">Dimensions or Preset Size *</label>
+                  <label style="font-weight:700;">Dimensions or Preset Size <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input type="text" id="type-dimensions" class="design-input" placeholder="A2 (420 x 594 mm), A3, 1080x1350, or Custom" value="A2 (420 x 594 mm)">
                 </div>
                 <div class="form-group">
-                  <label style="font-weight:700;">Medium Format *</label>
+                  <label style="font-weight:700;">Medium Format <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <select id="type-format" class="design-select">
                     <option value="print">Print Ready (CMYK)</option>
                     <option value="digital">Digital Display (RGB)</option>
@@ -281,11 +289,11 @@ export async function DesignRequests(route, router) {
 
               <div class="form-grid-2">
                 <div class="form-group" id="wrap-bleed">
-                  <label style="font-weight:700;">Bleed &amp; DPI (For Print) *</label>
+                  <label style="font-weight:700;">Bleed &amp; DPI (For Print) <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input type="text" id="type-bleed" class="design-input" placeholder="3mm bleed, 300 DPI CMYK" value="3mm bleed, 300 DPI CMYK">
                 </div>
                 <div class="form-group">
-                  <label style="font-weight:700;">Orientation *</label>
+                  <label style="font-weight:700;">Orientation <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <select id="type-orientation" class="design-select">
                     <option value="Portrait">Portrait</option>
                     <option value="Landscape">Landscape</option>
@@ -303,11 +311,11 @@ export async function DesignRequests(route, router) {
             ${intakeForm.work_type === 'social_creative' ? `
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label style="font-weight:700;">Target Platform(s) *</label>
+                  <label style="font-weight:700;">Target Platform(s) <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input type="text" id="type-social-platforms" class="design-input" placeholder="Instagram, LinkedIn, X, Facebook" value="Instagram & LinkedIn">
                 </div>
                 <div class="form-group">
-                  <label style="font-weight:700;">Creative Format *</label>
+                  <label style="font-weight:700;">Creative Format <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <select id="type-social-format" class="design-select">
                     <option value="single_post">Single Feed Post</option>
                     <option value="story">Story / Status (9:16)</option>
@@ -322,7 +330,7 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Accompanying Social Caption Text &amp; Hashtags</label>
+                <label style="font-weight:700;">Accompanying Social Caption Text &amp; Hashtags (Optional)</label>
                 <textarea id="type-caption-text" class="form-textarea" placeholder="Draft social media copy, hashtags, speaker tags..."></textarea>
               </div>
             ` : ''}
@@ -330,11 +338,11 @@ export async function DesignRequests(route, router) {
             ${intakeForm.work_type === 'video_motion' ? `
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label style="font-weight:700;">Target Duration *</label>
+                  <label style="font-weight:700;">Target Duration <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input type="text" id="type-video-duration" class="design-input" placeholder="e.g. 30s reel, 60s promo, or 3 min video" value="30s">
                 </div>
                 <div class="form-group">
-                  <label style="font-weight:700;">Aspect Ratio *</label>
+                  <label style="font-weight:700;">Aspect Ratio <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <select id="type-video-ratio" class="design-select">
                     <option value="9:16">9:16 (Vertical Reel / YouTube Shorts)</option>
                     <option value="16:9">16:9 (Landscape Standard / YouTube)</option>
@@ -345,7 +353,7 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Raw Footage or Drive Links *</label>
+                <label style="font-weight:700;">Raw Footage or Drive Links <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <input type="text" id="type-footage-links" class="design-input" placeholder="https://drive.google.com/drive/folders/... raw video assets">
               </div>
 
@@ -365,7 +373,7 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Music &amp; Audio Preferences</label>
+                <label style="font-weight:700;">Music &amp; Audio Preferences (Optional)</label>
                 <input type="text" id="type-music" class="design-input" placeholder="e.g. Upbeat energetic synth, subtle ambient corporate, acoustic">
               </div>
             ` : ''}
@@ -373,11 +381,11 @@ export async function DesignRequests(route, router) {
             ${intakeForm.work_type === 'presentation' ? `
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label style="font-weight:700;">Slide or Page Count *</label>
+                  <label style="font-weight:700;">Slide or Page Count <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input type="number" id="type-slide-count" class="design-input" min="1" max="100" value="12">
                 </div>
                 <div class="form-group">
-                  <label style="font-weight:700;">Template Preference *</label>
+                  <label style="font-weight:700;">Template Preference <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <select id="type-template-pref" class="design-select">
                     <option value="existing_template">Use Existing Master Brand Deck Template</option>
                     <option value="from_scratch">Design Custom Style from Scratch</option>
@@ -386,7 +394,7 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Source Content Document Link *</label>
+                <label style="font-weight:700;">Source Content Document Link <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <input type="text" id="type-source-doc" class="design-input" placeholder="https://docs.google.com/document/d/... presentation bullet points or script">
               </div>
             ` : ''}
@@ -397,7 +405,7 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Detailed Description of Requested Work *</label>
+                <label style="font-weight:700;">Detailed Description of Requested Work <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <textarea id="type-other-scope" class="form-textarea" placeholder="Detail the requested deliverable, format, dimensions, reference files, and delivery expectations..." style="height: 120px;"></textarea>
               </div>
             ` : ''}
@@ -442,6 +450,7 @@ export async function DesignRequests(route, router) {
     if (step2Next) {
       step2Next.addEventListener('click', () => {
         const title = container.querySelector('#intake-title')?.value.trim();
+        const purpose = container.querySelector('#intake-purpose')?.value.trim();
         const division = container.querySelector('#intake-division')?.value;
         const brandKit = container.querySelector('#intake-brand-kit')?.value;
         const audience = container.querySelector('#intake-audience')?.value.trim();
@@ -454,11 +463,18 @@ export async function DesignRequests(route, router) {
           return;
         }
         if (!reqDate) {
-          toast('Required-by date and time is required.', 'warning');
+          toast('Required-by date is required.', 'warning');
+          return;
+        }
+
+        // Validate exact copy for work types that need fixed text
+        if (['poster', 'social_creative', 'presentation'].includes(intakeForm.work_type) && !copy) {
+          toast('Exact Text to Include in the Design is required for this work type.', 'warning');
           return;
         }
 
         intakeForm.title = title;
+        intakeForm.purpose = purpose || '';
         intakeForm.project_id = null;
         intakeForm.brand_kit_name = brandKit || 'RLabZ Core Platform Brand Kit';
         intakeForm.requesting_division = division;

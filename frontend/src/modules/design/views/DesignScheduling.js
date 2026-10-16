@@ -1,6 +1,7 @@
 import { API_BASE } from '@/core/config/api.js';
 import { updateDesignSidebar } from '../layouts/DesignLayout.js';
 import { openTicketStudioModal, getStatusBadge, getPriorityBadge } from '../utils/ticketModal.js';
+import { renderPagination, setupPaginationListeners } from '../utils/pagination.js';
 import Swal from 'sweetalert2';
 import '../design.css';
 
@@ -20,6 +21,11 @@ export async function DesignScheduling(route, router) {
   let unassignedTickets = [];
   let calendarStartDate = new Date();
   calendarStartDate.setHours(0, 0, 0, 0);
+
+  let queuePage = 1;
+  const queuePerPage = 6;
+  let teamPage = 1;
+  const teamPerPage = 6;
 
   const toast = (title, icon = 'success') => {
     Swal.fire({
@@ -133,7 +139,7 @@ export async function DesignScheduling(route, router) {
             </div>
           ` : `
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
-              ${unassignedTickets.map(t => `
+              ${unassignedTickets.slice((queuePage - 1) * queuePerPage, queuePage * queuePerPage).map(t => `
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.2rem; display: flex; flex-direction: column; justify-content: space-between;">
                   <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -160,6 +166,9 @@ export async function DesignScheduling(route, router) {
                 </div>
               `).join('')}
             </div>
+            <div id="queue-pagination-container">
+              ${renderPagination(unassignedTickets.length, queuePage, queuePerPage)}
+            </div>
           `}
         </div>
 
@@ -172,7 +181,7 @@ export async function DesignScheduling(route, router) {
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
             ${team.length === 0 ? `
               <div style="color: #94a3b8; font-size: 0.88rem; padding: 1rem;">No designer records available.</div>
-            ` : team.map(m => {
+            ` : team.slice((teamPage - 1) * teamPerPage, teamPage * teamPerPage).map(m => {
               const maxHours = m.weekly_capacity_hours || 40;
               const committed = m.hours_committed_this_week || 0;
               const pct = Math.min((committed / maxHours) * 100, 100);
@@ -201,6 +210,9 @@ export async function DesignScheduling(route, router) {
                 </div>
               `;
             }).join('')}
+          </div>
+          <div id="team-pagination-container">
+            ${renderPagination(team.length, teamPage, teamPerPage)}
           </div>
         </div>
 
@@ -371,6 +383,17 @@ export async function DesignScheduling(route, router) {
       });
     }
 
+    // Queue & Team Pagination
+    setupPaginationListeners(container.querySelector('#queue-pagination-container'), (page) => {
+      queuePage = page;
+      render();
+    });
+
+    setupPaginationListeners(container.querySelector('#team-pagination-container'), (page) => {
+      teamPage = page;
+      render();
+    });
+
     // Open Studio on ticket view
     container.querySelectorAll('.btn-view-ticket').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -389,7 +412,10 @@ export async function DesignScheduling(route, router) {
         const estHours = btn.dataset.hours || 8;
 
         const designers = (capacityData && Array.isArray(capacityData.team)) ? capacityData.team : [];
-        const designerOptions = designers.map(d => `<option value="${d.user_id}">${d.name} (${d.hours_committed_this_week || 0}h committed · ${d.weekly_capacity_hours || 20}h cap)</option>`).join('');
+        const defaultPrompt = '<option value="">-- Select Designer --</option>';
+        const designerOptions = designers.length === 0
+          ? '<option value="" disabled>No designers available</option>'
+          : defaultPrompt + designers.map(d => `<option value="${d.user_id}">${d.name} (${d.hours_committed_this_week || 0}h committed · ${d.weekly_capacity_hours || 20}h cap)</option>`).join('');
 
         const defaultCommittedDate = btn.dataset.required ? new Date(btn.dataset.required).toISOString().slice(0, 16) : new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16);
 
@@ -407,7 +433,7 @@ export async function DesignScheduling(route, router) {
               </div>
 
               <div>
-                <label style="font-size:0.8rem; font-weight:700; color: #334155; display: block; margin-bottom: 4px;">1. Select Designer *</label>
+                <label style="font-size:0.8rem; font-weight:700; color: #334155; display: block; margin-bottom: 4px;">1. Select Designer <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <select id="swal-assignee" class="swal2-select" style="margin:0; width:100%; box-sizing: border-box; font-size: 0.88rem; height: 40px;">
                   ${designerOptions}
                 </select>
@@ -415,7 +441,7 @@ export async function DesignScheduling(route, router) {
 
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <label style="font-size:0.8rem; font-weight:700; color: #334155;">2. Committed Delivery Date *</label>
+                  <label style="font-size:0.8rem; font-weight:700; color: #334155;">2. Committed Delivery Date <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <span style="font-size: 0.72rem; color: #64748b;">Compare with deadline above</span>
                 </div>
                 <input type="datetime-local" id="swal-committed-date" class="swal2-input" value="${defaultCommittedDate}" style="margin:0; width:100%; box-sizing: border-box; font-size: 0.88rem;">

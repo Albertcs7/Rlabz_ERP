@@ -1,5 +1,6 @@
 import { API_BASE } from '@/core/config/api.js';
 import { updateDesignSidebar } from '../layouts/DesignLayout.js';
+import { renderPagination, setupPaginationListeners } from '../utils/pagination.js';
 import Swal from 'sweetalert2';
 import '../design.css';
 
@@ -15,6 +16,8 @@ export async function DesignAuditLog(route, router) {
   let logs = [];
   let searchQuery = '';
   let actionFilter = 'all';
+  let currentPage = 1;
+  const itemsPerPage = 12;
 
   const toast = (title, icon = 'success') => {
     Swal.fire({
@@ -55,6 +58,11 @@ export async function DesignAuditLog(route, router) {
 
       return matchSearch && matchAction;
     });
+
+    const totalLogs = filtered.length;
+    const maxPages = Math.ceil(totalLogs / itemsPerPage) || 1;
+    if (currentPage > maxPages) currentPage = maxPages;
+    const paginatedLogs = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     container.innerHTML = `
       <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
@@ -124,7 +132,7 @@ export async function DesignAuditLog(route, router) {
                   No audit log entries match your search criteria.
                 </td>
               </tr>
-            ` : filtered.map(log => {
+            ` : paginatedLogs.map(log => {
               const dt = log.created_at ? new Date(log.created_at).toLocaleString('en-IN', {
                 month: 'short',
                 day: 'numeric',
@@ -184,6 +192,10 @@ export async function DesignAuditLog(route, router) {
             }).join('')}
           </tbody>
         </table>
+
+        <div id="audit-pagination-container">
+          ${renderPagination(totalLogs, currentPage, itemsPerPage)}
+        </div>
       </div>
     `;
 
@@ -191,13 +203,24 @@ export async function DesignAuditLog(route, router) {
     const searchInput = container.querySelector('#audit-search-input');
     searchInput?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
+      currentPage = 1;
       render();
-      container.querySelector('#audit-search-input')?.focus();
+      const el = container.querySelector('#audit-search-input');
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
     });
 
     const actionSel = container.querySelector('#audit-action-filter');
     actionSel?.addEventListener('change', (e) => {
       actionFilter = e.target.value;
+      currentPage = 1;
+      render();
+    });
+
+    setupPaginationListeners(container.querySelector('#audit-pagination-container'), (newPage) => {
+      currentPage = newPage;
       render();
     });
 

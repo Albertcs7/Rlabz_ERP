@@ -1088,3 +1088,20 @@ hr.fin-divider {
   color: var(--text-muted);
   padding: 0 0.25rem;
 }
+
+/* ── Mandatory Form Field Asterisks (Finance Module) ── */
+.finance-module label .required,
+.finance-module label .text-danger,
+.finance-module .fin-form-group label .required,
+.finance-module label span[style*="red"],
+.fin-modal label .required,
+.fin-modal label .text-danger,
+.fin-modal label span[style*="red"],
+.fin-modal-box label .required,
+.fin-modal-box label .text-danger,
+.fin-modal-box label span[style*="red"] {
+  color: #dc2626 !important;
+  font-weight: 800 !important;
+  margin-left: 2px;
+  display: inline-block;
+}

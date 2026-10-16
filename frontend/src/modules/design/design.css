@@ -1651,4 +1651,118 @@ hr.fin-divider {
   box-sizing: border-box !important;
 }
 
+/* ── Design Studio 2-Column Responsive Split ── */
+.design-studio-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 
+.design-studio-grid > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 1100px) {
+  .design-studio-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Mandatory Form Field Asterisks (Design Module) ── */
+.design-module label .required,
+.design-module label .text-danger,
+.design-module .form-group label .required,
+.design-module label span[style*="red"],
+.design-modal label .required,
+.design-modal label .text-danger,
+.design-modal label span[style*="red"],
+.swal2-container label .required,
+.swal2-container label .text-danger {
+  color: #dc2626 !important;
+  font-weight: 800 !important;
+  margin-left: 2px;
+  display: inline-block;
+}
+
+/* ── Asset Library Cards ── */
+.fin-asset-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.fin-asset-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+.fin-asset-card:hover img {
+  transform: scale(1.04);
+}
+
+/* ── Standard ERP Pagination ── */
+.fin-pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  background: #ffffff;
+  border-radius: 0 0 12px 12px;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fin-pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-muted, #64748b);
+}
+
+.fin-pagination-controls {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fin-page-btn {
+  background: #ffffff;
+  border: 1px solid var(--border-color, #cbd5e1);
+  color: var(--text-color, #1e293b);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.fin-page-btn:hover:not(:disabled) {
+  background: var(--bg-light, #f1f5f9);
+  border-color: #94a3b8;
+}
+
+.fin-page-btn.active {
+  background: var(--primary, #009688);
+  color: #ffffff;
+  border-color: var(--primary, #009688);
+  box-shadow: 0 1px 3px rgba(0, 150, 136, 0.3);
+}
+
+.fin-page-btn:disabled,
+.fin-page-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.fin-page-ellipsis {
+  color: var(--text-muted, #64748b);
+  padding: 0 0.25rem;
+}

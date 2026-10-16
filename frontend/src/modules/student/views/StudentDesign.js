@@ -289,9 +289,9 @@ export async function StudentDesign(route, router) {
   function renderBrandLogos(logos) {
     if (!logos || !Array.isArray(logos) || logos.length === 0) return '';
     return `
-      <div>
-        <label style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Official Logos &amp; Assets</label>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div style="margin-top: 10px; width: 100%; box-sizing: border-box;">
+        <label style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 6px;">Official Logos &amp; Assets</label>
+        <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; box-sizing: border-box;">
           ${logos.map(logo => {
             let title = 'Download Logo';
             let url = '#';
@@ -306,14 +306,15 @@ export async function StudentDesign(route, router) {
             }
             if (!url || url === '#' || logo.is_available === false) {
               return `
-                <span class="fin-badge neutral" style="font-size: 0.74rem;">
-                  ⏳ ${title}${format} - ${logo.note || 'Available Soon'}
-                </span>
+                <div style="font-size: 0.72rem; background: #f1f5f9; color: #475569; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0; line-height: 1.35; word-break: break-word; overflow-wrap: anywhere; width: 100%; max-width: 100%; box-sizing: border-box;">
+                  ⏳ <strong>${title}${format}</strong><span style="color: #64748b; font-size: 0.7rem; display: block; margin-top: 2px;">${logo.note || 'Available Soon'}</span>
+                </div>
               `;
             }
             return `
-              <a href="${url}" target="_blank" download class="fin-btn outline sm" style="font-size: 0.74rem; text-decoration: none;">
-                📥 ${title}${format}
+              <a href="${url}" target="_blank" download class="fin-btn outline sm" style="font-size: 0.73rem; padding: 6px 10px; text-decoration: none; display: flex; align-items: flex-start; gap: 6px; width: 100%; max-width: 100%; box-sizing: border-box; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere; text-align: left; line-height: 1.35; border-radius: 6px;">
+                <span style="flex-shrink: 0; font-size: 0.85rem; line-height: 1.2;">📥</span>
+                <span style="flex: 1; min-width: 0; word-break: break-word; overflow-wrap: anywhere; white-space: normal !important;">${title}${format}</span>
               </a>
             `;
           }).join('')}
@@ -758,7 +759,7 @@ export async function StudentDesign(route, router) {
                 <!-- Media Canvas -->
                 <div style="background: #0f172a; border-radius: 8px; min-height: 260px; max-height: 440px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; margin-bottom: 8px;">
                   ${currentVersion ? (
-                    (currentVersion.file_type === 'video' || (currentVersion.file_url && currentVersion.file_url.match(/\.(mp4|webm)$/i))) ? `
+                    (currentVersion.file_type === 'video' || (currentVersion.file_type && currentVersion.file_type.includes('video')) || (currentVersion.file_url && currentVersion.file_url.match(/\.(mp4|webm|mov|ogg|m4v)$/i))) ? `
                       <video src="${resolveMediaUrl(currentVersion.file_url)}" controls style="max-width: 100%; max-height: 420px; object-fit: contain;"></video>
                     ` : (currentVersion.file_type === 'pdf' || (currentVersion.file_url && currentVersion.file_url.match(/\.pdf$/i))) ? `
                       <div style="text-align: center; padding: 30px; color: #e2e8f0;">
@@ -770,7 +771,7 @@ export async function StudentDesign(route, router) {
                         </a>
                       </div>
                     ` : currentVersion.file_url ? `
-                      <img src="${resolveMediaUrl(currentVersion.file_url)}" alt="Version V${currentVersion.version_number}" id="student-preview-img" style="max-width: 100%; max-height: 420px; object-fit: contain; cursor: zoom-in;" title="Click to zoom preview" />
+                      <img src="${resolveMediaUrl(currentVersion.file_url)}" alt="Version V${currentVersion.version_number}" id="student-preview-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800';" style="max-width: 100%; max-height: 420px; object-fit: contain; cursor: zoom-in;" title="Click to zoom preview" />
                       <button type="button" id="btn-zoom-preview" class="fin-btn sm" style="position: absolute; bottom: 8px; right: 8px; background: rgba(15, 23, 42, 0.85); color: #fff; font-size: 0.72rem; backdrop-filter: blur(4px);">
                         🔍 Zoom
                       </button>

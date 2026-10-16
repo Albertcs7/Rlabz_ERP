@@ -1,5 +1,6 @@
 import { API_BASE } from '@/core/config/api.js';
 import { updateDesignSidebar } from '../layouts/DesignLayout.js';
+import { renderPagination, setupPaginationListeners } from '../utils/pagination.js';
 import Swal from 'sweetalert2';
 import '../design.css';
 
@@ -14,6 +15,8 @@ export async function DesignReports(route, router) {
 
   let reportData = null;
   let searchQuery = '';
+  let currentPage = 1;
+  const itemsPerPage = 8;
 
   const toast = (title, icon = 'success') => {
     Swal.fire({
@@ -100,10 +103,15 @@ export async function DesignReports(route, router) {
 
     const byDiv = reportData?.byDivision || {};
     const turnaround = reportData?.turnaroundByType || {};
-    const requesters = (reportData?.revisionsByRequester || []).filter(r => {
+    const allRequesters = (reportData?.revisionsByRequester || []).filter(r => {
       if (!searchQuery) return true;
       return (r.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     });
+
+    const totalRequesters = allRequesters.length;
+    const maxPages = Math.ceil(totalRequesters / itemsPerPage) || 1;
+    if (currentPage > maxPages) currentPage = maxPages;
+    const requesters = allRequesters.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const maxTurnaround = Math.max(...Object.values(turnaround).map(Number), 5);
     const maxDivCount = Math.max(...Object.values(byDiv).map(Number), 5);
@@ -275,6 +283,10 @@ export async function DesignReports(route, router) {
               }).join('')}
             </tbody>
           </table>
+
+          <div id="requesters-pagination-container">
+            ${renderPagination(totalRequesters, currentPage, itemsPerPage)}
+          </div>
         </div>
       </div>
     `;
@@ -283,8 +295,18 @@ export async function DesignReports(route, router) {
     const searchInput = container.querySelector('#requester-search-input');
     searchInput?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
+      currentPage = 1;
       render();
-      container.querySelector('#requester-search-input')?.focus();
+      const el = container.querySelector('#requester-search-input');
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
+    });
+
+    setupPaginationListeners(container.querySelector('#requesters-pagination-container'), (newPage) => {
+      currentPage = newPage;
+      render();
     });
 
     const exportBtn = container.querySelector('#export-csv-btn');

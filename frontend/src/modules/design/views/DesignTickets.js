@@ -1,6 +1,7 @@
 import { API_BASE } from '@/core/config/api.js';
 import { updateDesignSidebar } from '../layouts/DesignLayout.js';
 import { openTicketStudioModal, getStatusBadge, getPriorityBadge, getBallBadge } from '../utils/ticketModal.js';
+import { renderPagination, setupPaginationListeners } from '../utils/pagination.js';
 import '../design.css';
 
 export async function DesignTickets(route, router) {
@@ -20,6 +21,8 @@ export async function DesignTickets(route, router) {
   let filterPriority = 'all';
   let filterProject = 'all';
   let searchQuery = '';
+  let currentPage = 1;
+  const itemsPerPage = 10;
 
   const workTypeLabels = {
     poster: 'Poster / Static Graphic',
@@ -166,7 +169,7 @@ export async function DesignTickets(route, router) {
                   No design tickets match your filter criteria.
                 </td>
               </tr>
-            ` : filtered.map(t => `
+            ` : filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(t => `
               <tr>
                 <td>
                   <span class="design-ticket-id-link btn-view-ticket" data-id="${t.id}">
@@ -213,6 +216,9 @@ export async function DesignTickets(route, router) {
           </tbody>
         </table>
       </div>
+      <div id="tickets-pagination-container">
+        ${renderPagination(filtered.length, currentPage, itemsPerPage)}
+      </div>
     </div>
     `;
 
@@ -231,21 +237,28 @@ export async function DesignTickets(route, router) {
     if (searchInp) {
       searchInp.addEventListener('input', (e) => {
         searchQuery = e.target.value;
+        currentPage = 1;
         render();
       });
     }
 
     const projectSel = container.querySelector('#filter-project-select');
-    if (projectSel) projectSel.addEventListener('change', (e) => { filterProject = e.target.value; render(); });
+    if (projectSel) projectSel.addEventListener('change', (e) => { filterProject = e.target.value; currentPage = 1; render(); });
 
     const statusSel = container.querySelector('#filter-status-select');
-    if (statusSel) statusSel.addEventListener('change', (e) => { filterStatus = e.target.value; render(); });
+    if (statusSel) statusSel.addEventListener('change', (e) => { filterStatus = e.target.value; currentPage = 1; render(); });
 
     const workSel = container.querySelector('#filter-work-select');
-    if (workSel) workSel.addEventListener('change', (e) => { filterWorkType = e.target.value; render(); });
+    if (workSel) workSel.addEventListener('change', (e) => { filterWorkType = e.target.value; currentPage = 1; render(); });
 
     const prioritySel = container.querySelector('#filter-priority-select');
-    if (prioritySel) prioritySel.addEventListener('change', (e) => { filterPriority = e.target.value; render(); });
+    if (prioritySel) prioritySel.addEventListener('change', (e) => { filterPriority = e.target.value; currentPage = 1; render(); });
+
+    // Pagination
+    setupPaginationListeners(container.querySelector('#tickets-pagination-container'), (page) => {
+      currentPage = page;
+      render();
+    });
   }
 
   await loadData();

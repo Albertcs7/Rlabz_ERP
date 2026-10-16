@@ -1,5 +1,6 @@
 import { API_BASE } from '@/core/config/api.js';
 import { updateDesignSidebar } from '../layouts/DesignLayout.js';
+import { renderPagination, setupPaginationListeners } from '../utils/pagination.js';
 import Swal from 'sweetalert2';
 import '../design.css';
 
@@ -17,6 +18,8 @@ export async function DesignUsers(route, router) {
   let searchQuery = '';
   let roleFilter = 'all';
   let statusFilter = 'all';
+  let currentPage = 1;
+  const itemsPerPage = 8;
 
   const availableSkillOptions = [
     'poster',
@@ -158,8 +161,17 @@ export async function DesignUsers(route, router) {
                     <strong>No design team members match your filter criteria.</strong>
                   </td>
                 </tr>
-              ` : filteredUsers.map(u => {
+              ` : filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(u => {
                 const cap = teamCapacity?.team?.find(m => m.user_id === u.id);
+                const rawSkills = Array.isArray(u.skill_tags)
+                  ? u.skill_tags
+                  : (typeof u.skill_tags === 'string' ? u.skill_tags.replace(/[\[\]"]/g, '').split(',') : []);
+                const cleanSkills = rawSkills.map(s => s.trim()).filter(Boolean);
+                const openCount = u.open_tickets_count || 0;
+                const committedHrs = parseFloat(u.hours_committed_this_week || 0).toFixed(1);
+                const nextSlot = cap?.next_free_slot;
+                const showNextSlot = openCount > 0 && nextSlot && nextSlot !== 'Immediate availability';
+
                 return `
                   <tr>
                     <td style="padding: 12px 14px;">
@@ -167,7 +179,7 @@ export async function DesignUsers(route, router) {
                         <img src="${u.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name) + '&background=009688&color=fff'}" alt="${u.name}" style="width: 38px; height: 38px; border-radius: 9999px; object-fit: cover; border: 1px solid #e2e8f0;">
                         <div>
                           <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">${u.name}</div>
-                          <div style="font-size: 0.74rem; color: #64748b;">${u.email}</div>
+                          <div style="font-size: 0.74rem; color: #64748b;">${u.email}${u.phone ? ` · ${u.phone}` : ''}</div>
                           <div style="font-size: 0.7rem; color: #94a3b8;">Joined: ${u.joining_date || 'N/A'}</div>
                         </div>
                       </div>
@@ -175,24 +187,26 @@ export async function DesignUsers(route, router) {
                     <td style="padding: 12px 14px;">
                       <div style="font-weight: 600; color: #334155; font-size: 0.84rem;">${u.division}</div>
                       <span class="fin-badge ${u.system_role === 'student' ? 'purple' : 'info'}" style="font-size: 0.7rem; margin-top: 2px;">
-                        ${u.design_role}
+                        ${u.design_role || (u.system_role === 'student' ? 'Student Designer' : 'Design Lead')}
                       </span>
                     </td>
                     <td style="padding: 12px 14px;">
                       <div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px;">
-                        ${(u.skill_tags || []).map(s => `<span class="fin-badge neutral" style="font-size: 0.7rem; padding: 2px 6px;">${s}</span>`).join('')}
+                        ${cleanSkills.length === 0 ? '<span style="color:#94a3b8; font-size:0.75rem;">No skill tags</span>' : cleanSkills.map(s => `<span class="fin-badge neutral" style="font-size: 0.7rem; padding: 2px 6px;">${s}</span>`).join('')}
                       </div>
                     </td>
                     <td style="padding: 12px 14px;">
                       <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a;">
-                        ${u.open_tickets_count || 0} tasks · ${parseFloat(u.hours_committed_this_week || 0).toFixed(1)}h committed
+                        ${openCount} active task${openCount === 1 ? '' : 's'} · ${committedHrs}h committed
                       </div>
-                      <div style="font-size: 0.74rem; color: #009688; font-weight: 600; margin-top: 2px;">
-                        ${cap ? cap.next_free_slot : 'Immediate availability'}
-                      </div>
+                      ${showNextSlot ? `
+                        <div style="font-size: 0.74rem; color: #0284c7; font-weight: 600; margin-top: 2px;">
+                          Next free: ${nextSlot}
+                        </div>
+                      ` : ''}
                     </td>
                     <td style="padding: 12px 14px;">
-                      <strong style="color: #0f172a;">${u.weekly_capacity_hours} hrs</strong><span style="font-size: 0.75rem; color: #64748b;">/week</span>
+                      <strong style="color: #0f172a;">${u.weekly_capacity_hours || 20} hrs</strong><span style="font-size: 0.75rem; color: #64748b;">/week</span>
                     </td>
                     <td style="padding: 12px 14px;">
                       <span class="fin-badge ${u.is_active ? 'success' : 'danger'}" style="font-size: 0.75rem;">
@@ -215,6 +229,9 @@ export async function DesignUsers(route, router) {
             </tbody>
           </table>
         </div>
+        <div id="users-pagination-container">
+          ${renderPagination(filteredUsers.length, currentPage, itemsPerPage)}
+        </div>
       </div>
     `;
 
@@ -225,17 +242,26 @@ export async function DesignUsers(route, router) {
     // Search input
     container.querySelector('#user-search-input')?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
+      currentPage = 1;
       render();
     });
 
     // Filters
     container.querySelector('#user-role-filter')?.addEventListener('change', (e) => {
       roleFilter = e.target.value;
+      currentPage = 1;
       render();
     });
 
     container.querySelector('#user-status-filter')?.addEventListener('change', (e) => {
       statusFilter = e.target.value;
+      currentPage = 1;
+      render();
+    });
+
+    // Pagination
+    setupPaginationListeners(container.querySelector('#users-pagination-container'), (page) => {
+      currentPage = page;
       render();
     });
 
@@ -326,7 +352,7 @@ export async function DesignUsers(route, router) {
           <div style="text-align: left; display: flex; flex-direction: column; gap: 14px; font-size: 0.85rem; font-family: inherit;">
             <div>
               <label style="font-weight: 700; color: #0f172a; display: block; margin-bottom: 4px;">
-                1. Search Existing Students or Staff *
+                1. Search Existing Students or Staff <span class="required" style="color: #dc2626; font-weight:800;">*</span>
               </label>
               <input type="text" id="swal-candidate-search" class="swal2-input" placeholder="Type student name or email to search..." style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.85rem;">
               <div id="swal-candidate-results" style="max-height: 160px; overflow-y: auto; margin-top: 8px; border: 1px solid #f1f5f9; padding: 6px; border-radius: 8px;">
@@ -338,7 +364,7 @@ export async function DesignUsers(route, router) {
               <strong style="color: #0f172a; font-size: 0.88rem;">2. Configure Creative Role &amp; Capacity</strong>
               
               <div>
-                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Creative Skills &amp; Specialties *</label>
+                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Creative Skills &amp; Specialties <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #ffffff; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
                   ${skillsCheckboxes}
                 </div>
@@ -346,7 +372,7 @@ export async function DesignUsers(route, router) {
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div>
-                  <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Weekly Capacity (Hours/Week) *</label>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Weekly Capacity (Hours/Week) <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input type="number" id="swal-candidate-capacity" class="swal2-input" value="20" min="1" max="80" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.85rem;">
                 </div>
                 <div>
@@ -465,7 +491,7 @@ export async function DesignUsers(route, router) {
         html: `
           <div style="text-align: left; display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem; font-family: inherit;">
             <div>
-              <label style="font-weight: 700; color: #0f172a; display: block; margin-bottom: 4px;">Account Type *</label>
+              <label style="font-weight: 700; color: #0f172a; display: block; margin-bottom: 4px;">Account Type <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
               <div style="display: flex; gap: 16px;">
                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
                   <input type="radio" name="swal-acc-type" value="student" checked id="radio-acc-student">
@@ -480,18 +506,18 @@ export async function DesignUsers(route, router) {
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div>
-                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Full Name *</label>
+                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Full Name <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <input type="text" id="swal-new-name" class="swal2-input" placeholder="e.g. Maya Suresh" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.85rem;">
               </div>
               <div>
-                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Email Address *</label>
+                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Email Address <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <input type="email" id="swal-new-email" class="swal2-input" placeholder="e.g. maya@rajagiri.edu" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.85rem;">
               </div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div>
-                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Initial Secure Password *</label>
+                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Initial Secure Password <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <input type="password" id="swal-new-password" class="swal2-input" placeholder="Choose a secure password (min 6 chars)" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.85rem;">
               </div>
               <div>
@@ -527,7 +553,7 @@ export async function DesignUsers(route, router) {
             </div>
 
             <div>
-              <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Skills &amp; Competencies *</label>
+              <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Skills &amp; Competencies <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
               <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f8fafc; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;">
                 ${skillsCheckboxes}
               </div>
@@ -535,7 +561,7 @@ export async function DesignUsers(route, router) {
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div>
-                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Weekly Capacity (Hours/Week) *</label>
+                <label style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Weekly Capacity (Hours/Week) <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                 <input type="number" id="swal-new-capacity" class="swal2-input" value="20" min="1" max="80" style="margin: 0; width: 100%; box-sizing: border-box; font-size: 0.85rem;">
               </div>
               <div>
@@ -701,7 +727,7 @@ export async function DesignUsers(route, router) {
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div>
-                  <label style="font-size: 0.8rem; font-weight: 700; color: #0f172a;">Weekly Capacity (Hours/Week) *</label>
+                  <label style="font-size: 0.8rem; font-weight: 700; color: #0f172a;">Weekly Capacity (Hours/Week) <span class="required" style="color: #dc2626; font-weight:800;">*</span></label>
                   <input id="swal-edit-capacity" type="number" min="0" max="80" class="swal2-input" value="${u.weekly_capacity_hours || 20}" style="margin: 4px 0 0 0; width: 100%; box-sizing: border-box; font-size: 0.85rem;">
                 </div>
                 <div>

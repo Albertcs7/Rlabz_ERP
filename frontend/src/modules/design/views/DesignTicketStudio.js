@@ -26,7 +26,7 @@ export async function DesignTicketStudio(route, router) {
     try {
       const [ticketRes, teamRes] = await Promise.all([
         fetch(`${API_BASE}/design/tickets/${ticketId}`, { headers }),
-        fetch(`${API_BASE}/design/team-candidates`, { headers }).catch(() => null)
+        fetch(`${API_BASE}/design/team-capacity`, { headers }).catch(() => null)
       ]);
 
       if (!ticketRes.ok) {
@@ -44,7 +44,7 @@ export async function DesignTicketStudio(route, router) {
 
       if (teamRes && teamRes.ok) {
         const teamData = await teamRes.json();
-        teamMembers = teamData.candidates || [];
+        teamMembers = teamData.team || teamData.candidates || [];
       }
 
       render();
@@ -80,18 +80,9 @@ export async function DesignTicketStudio(route, router) {
     return url;
   }
 
-  // Helper: Render Brand Colors without [object Object]
+  // Helper: Render Brand Colors without overflowing
   function renderBrandColors(palette) {
-    if (!palette || !Array.isArray(palette) || palette.length === 0) {
-      return `
-        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
-          <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-family: monospace;">
-            <span style="width: 12px; height: 12px; border-radius: 3px; background: #009688; border: 1px solid rgba(0,0,0,0.15);"></span>
-            <span>#009688</span>
-          </div>
-        </div>
-      `;
-    }
+    if (!palette || !Array.isArray(palette) || palette.length === 0) return '';
     return `
       <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
         ${palette.map(item => {
@@ -105,9 +96,9 @@ export async function DesignTicketStudio(route, router) {
             name = item.name ? `${item.name} (${hex})` : hex;
           }
           return `
-            <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-family: monospace;" title="${typeof item === 'object' && item.usage ? item.usage : ''}">
-              <span style="width: 12px; height: 12px; border-radius: 3px; background: ${hex}; border: 1px solid rgba(0,0,0,0.15);"></span>
-              <span style="font-weight: 600; color: #1e293b;">${name}</span>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-family: monospace; max-width: 100%; box-sizing: border-box;" title="${typeof item === 'object' && item.usage ? item.usage : ''}">
+              <span style="width: 12px; height: 12px; border-radius: 3px; background: ${hex}; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0;"></span>
+              <span style="font-weight: 600; color: #1e293b; word-break: break-word;">${name}</span>
             </div>
           `;
         }).join('')}
@@ -136,13 +127,13 @@ export async function DesignTicketStudio(route, router) {
     return String(rules);
   }
 
-  // Helper: Render Brand Logos without [object Object]
+  // Helper: Render Brand Logos without overflowing
   function renderBrandLogos(logos) {
     if (!logos || !Array.isArray(logos) || logos.length === 0) return '';
     return `
-      <div style="margin-top: 8px;">
-        <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Brand Logos &amp; Assets</div>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <div style="margin-top: 10px; width: 100%; box-sizing: border-box;">
+        <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">Brand Logos &amp; Assets</div>
+        <div style="display: flex; flex-direction: column; gap: 6px; width: 100%; box-sizing: border-box;">
           ${logos.map(logo => {
             let title = 'Download Logo';
             let url = '#';
@@ -157,14 +148,15 @@ export async function DesignTicketStudio(route, router) {
             }
             if (!url || url === '#' || logo.is_available === false) {
               return `
-                <span class="fin-badge neutral" style="font-size: 0.7rem;">
-                  ⏳ ${title}${format} - ${logo.note || 'Available Soon'}
-                </span>
+                <div style="font-size: 0.72rem; background: #f1f5f9; color: #475569; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0; line-height: 1.35; word-break: break-word; overflow-wrap: anywhere; width: 100%; max-width: 100%; box-sizing: border-box;">
+                  ⏳ <strong>${title}${format}</strong><span style="color: #64748b; font-size: 0.7rem; display: block; margin-top: 2px;">${logo.note || 'Available Soon / Pending Division Upload'}</span>
+                </div>
               `;
             }
             return `
-              <a href="${url}" target="_blank" download class="design-btn design-btn-secondary design-btn-sm" style="font-size: 0.72rem; padding: 2px 8px; text-decoration: none;">
-                📥 ${title}${format}
+              <a href="${url}" target="_blank" download class="design-btn design-btn-secondary design-btn-sm" style="font-size: 0.73rem; padding: 6px 10px; text-decoration: none; display: flex; align-items: flex-start; gap: 6px; width: 100%; max-width: 100%; box-sizing: border-box; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere; text-align: left; line-height: 1.35; border-radius: 6px;">
+                <span style="flex-shrink: 0; font-size: 0.85rem; line-height: 1.2;">📥</span>
+                <span style="flex: 1; min-width: 0; word-break: break-word; overflow-wrap: anywhere; white-space: normal !important;">${title}${format}</span>
               </a>
             `;
           }).join('')}
@@ -227,17 +219,23 @@ export async function DesignTicketStudio(route, router) {
               🎨 Assigned Designer Workspace
             </span>
           `}
-          <button class="design-btn design-btn-secondary design-btn-sm" id="btn-log-time" title="Log time against this design deliverable">
-            ⏱️ Log Time (${parseFloat(t.actual_hours_logged || 0).toFixed(1)}h logged)
-          </button>
+          ${(isStudent || isSelfAssigned) ? `
+            <button class="design-btn design-btn-secondary design-btn-sm" id="btn-log-time" title="Log time against this design deliverable">
+              ⏱️ Log Time (${parseFloat(t.actual_hours_logged || 0).toFixed(1)}h logged)
+            </button>
+          ` : `
+            <span class="fin-badge neutral" style="font-size: 0.8rem; padding: 5px 12px;" title="Total creative hours logged by assigned designer">
+              ⏱️ ${parseFloat(t.actual_hours_logged || 0).toFixed(1)}h logged
+            </span>
+          `}
         </div>
       </div>
 
       <!-- Main Studio 2-Column Split Workspace -->
-      <div style="display: grid; grid-template-columns: minmax(320px, 380px) 1fr; gap: 1.5rem; align-items: start;">
+      <div class="design-studio-grid" style="display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 1.25rem; align-items: start; width: 100%; max-width: 100%; box-sizing: border-box;">
         
         <!-- LEFT COLUMN: Workflow & Responsibility, Brief, Brand Kit & Activity History -->
-        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div style="display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; max-width: 100%; box-sizing: border-box;">
           
           <!-- Workflow & Responsibility Card -->
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
@@ -260,10 +258,20 @@ export async function DesignTicketStudio(route, router) {
                 <strong>${t.requester_name} (${t.requesting_division})</strong>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b;">Requested Deadline:</span>
+                <strong>
+                  ${t.required_by ? new Date(t.required_by).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible'}
+                </strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #64748b;">Committed Delivery:</span>
                 <strong style="color: #0284c7;">
-                  ${t.committed_delivery_date ? new Date(t.committed_delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending'}
+                  ${t.committed_delivery_date ? new Date(t.committed_delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending Confirmation'}
                 </strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b;">Logged Work Time:</span>
+                <strong>${parseFloat(t.actual_hours_logged || 0).toFixed(1)} hrs</strong>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #64748b;">Revisions Count:</span>
@@ -307,10 +315,14 @@ export async function DesignTicketStudio(route, router) {
               ` : ''}
               ${t.required_by ? `
                 <div>
-                  <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">REQUIRED BY</span>
+                  <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">REQUESTED DEADLINE</span>
                   <strong>${new Date(t.required_by).toLocaleDateString()}</strong>
                 </div>
               ` : ''}
+              <div>
+                <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">COMMITTED DELIVERY</span>
+                <strong style="color: #0284c7;">${t.committed_delivery_date ? new Date(t.committed_delivery_date).toLocaleDateString() : 'Pending'}</strong>
+              </div>
               <div>
                 <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">ESTIMATED EFFORT</span>
                 <strong>${t.estimated_hours || 0} hrs</strong>
@@ -328,7 +340,7 @@ export async function DesignTicketStudio(route, router) {
           </div>
 
           <!-- Compact Brand Kit Card (Rendered once per page) -->
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); overflow: hidden; max-width: 100%; box-sizing: border-box;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
               <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Brand Kit</h4>
               <span class="asset-brand-badge" style="font-size: 0.75rem; padding: 2px 8px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 4px; font-weight: 600;">
@@ -392,7 +404,7 @@ export async function DesignTicketStudio(route, router) {
         </div>
 
         <!-- RIGHT COLUMN: Single Consolidated Deliverable Review Section -->
-        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div style="display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; max-width: 100%; box-sizing: border-box;">
           
           <!-- ONE Deliverable Review Section -->
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
@@ -467,7 +479,7 @@ export async function DesignTicketStudio(route, router) {
               <!-- Visual Media Preview Canvas -->
               <div style="display: flex; flex-direction: column; background: #0f172a; border-radius: 10px; overflow: hidden; position: relative; min-height: 460px; align-items: center; justify-content: center;">
                 ${currentVersion ? (
-                  (currentVersion.file_type === 'video' || (currentVersion.file_url && currentVersion.file_url.match(/\.(mp4|webm)$/i))) ? `
+                  (currentVersion.file_type === 'video' || (currentVersion.file_type && currentVersion.file_type.includes('video')) || (currentVersion.file_url && currentVersion.file_url.match(/\.(mp4|webm|mov|ogg|m4v)$/i))) ? `
                     <video src="${resolveMediaUrl(currentVersion.file_url)}" controls style="max-width: 100%; max-height: 500px; object-fit: contain;"></video>
                   ` : (currentVersion.file_type === 'pdf' || (currentVersion.file_url && currentVersion.file_url.match(/\.pdf$/i))) ? `
                     <div style="text-align: center; padding: 30px; color: #e2e8f0;">
@@ -479,7 +491,7 @@ export async function DesignTicketStudio(route, router) {
                       </a>
                     </div>
                   ` : `
-                    <img src="${resolveMediaUrl(currentVersion.file_url)}" alt="Version Preview" id="studio-preview-image" style="max-width: 100%; max-height: 500px; object-fit: contain; cursor: zoom-in;" title="Click to view full size">
+                    <img src="${resolveMediaUrl(currentVersion.file_url)}" alt="Version Preview" id="studio-preview-image" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800';" style="max-width: 100%; max-height: 500px; object-fit: contain; cursor: zoom-in;" title="Click to view full size">
                   `
                 ) : `
                   <div style="color: #94a3b8; text-align: center; padding: 3rem;">
@@ -703,7 +715,8 @@ export async function DesignTicketStudio(route, router) {
     container.querySelector('#btn-reassign-ticket')?.addEventListener('click', async () => {
       let optionsHtml = '<option value="">-- Select Team Member --</option>';
       teamMembers.forEach(m => {
-        optionsHtml += `<option value="${m.id}" ${m.id == t.assigned_to ? 'selected' : ''}>${m.name} (${m.email})</option>`;
+        const uid = m.user_id || m.id;
+        optionsHtml += `<option value="${uid}" ${uid == t.assigned_to ? 'selected' : ''}>${m.name} (${m.role || m.email || ''})</option>`;
       });
 
       const { value: formValues } = await Swal.fire({

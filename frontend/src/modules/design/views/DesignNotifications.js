@@ -1,5 +1,6 @@
 import { API_BASE } from '@/core/config/api.js';
 import { updateDesignSidebar } from '../layouts/DesignLayout.js';
+import { renderPagination, setupPaginationListeners } from '../utils/pagination.js';
 import Swal from 'sweetalert2';
 import '../design.css';
 
@@ -17,6 +18,8 @@ export async function DesignNotifications(route, router) {
   let searchQuery = '';
   let urgencyFilter = 'all';
   let readFilter = 'all';
+  let currentPage = 1;
+  const itemsPerPage = 8;
 
   const toast = (title, icon = 'success') => {
     Swal.fire({
@@ -221,7 +224,7 @@ export async function DesignNotifications(route, router) {
               <div style="font-size: 0.95rem; font-weight: 600; color: #64748b;">No notifications found</div>
               <p style="margin: 4px 0 0 0; font-size: 0.82rem;">No design notifications match your selected search or filter criteria.</p>
             </div>
-          ` : filtered.map(n => {
+          ` : filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(n => {
             const isUnread = !n.is_read;
             const urgency = (n.urgency || 'normal').toLowerCase();
             let urgencyBadge = '<span style="background: #e2e8f0; color: #475569; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">Normal</span>';
@@ -283,6 +286,9 @@ export async function DesignNotifications(route, router) {
             `;
           }).join('')}
         </div>
+        <div id="notifs-pagination-container" style="margin-top: 1.25rem;">
+          ${renderPagination(filtered.length, currentPage, itemsPerPage)}
+        </div>
       </div>
     `;
 
@@ -290,6 +296,7 @@ export async function DesignNotifications(route, router) {
     const searchInput = container.querySelector('#notif-search-input');
     searchInput?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
+      currentPage = 1;
       render();
       container.querySelector('#notif-search-input')?.focus();
     });
@@ -297,12 +304,20 @@ export async function DesignNotifications(route, router) {
     const urgencySel = container.querySelector('#notif-urgency-filter');
     urgencySel?.addEventListener('change', (e) => {
       urgencyFilter = e.target.value;
+      currentPage = 1;
       render();
     });
 
     const statusSel = container.querySelector('#notif-status-filter');
     statusSel?.addEventListener('change', (e) => {
       readFilter = e.target.value;
+      currentPage = 1;
+      render();
+    });
+
+    // Pagination
+    setupPaginationListeners(container.querySelector('#notifs-pagination-container'), (page) => {
+      currentPage = page;
       render();
     });
 

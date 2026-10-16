@@ -1,6 +1,7 @@
 import { API_BASE } from '@/core/config/api.js';
 import { updateDesignSidebar } from '../layouts/DesignLayout.js';
 import { openTicketStudioModal, getStatusBadge, getPriorityBadge } from '../utils/ticketModal.js';
+import { renderPagination, setupPaginationListeners } from '../utils/pagination.js';
 import Swal from 'sweetalert2';
 import '../design.css';
 
@@ -15,6 +16,8 @@ export async function DesignApprovals(route, router) {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   let pendingApprovalTickets = [];
+  let currentPage = 1;
+  const itemsPerPage = 5;
 
   const toast = (title, icon = 'success') => {
     Swal.fire({
@@ -66,7 +69,7 @@ export async function DesignApprovals(route, router) {
           </div>
         ` : `
           <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-            ${pendingApprovalTickets.map(t => {
+            ${pendingApprovalTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(t => {
               const isSelfAssigned = storedUser && storedUser.id && (t.assigned_to == storedUser.id);
               return `
                 <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
@@ -123,6 +126,9 @@ export async function DesignApprovals(route, router) {
               `;
             }).join('')}
           </div>
+          <div id="approvals-pagination-container">
+            ${renderPagination(pendingApprovalTickets.length, currentPage, itemsPerPage)}
+          </div>
         `}
       </div>
     `;
@@ -131,6 +137,11 @@ export async function DesignApprovals(route, router) {
   }
 
   function attachEvents() {
+    setupPaginationListeners(container.querySelector('#approvals-pagination-container'), (page) => {
+      currentPage = page;
+      render();
+    });
+
     container.querySelectorAll('.btn-inspect-studio').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.id;

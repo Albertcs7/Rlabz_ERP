@@ -495,7 +495,7 @@ export async function ProjectFinance(route, router) {
             <div id="mkt-error-msg" style="display:none; color:#ef4444; font-size:0.8rem; margin-bottom:0.75rem; padding:0.5rem; background:#fee2e2; border-radius:4px;"></div>
             
             <div class="fin-form-group">
-              <label style="font-weight:600;">Expense Title / Campaign *</label>
+              <label style="font-weight:600;">Expense Title / Campaign <span class="required" style="color:#dc2626; font-weight:800;">*</span></label>
               <input type="text" class="fin-input" id="mkt-title" placeholder="e.g. Meta Lead Campaign, Google Ads, Print flyers" required>
             </div>
 
@@ -512,14 +512,14 @@ export async function ProjectFinance(route, router) {
                 </select>
               </div>
               <div class="fin-form-group" style="flex:1;">
-                <label style="font-weight:600;">Amount (₹) *</label>
+                <label style="font-weight:600;">Amount (₹) <span class="required" style="color:#dc2626; font-weight:800;">*</span></label>
                 <input type="number" class="fin-input" id="mkt-amount" placeholder="0.00" min="0.01" step="0.01" required>
               </div>
             </div>
 
             <div style="display:flex; gap:0.75rem;">
               <div class="fin-form-group" style="flex:1;">
-                <label style="font-weight:600;">Expense Date *</label>
+                <label style="font-weight:600;">Expense Date <span class="required" style="color:#dc2626; font-weight:800;">*</span></label>
                 <input type="date" class="fin-input" id="mkt-date" value="${new Date().toISOString().split('T')[0]}" required>
               </div>
               <div class="fin-form-group" style="flex:1;">

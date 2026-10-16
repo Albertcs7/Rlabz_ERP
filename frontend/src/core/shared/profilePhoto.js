@@ -66,9 +66,36 @@ export function applyHeaderAvatar(root, url, displayName) {
  */
 export function rememberProfilePhoto(url) {
   try {
-    if (authStore?.user) authStore.user = { ...authStore.user, profile_photo_url: url || null };
+    const cleanUrl = url ? String(url).trim() : null;
+    if (authStore?.user) {
+      authStore.user = {
+        ...authStore.user,
+        profile_photo_url: cleanUrl,
+        profile_photo_path: cleanUrl,
+        avatar: cleanUrl
+      };
+    }
     const cached = JSON.parse(localStorage.getItem('user') || 'null');
-    if (cached) localStorage.setItem('user', JSON.stringify({ ...cached, profile_photo_url: url || null }));
+    if (cached) {
+      if (cleanUrl) {
+        localStorage.setItem('user', JSON.stringify({
+          ...cached,
+          profile_photo_url: cleanUrl,
+          profile_photo_path: cleanUrl,
+          avatar: cleanUrl
+        }));
+      } else {
+        delete cached.profile_photo_url;
+        delete cached.profile_photo_path;
+        delete cached.avatar;
+        localStorage.setItem('user', JSON.stringify({
+          ...cached,
+          profile_photo_url: null,
+          profile_photo_path: null,
+          avatar: null
+        }));
+      }
+    }
   } catch (e) {
     // Cache only — the header still updates from the server response.
   }

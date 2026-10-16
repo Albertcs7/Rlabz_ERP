@@ -3,7 +3,7 @@ import { API_BASE } from '@/core/config/api.js';
 import Swal from 'sweetalert2';
 import { renderStudentSidebar, updateStudentNavbarAvatar, updateTopBarAvatar } from '@/modules/student/views/StudentSidebar.js';
 import { getStudentProfilePhoto, saveStudentProfilePhoto, removeStudentProfilePhoto } from '@/modules/student/views/studentStore.js';
-import { profilePhotoUrl } from '@/core/shared/profilePhoto.js';
+import { profilePhotoUrl, applyHeaderAvatar, rememberProfilePhoto } from '@/core/shared/profilePhoto.js';
 import { mountProfilePhotoEditor } from '@/core/shared/components/ProfilePhotoEditor.js';
 import '../userProfile.css';
 
@@ -57,7 +57,7 @@ export async function UserProfile(route, router) {
   // Fetch live profile from backend if available
   if (token) {
     try {
-      const endpoint = isStudentRole ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
+      const endpoint = `${API_BASE}/auth/profile`;
       const res = await fetch(endpoint, {
         headers: {
           'Content-Type': 'application/json',
@@ -74,9 +74,20 @@ export async function UserProfile(route, router) {
             profileUser.avatar = studentInitialPhoto;
           }
           if (!isStudentRole) {
-            profileUser.avatar = liveUser.profile_photo_path
-              ? profilePhotoUrl(liveUser.profile_photo_path)
-              : (liveUser.avatar || authStore.user?.profile_photo_url || authStore.user?.avatar || null);
+            const serverPhoto = liveUser.profile_photo_path || liveUser.avatar || null;
+            profileUser.avatar = serverPhoto ? profilePhotoUrl(serverPhoto) : null;
+            if (!serverPhoto && authStore.user) {
+              authStore.user.avatar = null;
+              authStore.user.profile_photo_url = null;
+              authStore.user.profile_photo_path = null;
+              try {
+                const cached = JSON.parse(localStorage.getItem('user') || '{}');
+                delete cached.avatar;
+                delete cached.profile_photo_url;
+                delete cached.profile_photo_path;
+                localStorage.setItem('user', JSON.stringify({ ...cached, avatar: null, profile_photo_url: null, profile_photo_path: null }));
+              } catch (_) {}
+            }
           }
         }
         if (body.user?.role !== 'finance' && body.teams && body.teams.length > 0) {
@@ -535,39 +546,46 @@ export async function UserProfile(route, router) {
 
     // Quick Profile Photo Upload Handler
     async function applyProfilePhoto(photoDataUrl) {
-      profileUser.avatar = photoDataUrl;
-      profileUser.profile_photo_url = photoDataUrl;
-      profileUser.profile_photo_path = photoDataUrl;
-      rememberProfilePhoto(photoDataUrl);
+      const cleanUrl = photoDataUrl && photoDataUrl.trim() ? photoDataUrl.trim() : null;
+      profileUser.avatar = cleanUrl;
+      profileUser.profile_photo_url = cleanUrl;
+      profileUser.profile_photo_path = cleanUrl;
+      rememberProfilePhoto(cleanUrl);
+
       if (authStore.user) {
-        authStore.user.avatar = photoDataUrl;
-        authStore.user.profile_photo_url = photoDataUrl;
-        authStore.user.profile_photo_path = photoDataUrl;
-        localStorage.setItem('user', JSON.stringify(authStore.user));
+        authStore.user.avatar = cleanUrl;
+        authStore.user.profile_photo_url = cleanUrl;
+        authStore.user.profile_photo_path = cleanUrl;
       }
 
-      if (!photoDataUrl) {
+      if (!cleanUrl) {
         localStorage.removeItem('rlabz_profile_photo');
         localStorage.removeItem('profile_photo_url');
       }
 
       if (authStore.role === 'student' || window.location.pathname.startsWith('/student')) {
-        if (photoDataUrl) {
-          saveStudentProfilePhoto(authStore.user, photoDataUrl);
+        if (cleanUrl) {
+          saveStudentProfilePhoto(authStore.user, cleanUrl);
         } else {
           removeStudentProfilePhoto(authStore.user);
         }
       }
 
       // Sync topbar & popover avatars immediately
-      applyHeaderAvatar(document, photoDataUrl, profileUser.name);
-      updateTopBarAvatar(photoDataUrl, profileUser.name);
+      applyHeaderAvatar(document, cleanUrl, profileUser.name);
+      updateTopBarAvatar(cleanUrl, profileUser.name);
       updateStudentNavbarAvatar();
+
+      // Clear input in the DOM if present
+      const editAvatarInp = container.querySelector('#edit-avatar');
+      if (editAvatarInp) {
+        editAvatarInp.value = cleanUrl || '';
+      }
 
       // Persist to backend
       if (token) {
         try {
-          if (photoDataUrl) {
+          if (cleanUrl) {
             await fetch(`${API_BASE}/auth/profile-photo`, {
               method: 'POST',
               headers: {
@@ -575,16 +593,31 @@ export async function UserProfile(route, router) {
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${token}`
               },
-              body: JSON.stringify({ photo_url: photoDataUrl })
+              body: JSON.stringify({ photo_url: cleanUrl })
             });
           } else {
-            await fetch(`${API_BASE}/auth/profile-photo`, {
-              method: 'DELETE',
-              headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`
-              }
-            });
+            await Promise.allSettled([
+              fetch(`${API_BASE}/auth/profile-photo`, {
+                method: 'DELETE',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                }
+              }),
+              fetch(`${API_BASE}/auth/profile`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  name: profileUser.name,
+                  avatar: null,
+                  photo_url: null
+                })
+              })
+            ]);
           }
         } catch (err) {
           console.warn('Could not persist avatar to server:', err);
@@ -643,8 +676,11 @@ export async function UserProfile(route, router) {
         denyButtonColor: '#0284c7',
         footer: hasPhoto ? '<button type="button" id="swal-remove-photo-btn" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.85rem;text-decoration:underline;">Remove current photo</button>' : '',
         didOpen: () => {
-          document.getElementById('swal-remove-photo-btn')?.addEventListener('click', async () => {
+          document.getElementById('swal-remove-photo-btn')?.addEventListener('click', async (e) => {
+            e.preventDefault();
             Swal.close();
+            const editAvatarInp = container.querySelector('#edit-avatar');
+            if (editAvatarInp) editAvatarInp.value = '';
             await applyProfilePhoto(null);
             Swal.fire({
               icon: 'success',
@@ -707,7 +743,11 @@ export async function UserProfile(route, router) {
       });
     }
 
-    container.querySelector('#btn-remove-avatar-edit')?.addEventListener('click', async () => {
+    container.querySelector('#btn-remove-avatar-edit')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const editAvatarInp = container.querySelector('#edit-avatar');
+      if (editAvatarInp) editAvatarInp.value = '';
       await applyProfilePhoto(null);
       Swal.fire({
         icon: 'success',
@@ -740,7 +780,7 @@ export async function UserProfile(route, router) {
 
         try {
           if (token) {
-            const endpoint = authStore.role === 'student' ? `${API_BASE}/student/profile` : `${API_BASE}/auth/profile`;
+            const endpoint = `${API_BASE}/auth/profile`;
             const res = await fetch(endpoint, {
               method: 'PUT',
               headers: {

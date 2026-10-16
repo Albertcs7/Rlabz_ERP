@@ -37,10 +37,23 @@ export async function DesignVersionControl(route, router) {
     render();
   }
 
+  function resolveMediaUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+    if (url.startsWith('/storage/')) {
+      const origin = API_BASE.replace(/\/api\/?$/, '');
+      return `${origin}${url}`;
+    }
+    return url;
+  }
+
   function render() {
     const t = activeDetail?.ticket;
     const versions = activeDetail?.versions || [];
     const comments = activeDetail?.comments || [];
+    const storedUser = JSON.parse(localStorage.getItem('rlabz_user') || '{}');
+    const isStudent = storedUser && storedUser.role === 'student';
+    const isAssignedDesigner = storedUser && storedUser.id && t && (t.assigned_to == storedUser.id);
 
     container.innerHTML = `
       <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
@@ -86,9 +99,11 @@ export async function DesignVersionControl(route, router) {
               <button class="design-btn design-btn-secondary design-btn-sm" id="btn-side-compare">
                 Side-by-Side Compare
               </button>
-              <button class="design-btn design-btn-primary design-btn-sm" id="btn-upload-version">
-                + Upload New Version
-              </button>
+              ${(isStudent || isAssignedDesigner) ? `
+                <button class="design-btn design-btn-primary design-btn-sm" id="btn-upload-version">
+                  + Upload New Version
+                </button>
+              ` : ''}
               <button class="design-btn design-btn-secondary design-btn-sm" id="btn-open-full-studio" data-id="${t.id}">
                 Open Full Studio
               </button>
@@ -103,7 +118,8 @@ export async function DesignVersionControl(route, router) {
 
             ${versions.length === 0 ? `
               <div style="text-align: center; padding: 3rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; color: #64748b;">
-                No versions have been uploaded for this job yet.<br>Click "+ Upload New Version" to submit initial deliverable draft.
+                No versions have been uploaded for this job yet.<br>
+                ${(isStudent || isAssignedDesigner) ? 'Click "+ Upload New Version" to submit initial deliverable draft.' : 'Awaiting deliverable submission by assigned designer.'}
               </div>
             ` : `
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem;">
@@ -112,10 +128,10 @@ export async function DesignVersionControl(route, router) {
                   return `
                     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
                       <div style="height: 200px; background: #0f172a; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-                        ${v.file_type === 'video' ? `
-                          <video src="${v.file_url}" controls style="max-height: 100%; max-width: 100%;"></video>
+                        ${(v.file_type === 'video' || (v.file_type && v.file_type.includes('video')) || (v.file_url && v.file_url.match(/\.(mp4|webm|mov|ogg|m4v)$/i))) ? `
+                          <video src="${resolveMediaUrl(v.file_url)}" controls style="max-height: 100%; max-width: 100%; object-fit: contain;"></video>
                         ` : `
-                          <img src="${v.file_url}" alt="Version ${v.version_number}" style="width: 100%; height: 100%; object-fit: cover;">
+                          <img src="${resolveMediaUrl(v.file_url)}" alt="Version ${v.version_number}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';" style="width: 100%; height: 100%; object-fit: cover;">
                         `}
                         <span style="position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.85); color: #ffffff; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">
                           V${v.version_number}
