@@ -195,9 +195,6 @@ export function AdminUsers(route, router) {
 
       <!-- Tab Content: Users Directory -->
       ${activeTab === 'users' ? renderUsersTab() : renderAuditTab()}
-
-      <!-- Modals Outlet -->
-      <div id="admin-modal-root"></div>
     `;
 
     bindEvents();
@@ -682,8 +679,12 @@ export function AdminUsers(route, router) {
 
   // Render Modal Windows
   function renderModal() {
-    const modalRoot = container.querySelector('#admin-modal-root');
-    if (!modalRoot) return;
+    let modalRoot = document.getElementById('admin-modal-root');
+    if (!modalRoot) {
+      modalRoot = document.createElement('div');
+      modalRoot.id = 'admin-modal-root';
+      document.body.appendChild(modalRoot);
+    }
 
     if (!activeModal) {
       modalRoot.innerHTML = '';
@@ -692,20 +693,28 @@ export function AdminUsers(route, router) {
 
     if (activeModal === 'create') {
       modalRoot.innerHTML = renderCreateUserModal();
-      bindCreateModalEvents();
+      bindCreateModalEvents(modalRoot);
     } else if (activeModal === 'edit' && selectedUser) {
       modalRoot.innerHTML = renderEditUserModal();
-      bindEditModalEvents();
+      bindEditModalEvents(modalRoot);
     } else if (activeModal === 'permissions' && selectedUser) {
       modalRoot.innerHTML = renderPermissionsModal();
-      bindPermissionsModalEvents();
+      bindPermissionsModalEvents(modalRoot);
     } else if (activeModal === 'password' && selectedUser) {
       modalRoot.innerHTML = renderPasswordModal();
-      bindPasswordModalEvents();
+      bindPasswordModalEvents(modalRoot);
     } else if (activeModal === 'view' && selectedUser) {
       modalRoot.innerHTML = renderViewModal();
-      bindViewModalEvents();
+      bindViewModalEvents(modalRoot);
     }
+
+    // Dismiss modal when clicking backdrop
+    modalRoot.querySelector('.admin-modal-overlay')?.addEventListener('click', (e) => {
+      if (e.target.classList.contains('admin-modal-overlay')) {
+        activeModal = null;
+        render();
+      }
+    });
   }
 
   // 1. Create User Modal
@@ -804,9 +813,10 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindCreateModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-create')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindCreateModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-create')?.addEventListener('click', () => { activeModal = null; render(); });
 
     container.querySelector('#btn-gen-pwd')?.addEventListener('click', () => {
       const pwd = generateRandomPassword();
@@ -1028,11 +1038,12 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindEditModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-edit')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindEditModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-edit')?.addEventListener('click', () => { activeModal = null; render(); });
 
-    const form = container.querySelector('#form-edit-user');
+    const form = root.querySelector('#form-edit-user');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1133,12 +1144,13 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindPermissionsModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-perms')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindPermissionsModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-perms')?.addEventListener('click', () => { activeModal = null; render(); });
 
     // Track checkbox toggles
-    container.querySelectorAll('.chk-perm').forEach(chk => {
+    root.querySelectorAll('.chk-perm').forEach(chk => {
       chk.addEventListener('change', () => {
         const val = chk.value;
         if (chk.checked) {
@@ -1240,17 +1252,18 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindPasswordModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-cancel-pwd')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindPasswordModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-cancel-pwd')?.addEventListener('click', () => { activeModal = null; render(); });
 
-    container.querySelector('#btn-gen-reset-pwd')?.addEventListener('click', () => {
+    root.querySelector('#btn-gen-reset-pwd')?.addEventListener('click', () => {
       const pwd = generateRandomPassword();
-      const input = container.querySelector('#input-reset-pwd');
+      const input = root.querySelector('#input-reset-pwd');
       if (input) input.value = pwd;
     });
 
-    const form = container.querySelector('#form-reset-password');
+    const form = root.querySelector('#form-reset-password');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1370,9 +1383,10 @@ export function AdminUsers(route, router) {
     `;
   }
 
-  function bindViewModalEvents() {
-    container.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
-    container.querySelector('#btn-close-view')?.addEventListener('click', () => { activeModal = null; render(); });
+  function bindViewModalEvents(modalHost) {
+    const root = modalHost || document.getElementById('admin-modal-root') || container;
+    root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
+    root.querySelector('#btn-close-view')?.addEventListener('click', () => { activeModal = null; render(); });
   }
 
   // Helpers
