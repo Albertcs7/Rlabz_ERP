@@ -1117,6 +1117,7 @@ export function FacultySprints() {
                 try {
                     const headers = {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     };
 
@@ -1134,7 +1135,12 @@ export function FacultySprints() {
                         body: JSON.stringify(payload)
                     });
 
-                    const data = await res.json();
+                    let data = {};
+                    try {
+                        data = await res.json();
+                    } catch (parseErr) {
+                        data = { error: `Server error (${res.status}): Please check backend logs.` };
+                    }
 
                     if (res.ok) {
                         const isNew = moduleIdVal === 'new';
