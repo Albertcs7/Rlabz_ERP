@@ -216,6 +216,115 @@ export async function StudentDesign(route, router) {
     `;
   }
 
+  // Helper: Resolve media URL cleanly without hardcoding localhost
+  function resolveMediaUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+    if (url.startsWith('/storage/')) {
+      const origin = API_BASE.replace(/\/api\/?$/, '');
+      return `${origin}${url}`;
+    }
+    return url;
+  }
+
+  // Helper: Render Brand Colors without [object Object]
+  function renderBrandColors(palette) {
+    if (!palette || !Array.isArray(palette) || palette.length === 0) {
+      return `
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: monospace;">
+            <span style="width: 14px; height: 14px; border-radius: 4px; background: #009688; border: 1px solid rgba(0,0,0,0.15);"></span>
+            <span>#009688 (Primary Teal)</span>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        ${palette.map(item => {
+          let hex = '#009688';
+          let name = '';
+          let usage = '';
+          if (typeof item === 'string') {
+            hex = item;
+            name = item;
+          } else if (typeof item === 'object' && item !== null) {
+            hex = item.hex || item.value || '#009688';
+            name = item.name ? `${item.name} (${hex})` : hex;
+            usage = item.usage || item.token || '';
+          }
+          return `
+            <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: monospace;" title="${usage}">
+              <span style="width: 14px; height: 14px; border-radius: 4px; background: ${hex}; border: 1px solid rgba(0,0,0,0.15);"></span>
+              <span style="font-weight: 600; color: #1e293b;">${name}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // Helper: Render Typography without [object Object]
+  function renderBrandTypography(rules) {
+    if (!rules) return 'Plus Jakarta Sans, Inter (Display: 700/800, Body: 400/500)';
+    if (Array.isArray(rules)) {
+      return rules.map(item => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item !== null) {
+          const lbl = item.label ? `<strong>${item.label}:</strong> ` : '';
+          const fam = item.family || 'Sans-serif';
+          const w = item.weights ? ` (${item.weights})` : '';
+          return `${lbl}${fam}${w}`;
+        }
+        return String(item);
+      }).join(' &nbsp;•&nbsp; ');
+    }
+    if (typeof rules === 'object') {
+      return rules.font_family || JSON.stringify(rules);
+    }
+    return String(rules);
+  }
+
+  // Helper: Render Brand Logos without [object Object]
+  function renderBrandLogos(logos) {
+    if (!logos || !Array.isArray(logos) || logos.length === 0) return '';
+    return `
+      <div>
+        <label style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Official Logos &amp; Assets</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          ${logos.map(logo => {
+            let title = 'Download Logo';
+            let url = '#';
+            let format = '';
+            if (typeof logo === 'string') {
+              url = resolveMediaUrl(logo);
+              title = logo.split('/').pop() || 'Logo Asset';
+            } else if (typeof logo === 'object' && logo !== null) {
+              title = logo.title || logo.name || 'Logo Asset';
+              url = resolveMediaUrl(logo.url);
+              format = logo.format ? ` (${logo.format})` : '';
+            }
+            if (!url || url === '#' || logo.is_available === false) {
+              return `
+                <span class="fin-badge neutral" style="font-size: 0.74rem;">
+                  ⏳ ${title}${format} - ${logo.note || 'Available Soon'}
+                </span>
+              `;
+            }
+            return `
+              <a href="${url}" target="_blank" download class="fin-btn outline sm" style="font-size: 0.74rem; text-decoration: none;">
+                📥 ${title}${format}
+              </a>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // State for upload file selection
+  let selectedUploadFile = null;
+
   // 3. Dedicated Ticket Workspace View
   function renderTicketStudio() {
     if (isLoadingDetail) {
@@ -241,7 +350,7 @@ export async function StudentDesign(route, router) {
     const versions = activeTicketDetail.versions || [];
     const comments = activeTicketDetail.comments || [];
     const history = activeTicketDetail.history || [];
-    const brandKit = activeTicketDetail.brand_kit || null;
+    const brandKit = activeTicketDetail.brand_kit || activeTicketDetail.brandKit || null;
 
     const currentVersion = selectedVersionId
       ? (versions.find(v => v.id === selectedVersionId) || versions[0])
@@ -270,6 +379,15 @@ export async function StudentDesign(route, router) {
     }[t.priority] || 'fin-badge-neutral';
 
     const typeFields = t.type_specific_fields || {};
+    const latestVersion = versions.length > 0 ? versions[0] : null;
+    const isApproved = t.status === 'Approved';
+    const isClosed = t.status === 'Closed';
+    const canSubmitDeliverable = !isApproved && !isClosed;
+
+    // Extract latest revision feedback if in revision status
+    const revComments = comments.filter(c => (c.comment && c.comment.startsWith('REVISION REQUESTED:')) || c.is_revision_note);
+    const latestRevComment = revComments.length > 0 ? revComments[revComments.length - 1] : null;
+    const latestRevisionFeedback = latestRevComment ? latestRevComment.comment.replace('REVISION REQUESTED:', '').trim() : null;
 
     return `
       <div class="student-design-studio-view animate-fade-in" style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -296,7 +414,7 @@ export async function StudentDesign(route, router) {
                   Ball: <strong>${t.ball_is_with || 'Designer'}</strong>
                 </span>
               </div>
-              <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">
+              <h1 style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">
                 ${t.title}
               </h1>
               <div style="font-size: 0.84rem; color: #64748b; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -313,34 +431,36 @@ export async function StudentDesign(route, router) {
                   ▶ Start Task
                 </button>
               ` : ''}
-              ${(t.status === 'In Progress' || t.status === 'Revision') ? `
-                <button type="button" id="btn-upload-new-version" class="fin-btn primary sm" style="background: #2563eb; border-color: #2563eb;">
-                  ⬆ ${t.status === 'Revision' ? 'Submit Revision' : 'Upload Deliverable'} (V${versions.length + 1})
+              ${canSubmitDeliverable ? `
+                <button type="button" id="btn-scroll-to-upload" class="fin-btn primary sm" style="background: #2563eb; border-color: #2563eb;">
+                  ⬆ ${t.status === 'Revision' ? 'Submit Revision' : 'Upload Deliverable'} (V${(latestVersion?.version_number || 0) + 1})
                 </button>
               ` : ''}
-              <button type="button" id="btn-log-design-time" class="fin-btn outline sm" style="color: #0284c7; border-color: #0284c7; background: #f0f9ff;">
-                ⏱ Log Hours (${t.actual_hours_logged || 0}h logged)
-              </button>
+              ${isApproved ? `
+                <span class="fin-badge fin-badge-success" style="font-size: 0.82rem; padding: 6px 14px; font-weight: 700;">
+                  ✓ Approved Final Deliverable
+                </span>
+              ` : ''}
             </div>
           </div>
         </div>
 
-        <!-- 2-Column Grid: Left (Brief & Brand Kit), Right (Versions & Feedback) -->
-        <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.5rem; align-items: start;">
+        <!-- 2-Column Grid: Left (Brief, Brand Kit, Work Log & Timeline), Right (My Deliverables & Feedback) -->
+        <div style="display: grid; grid-template-columns: minmax(320px, 400px) 1fr; gap: 1.5rem; align-items: start;">
           
-          <!-- LEFT COLUMN -->
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            
-            <!-- SECTION A: Brief and Requirements -->
+          <!-- LEFT COLUMN: Brief, Compact Brand Kit, Work Log & Timeline -->
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+            <!-- Creative Brief & Specifications (Rendered once per page) -->
             <div class="fin-panel" style="margin-bottom: 0;">
               <div class="fin-panel-header">
                 <div>
-                  <div class="fin-panel-title">A. Brief &amp; Requirements</div>
-                  <div class="fin-panel-subtitle">Creative specifications and requester guidance</div>
+                  <div class="fin-panel-title">Creative Brief &amp; Specifications</div>
+                  <div class="fin-panel-subtitle">Requester guidance and output requirements</div>
                 </div>
               </div>
 
-              <!-- Key Deadlines & Audience Strip -->
+              <!-- Key Deadlines & Specs Grid -->
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.82rem;">
                 <div>
                   <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem;">Committed Deadline</span>
@@ -348,48 +468,54 @@ export async function StudentDesign(route, router) {
                     📅 ${t.committed_delivery_date ? new Date(t.committed_delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (t.required_by ? new Date(t.required_by).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible Allocation')}
                   </div>
                 </div>
-                <div>
-                  <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem;">Publishing Channel</span>
-                  <div style="font-weight: 800; color: #0f172a; margin-top: 2px;">
-                    🌐 ${t.publishing_channel || 'Instagram / Campus Display'}
+                ${t.publishing_channel ? `
+                  <div>
+                    <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem;">Publishing Channel</span>
+                    <div style="font-weight: 800; color: #0f172a; margin-top: 2px;">
+                      🌐 ${t.publishing_channel}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem;">Target Audience</span>
-                  <div style="font-weight: 700; color: #0f172a; margin-top: 2px;">
-                    🎯 ${t.target_audience || 'Rajagiri Students & Faculty'}
+                ` : ''}
+                ${t.target_audience ? `
+                  <div>
+                    <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem;">Target Audience</span>
+                    <div style="font-weight: 700; color: #0f172a; margin-top: 2px;">
+                      🎯 ${t.target_audience}
+                    </div>
                   </div>
-                </div>
+                ` : ''}
                 <div>
-                  <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem;">Effort Estimate</span>
-                  <div style="font-weight: 700; color: #0f172a; margin-top: 2px;">
-                    ⏳ ${t.estimated_hours ? `${t.estimated_hours} hrs estimated` : 'Open Effort'}
+                  <span style="color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem;">Work Type</span>
+                  <div style="font-weight: 700; color: #0f172a; margin-top: 2px; text-transform: capitalize;">
+                    🎨 ${(t.work_type || 'design').replace('_', ' ')}
                   </div>
                 </div>
               </div>
 
-              <!-- Full Description -->
-              <div style="margin-bottom: 14px;">
-                <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">Brief Description</label>
-                <div style="font-size: 0.88rem; color: #1e293b; line-height: 1.5; white-space: pre-wrap; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #f1f5f9;">
-                  ${t.description || 'No detailed brief description provided.'}
-                </div>
-              </div>
-
-              <!-- Final Copy / Text to Include -->
-              ${t.final_copy_text ? `
+              <!-- Full Description (Hidden if empty) -->
+              ${t.description ? `
                 <div style="margin-bottom: 14px;">
-                  <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">Mandatory Copy / Headline Text</label>
-                  <div style="font-size: 0.85rem; color: #047857; background: #f0fdf4; border-left: 3px solid #10b981; padding: 10px 14px; border-radius: 0 8px 8px 0; font-family: monospace;">
-                    ${t.final_copy_text}
+                  <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">Brief Description</label>
+                  <div style="font-size: 0.88rem; color: #1e293b; line-height: 1.5; white-space: pre-wrap; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #f1f5f9;">
+                    ${t.description}
                   </div>
                 </div>
               ` : ''}
 
-              <!-- Work-type Specific Specifications -->
+              <!-- Final Copy / Mandatory Text -->
+              ${t.final_copy ? `
+                <div style="margin-bottom: 14px;">
+                  <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">Mandatory Headline / Copy Text</label>
+                  <div style="font-size: 0.85rem; color: #047857; background: #f0fdf4; border-left: 3px solid #10b981; padding: 10px 14px; border-radius: 0 8px 8px 0; font-family: monospace; white-space: pre-wrap;">
+                    ${t.final_copy}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Output Specifications -->
               ${Object.keys(typeFields).length > 0 ? `
                 <div style="margin-bottom: 14px;">
-                  <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">Format &amp; Output Specifications</label>
+                  <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">Output Specifications</label>
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
                     ${Object.entries(typeFields).map(([k, v]) => `
                       <div><strong style="text-transform: capitalize;">${k.replace(/_/g, ' ')}:</strong> ${v}</div>
@@ -399,17 +525,17 @@ export async function StudentDesign(route, router) {
               ` : ''}
 
               <!-- Reference Links / Attachments -->
-              ${(t.reference_link || (t.attachments && t.attachments.length > 0)) ? `
+              ${(t.reference_link || t.reference_links || (t.attachments && t.attachments.length > 0)) ? `
                 <div>
-                  <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">Reference Links &amp; Assets</label>
+                  <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">References &amp; Attachments</label>
                   <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    ${t.reference_link ? `
-                      <a href="${t.reference_link}" target="_blank" class="fin-btn outline sm" style="font-size: 0.76rem;">
-                        🔗 Requester Reference Link ↗
+                    ${(t.reference_link || t.reference_links) ? `
+                      <a href="${t.reference_link || t.reference_links}" target="_blank" rel="noopener noreferrer" class="fin-btn outline sm" style="font-size: 0.76rem;">
+                        🔗 Reference Link ↗
                       </a>
                     ` : ''}
                     ${(t.attachments || []).map((att, idx) => `
-                      <a href="${att.url || att}" target="_blank" class="fin-btn outline sm" style="font-size: 0.76rem;">
+                      <a href="${resolveMediaUrl(att.url || att)}" target="_blank" download class="fin-btn outline sm" style="font-size: 0.76rem;">
                         📎 Attachment #${idx + 1}
                       </a>
                     `).join('')}
@@ -418,12 +544,12 @@ export async function StudentDesign(route, router) {
               ` : ''}
             </div>
 
-            <!-- SECTION B: Brand Kit and Resources -->
+            <!-- Compact Brand Kit Section (Rendered once per page) -->
             <div class="fin-panel" style="margin-bottom: 0;">
               <div class="fin-panel-header">
                 <div>
-                  <div class="fin-panel-title">B. Brand Kit &amp; Resources</div>
-                  <div class="fin-panel-subtitle">Official color swatches, typography rules, and logos</div>
+                  <div class="fin-panel-title">Brand Kit &amp; Identity</div>
+                  <div class="fin-panel-subtitle">Official colors, typography, and logos</div>
                 </div>
                 <span class="fin-badge fin-badge-primary" style="font-size: 0.78rem;">
                   🎨 ${t.brand_kit_name || 'RLabZ Core Brand'}
@@ -432,74 +558,87 @@ export async function StudentDesign(route, router) {
 
               ${brandKit ? `
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                  <!-- Color Palette Swatches -->
                   <div>
-                    <label style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 6px;">Color Palette</label>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                      ${(brandKit.color_palette || ['#009688', '#00bfa5', '#0f172a', '#f8fafc']).map(color => `
-                        <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-family: monospace;">
-                          <span style="width: 14px; height: 14px; border-radius: 4px; background: ${color}; border: 1px solid rgba(0,0,0,0.15);"></span>
-                          <span>${color}</span>
-                        </div>
-                      `).join('')}
+                    <label style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Color Palette</label>
+                    ${renderBrandColors(brandKit.color_palette || brandKit.brand_colors)}
+                  </div>
+
+                  <div>
+                    <label style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Typography</label>
+                    <div style="font-size: 0.8rem; color: #334155; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0; line-height: 1.4;">
+                      ${renderBrandTypography(brandKit.typography_rules || brandKit.typography)}
                     </div>
                   </div>
 
-                  <!-- Typography Rules -->
-                  <div>
-                    <label style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Typography</label>
-                    <div style="font-size: 0.82rem; color: #334155; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                      ${Array.isArray(brandKit.typography_rules) ? brandKit.typography_rules.join(' • ') : (brandKit.typography_rules?.font_family || 'Plus Jakarta Sans, Inter (Display font: 700/800, Body font: 400/500)')}
-                    </div>
-                  </div>
+                  ${renderBrandLogos(brandKit.logo_assets || brandKit.downloadable_kits)}
 
-                  <!-- Logo Assets -->
-                  ${(brandKit.logo_assets && brandKit.logo_assets.length > 0) ? `
-                    <div>
-                      <label style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Official Logos</label>
-                      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        ${brandKit.logo_assets.map(logo => `
-                          <a href="${logo.url || logo}" target="_blank" download class="fin-btn outline sm" style="font-size: 0.74rem;">
-                            📥 ${logo.name || 'Download Logo Asset'}
-                          </a>
-                        `).join('')}
-                      </div>
+                  ${t.brand_constraints ? `
+                    <div style="background: #f0fdf4; border-left: 3px solid #10b981; padding: 6px 10px; border-radius: 0 6px 6px 0; font-size: 0.78rem; color: #065f46;">
+                      <strong>Constraints:</strong> ${t.brand_constraints}
                     </div>
                   ` : ''}
                 </div>
               ` : `
-                <div style="font-size: 0.85rem; color: #64748b; background: #fafafa; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; text-align: center;">
-                  No customized brand kit guidelines attached to this ticket. Use official <strong>RLabZ Primary Teal (#009688)</strong> and modern Sans-serif typography.
+                <div style="font-size: 0.82rem; color: #64748b; background: #fafafa; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 10px; text-align: center;">
+                  Standard RLabZ brand palette (#009688 Primary Teal) and Sans-serif typography apply.
                 </div>
               `}
             </div>
 
-            <!-- SECTION F: Ticket History & Timeline -->
+            <!-- Compact Work Log Section (Single place for logged hours) -->
             <div class="fin-panel" style="margin-bottom: 0;">
               <div class="fin-panel-header">
                 <div>
-                  <div class="fin-panel-title">F. Ticket History &amp; Audit Timeline</div>
-                  <div class="fin-panel-subtitle">Lifecycle transitions, reviews, and time logs</div>
+                  <div class="fin-panel-title">Work Log &amp; Effort</div>
+                  <div class="fin-panel-subtitle">Recorded creative time</div>
+                </div>
+                <button type="button" id="btn-quick-log-hours" class="fin-btn outline sm" style="font-size: 0.76rem;">
+                  + Log Hours
+                </button>
+              </div>
+
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 0.84rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 0.74rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Hours Logged</div>
+                  <div style="font-size: 1.25rem; font-weight: 800; color: #009688;">
+                    ${parseFloat(t.actual_hours_logged || 0).toFixed(1)} hrs
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size: 0.74rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Estimated Effort</div>
+                  <div style="font-size: 1.25rem; font-weight: 800; color: #475569;">
+                    ${t.estimated_hours || 0} hrs
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Compact Activity Timeline (Audit events only, no duplicate versions) -->
+            <div class="fin-panel" style="margin-bottom: 0;">
+              <div class="fin-panel-header">
+                <div>
+                  <div class="fin-panel-title">Activity Timeline</div>
+                  <div class="fin-panel-subtitle">Lifecycle events &amp; audit history</div>
                 </div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow-y: auto;">
+              <div style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;">
                 ${history.length > 0 ? history.map(h => `
-                  <div style="display: flex; gap: 10px; font-size: 0.8rem; border-left: 2px solid #009688; padding-left: 10px;">
+                  <div style="display: flex; gap: 8px; font-size: 0.78rem; border-left: 2px solid #009688; padding-left: 8px;">
                     <div style="flex: 1;">
                       <div style="font-weight: 700; color: #0f172a;">
                         ${(h.action || 'Event').replace(/_/g, ' ').toUpperCase()} 
-                        <span style="font-weight: 400; color: #64748b;">by ${h.actor_name || 'Design System'}</span>
+                        <span style="font-weight: 400; color: #64748b;">by ${h.actor_name || 'System'}</span>
                       </div>
-                      ${h.reason ? `<div style="color: #475569; margin-top: 2px;">${h.reason}</div>` : ''}
-                      <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                      ${h.reason ? `<div style="color: #475569; margin-top: 1px;">${h.reason}</div>` : ''}
+                      <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 1px;">
                         ${new Date(h.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
                 `).join('') : `
-                  <div style="font-size: 0.82rem; color: #94a3b8; font-style: italic; text-align: center; padding: 12px;">
-                    Ticket created and assigned to designer.
+                  <div style="font-size: 0.8rem; color: #94a3b8; font-style: italic; text-align: center; padding: 10px;">
+                    Ticket created and assigned.
                   </div>
                 `}
               </div>
@@ -507,86 +646,237 @@ export async function StudentDesign(route, router) {
 
           </div>
 
-          <!-- RIGHT COLUMN: Deliverables & Feedback -->
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <!-- RIGHT COLUMN: One "My Deliverables" Section & One "Feedback & Revisions" Section -->
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
             
-            <!-- SECTION C: Deliverable Versions -->
-            <div class="fin-panel" style="margin-bottom: 0;">
-              <div class="fin-panel-header">
+            <!-- ONE "My Deliverables" Section -->
+            <div class="fin-panel" id="section-deliverable-submission" style="margin-bottom: 0;">
+              <div class="fin-panel-header" style="flex-wrap: wrap; gap: 10px;">
                 <div>
-                  <div class="fin-panel-title">C. Deliverable Versions</div>
-                  <div class="fin-panel-subtitle">Sequential submissions (V1, V2, V3...)</div>
+                  <div class="fin-panel-title">My Deliverables</div>
+                  <div class="fin-panel-subtitle">File upload, sequential version history &amp; review preview</div>
                 </div>
-                ${(t.status === 'In Progress' || t.status === 'Revision') ? `
-                  <button type="button" id="btn-quick-upload-version" class="fin-btn primary sm" style="font-size: 0.76rem;">
-                    + New Version
-                  </button>
-                ` : ''}
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span class="fin-badge ${statusBadgeClass}" style="font-size: 0.76rem;">
+                    ${t.status}
+                  </span>
+                  <span class="fin-badge neutral" style="font-size: 0.76rem;">
+                    ${versions.length} Version${versions.length === 1 ? '' : 's'}
+                  </span>
+                </div>
               </div>
 
-              <!-- Version Selector Badges -->
-              <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
-                ${versions.length > 0 ? versions.map((v, i) => {
-                  const isCurrent = currentVersion && currentVersion.id === v.id;
-                  return `
-                    <button type="button" class="btn-select-version fin-btn ${isCurrent ? 'primary' : 'outline'} sm" data-version-id="${v.id}" style="font-size: 0.76rem; padding: 4px 10px;">
-                      V${v.version_number || (i + 1)} ${v.is_current ? '★ (Latest)' : ''}
-                    </button>
-                  `;
-                }).join('') : `
-                  <div style="font-size: 0.82rem; color: #94a3b8; font-style: italic;">No deliverable versions submitted yet.</div>
-                `}
-              </div>
-
-              <!-- Active Version Preview & Notes -->
-              ${currentVersion ? `
-                <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 12px;">
-                  <!-- Preview Box -->
-                  <div style="background: #0f172a; min-height: 220px; max-height: 380px; display: flex; align-items: center; justify-content: center; position: relative;">
-                    ${currentVersion.file_url ? `
-                      <img src="${currentVersion.file_url}" alt="Version V${currentVersion.version_number}" style="max-width: 100%; max-height: 360px; object-fit: contain;">
-                      <a href="${currentVersion.file_url}" target="_blank" download class="fin-btn sm" style="position: absolute; bottom: 8px; right: 8px; background: rgba(15, 23, 42, 0.85); color: #fff; font-size: 0.72rem; backdrop-filter: blur(4px);">
-                        Full Screen ↗
-                      </a>
-                    ` : `
-                      <div style="color: #94a3b8; font-size: 0.85rem; padding: 24px; text-align: center;">
-                        External submission / Cloud link deliverable
-                      </div>
-                    `}
-                  </div>
-
-                  <!-- Version Meta Details -->
-                  <div style="padding: 12px; background: #ffffff; border-top: 1px solid #e2e8f0; font-size: 0.82rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                      <span style="font-weight: 700; color: #0f172a;">
-                        Version ${currentVersion.version_number} by ${currentVersion.uploader_name || 'Designer'}
-                      </span>
-                      <span style="color: #64748b; font-size: 0.76rem;">
-                        ${new Date(currentVersion.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
+              ${t.status === 'Revision' ? `
+                <!-- Revision Instructions Banner -->
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 1.1rem;">⚠️</span>
+                      <strong style="color: #991b1b; font-size: 0.9rem;">Reviewer Requested Revisions (Round ${t.revision_count || 1})</strong>
                     </div>
-                    <div style="color: #334155; line-height: 1.45; background: #f8fafc; padding: 8px 10px; border-radius: 6px;">
-                      <strong>Change Notes:</strong> ${currentVersion.change_notes || currentVersion.change_summary || 'Initial creative draft.'}
+                    <span class="fin-badge danger" style="font-size: 0.72rem;">Target: V${latestVersion?.version_number || 1}</span>
+                  </div>
+                  <div style="font-size: 0.84rem; color: #7f1d1d; background: #fff5f5; border: 1px dashed #fca5a5; padding: 8px 12px; border-radius: 6px; line-height: 1.45; white-space: pre-wrap;">
+                    ${latestRevisionFeedback || 'Please address reviewer feedback, adjust the creative deliverable, and upload the next version below.'}
+                  </div>
+                </div>
+              ` : ''}
+
+              ${isApproved ? `
+                <!-- Approved Read-Only Notice Banner -->
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #10b981; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                  <span style="font-size: 1.4rem;">✅</span>
+                  <div>
+                    <div style="font-weight: 800; color: #166534; font-size: 0.92rem;">Deliverable Approved &amp; Signed Off</div>
+                    <div style="font-size: 0.8rem; color: #15803d; margin-top: 1px;">
+                      The final version is archived below in read-only mode. New uploads are disabled.
                     </div>
                   </div>
                 </div>
               ` : ''}
+
+              <!-- Upload Deliverable Box (Active when not approved/closed) -->
+              ${canSubmitDeliverable ? `
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="font-size: 0.95rem; color: #0f172a;">
+                      Upload Deliverable Version V${(latestVersion?.version_number || 0) + 1}
+                    </strong>
+                    <span class="fin-badge fin-badge-primary" style="font-size: 0.72rem;">
+                      Sequential V${(latestVersion?.version_number || 0) + 1}
+                    </span>
+                  </div>
+
+                  <!-- Drag & Drop Zone -->
+                  <div id="deliverable-dropzone" style="border: 2px dashed #009688; border-radius: 8px; padding: 18px 14px; text-align: center; background: #f0fdf9; cursor: pointer; transition: all 0.2s ease;">
+                    <input type="file" id="deliverable-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf,video/mp4,video/webm" style="display: none;" />
+                    <div style="font-size: 1.6rem; margin-bottom: 2px;">📁</div>
+                    <div style="font-weight: 700; color: #004d40; font-size: 0.9rem;">Drag &amp; drop design file here, or click to browse</div>
+                    <div style="font-size: 0.75rem; color: #00796b; margin-top: 2px;">Supports PNG, JPG, WEBP, SVG, PDF, MP4, WEBM (Max 50MB)</div>
+                    
+                    <div id="dropzone-file-display" style="display: none; margin-top: 10px; padding: 6px 12px; background: #ffffff; border: 1px solid #a7f3d0; border-radius: 6px; font-size: 0.8rem; color: #065f46; font-weight: 600; align-items: center; justify-content: space-between;">
+                      <span id="dropzone-file-name">Selected File</span>
+                      <button type="button" id="btn-remove-selected-file" style="background: none; border: none; color: #dc2626; font-weight: 700; cursor: pointer; padding: 2px 6px;">✕ Remove</button>
+                    </div>
+                  </div>
+
+                  <!-- Optional External Cloud / Figma Link -->
+                  <div style="margin-top: 10px;">
+                    <label style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">
+                      External Cloud Link / Figma (Optional if file uploaded)
+                    </label>
+                    <input type="url" id="deliverable-external-url" class="fin-input" placeholder="https://drive.google.com/... or Figma presentation link" style="width: 100%; font-size: 0.82rem;" />
+                  </div>
+
+                  <!-- Change Notes Field -->
+                  <div style="margin-top: 10px;">
+                    <label style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; display: block; margin-bottom: 4px;">
+                      Change Notes &amp; Version Summary *
+                    </label>
+                    <textarea id="deliverable-change-notes" class="fin-input" rows="2" placeholder="Detail what was created or adjusted in this version..." style="width: 100%; font-size: 0.82rem; resize: vertical;" required></textarea>
+                  </div>
+
+                  <!-- Submit Action Button -->
+                  <div style="margin-top: 12px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                    <span style="font-size: 0.76rem; color: #64748b;">Advances ticket to <strong>Submitted</strong> for review</span>
+                    <button type="button" id="btn-submit-deliverable" class="fin-btn primary" style="background: #009688; border-color: #009688; font-weight: 700; padding: 7px 16px; font-size: 0.84rem;">
+                      🚀 Submit for Review (V${(latestVersion?.version_number || 0) + 1})
+                    </button>
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Visual Deliverable Preview Inspector -->
+              <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <strong style="font-size: 0.9rem; color: #0f172a;">
+                    ${currentVersion ? `Previewing Deliverable V${currentVersion.version_number}` : 'Deliverable Preview'}
+                  </strong>
+                  ${currentVersion?.is_approved ? '<span class="fin-badge success">✓ Approved Deliverable</span>' : ''}
+                </div>
+
+                <!-- Media Canvas -->
+                <div style="background: #0f172a; border-radius: 8px; min-height: 260px; max-height: 440px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; margin-bottom: 8px;">
+                  ${currentVersion ? (
+                    (currentVersion.file_type === 'video' || (currentVersion.file_url && currentVersion.file_url.match(/\.(mp4|webm)$/i))) ? `
+                      <video src="${resolveMediaUrl(currentVersion.file_url)}" controls style="max-width: 100%; max-height: 420px; object-fit: contain;"></video>
+                    ` : (currentVersion.file_type === 'pdf' || (currentVersion.file_url && currentVersion.file_url.match(/\.pdf$/i))) ? `
+                      <div style="text-align: center; padding: 30px; color: #e2e8f0;">
+                        <div style="font-size: 3rem; margin-bottom: 8px;">📄</div>
+                        <div style="font-weight: 700; font-size: 1rem;">PDF Deliverable Document</div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; margin: 4px 0 14px 0;">${currentVersion.file_name || 'Document.pdf'}</div>
+                        <a href="${resolveMediaUrl(currentVersion.file_url)}" target="_blank" download class="fin-btn primary sm" style="text-decoration: none;">
+                          Open / Download PDF ↗
+                        </a>
+                      </div>
+                    ` : currentVersion.file_url ? `
+                      <img src="${resolveMediaUrl(currentVersion.file_url)}" alt="Version V${currentVersion.version_number}" id="student-preview-img" style="max-width: 100%; max-height: 420px; object-fit: contain; cursor: zoom-in;" title="Click to zoom preview" />
+                      <button type="button" id="btn-zoom-preview" class="fin-btn sm" style="position: absolute; bottom: 8px; right: 8px; background: rgba(15, 23, 42, 0.85); color: #fff; font-size: 0.72rem; backdrop-filter: blur(4px);">
+                        🔍 Zoom
+                      </button>
+                    ` : `
+                      <div style="color: #94a3b8; font-size: 0.85rem; padding: 24px; text-align: center;">
+                        External cloud link deliverable submission
+                      </div>
+                    `
+                  ) : `
+                    <div style="text-align: center; padding: 36px 20px; color: #94a3b8;">
+                      <div style="font-size: 2.8rem; margin-bottom: 6px;">🎨</div>
+                      <div style="font-weight: 700; color: #cbd5e1; font-size: 0.95rem;">No Deliverable Draft Yet</div>
+                      <p style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">Use the upload box above to submit Version V1.</p>
+                    </div>
+                  `}
+                </div>
+
+                <!-- Active Version Metadata -->
+                ${currentVersion ? `
+                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <div>
+                      <strong style="color: #0f172a;">V${currentVersion.version_number} by ${currentVersion.uploader_name || 'Designer'}</strong>
+                      <span style="color: #64748b; font-size: 0.74rem;"> · ${new Date(currentVersion.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div style="color: #334155; font-style: italic;">
+                      "${currentVersion.change_notes || 'Deliverable submission'}"
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Sequential Version History List -->
+              <div>
+                <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; justify-content: space-between;">
+                  <span>Sequential Versions (${versions.length})</span>
+                  <span style="font-size: 0.74rem; color: #64748b; font-weight: 400;">All submissions preserved</span>
+                </h4>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  ${versions.length > 0 ? versions.map((v) => {
+                    const isSelected = currentVersion && currentVersion.id === v.id;
+                    const vComments = comments.filter(c => c.version_id == v.id);
+                    
+                    let reviewBadge = '<span class="fin-badge neutral">Superseded</span>';
+                    if (v.is_approved) {
+                      reviewBadge = '<span class="fin-badge success">✓ Approved Final</span>';
+                    } else if (v.is_current) {
+                      if (t.status === 'Revision') reviewBadge = '<span class="fin-badge danger">⚠️ Revision Requested</span>';
+                      else if (t.status === 'Submitted' || t.status === 'In Review') reviewBadge = '<span class="fin-badge warning">⏳ In Review</span>';
+                      else reviewBadge = '<span class="fin-badge info">Current</span>';
+                    }
+
+                    return `
+                      <div class="version-history-item ${isSelected ? 'selected' : ''}" style="background: ${isSelected ? '#f0fdf4' : '#ffffff'}; border: 1px solid ${isSelected ? '#86efac' : '#e2e8f0'}; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-weight: 800; font-family: monospace; font-size: 0.88rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px;">
+                              V${v.version_number}
+                            </span>
+                            ${reviewBadge}
+                            <span style="font-size: 0.74rem; color: #64748b;">
+                              ${new Date(v.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+
+                          <div style="display: flex; align-items: center; gap: 6px;">
+                            ${v.file_url ? `
+                              <a href="${resolveMediaUrl(v.file_url)}" target="_blank" download class="fin-btn outline sm" style="font-size: 0.72rem; padding: 2px 8px;" title="Download deliverable file">
+                                ⬇ Download
+                              </a>
+                            ` : ''}
+                            <button type="button" class="fin-btn ${isSelected ? 'primary' : 'outline'} sm btn-inspect-version" data-version-id="${v.id}" style="font-size: 0.72rem; padding: 2px 8px;">
+                              ${isSelected ? '👁 Inspecting' : '👁 Inspect'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style="font-size: 0.8rem; color: #334155; line-height: 1.4; background: #f8fafc; padding: 4px 8px; border-radius: 4px;">
+                          <span style="font-weight: 600; color: #475569;">Notes:</span> ${v.change_notes || 'Deliverable submission'}
+                        </div>
+                      </div>
+                    `;
+                  }).join('') : `
+                    <div style="font-size: 0.82rem; color: #94a3b8; font-style: italic; text-align: center; padding: 16px; background: #f8fafc; border-radius: 6px;">
+                      No deliverable versions submitted yet. Upload V1 above.
+                    </div>
+                  `}
+                </div>
+              </div>
+
             </div>
 
-            <!-- SECTION D: Feedback and Revisions -->
+            <!-- ONE "Feedback & Revisions" Section -->
             <div class="fin-panel" style="margin-bottom: 0;">
               <div class="fin-panel-header">
                 <div>
-                  <div class="fin-panel-title">D. Feedback &amp; Revisions</div>
-                  <div class="fin-panel-subtitle">Reviewer discussion and change instructions</div>
+                  <div class="fin-panel-title">Feedback &amp; Revisions</div>
+                  <div class="fin-panel-subtitle">Reviewer discussion and revision instructions</div>
                 </div>
-                <span class="fin-badge fin-badge-info" style="font-size: 0.75rem;">
-                  ${versionComments.length} note${versionComments.length === 1 ? '' : 's'}
+                <span class="fin-badge fin-badge-info" style="font-size: 0.74rem;">
+                  ${versionComments.length} note${versionComments.length === 1 ? '' : 's'} on V${currentVersion ? currentVersion.version_number : 1}
                 </span>
               </div>
 
               <!-- Comments Thread -->
-              <div style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; margin-bottom: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; margin-bottom: 12px;">
                 ${versionComments.length > 0 ? versionComments.map(c => `
                   <div style="background: ${c.status === 'resolved' ? '#f0fdf4' : '#f8fafc'}; border: 1px solid ${c.status === 'resolved' ? '#bbf7d0' : '#e2e8f0'}; border-radius: 8px; padding: 10px 12px; font-size: 0.82rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -600,45 +890,17 @@ export async function StudentDesign(route, router) {
                     <div style="color: #334155; line-height: 1.45; white-space: pre-wrap;">${c.comment}</div>
                   </div>
                 `).join('') : `
-                  <div style="font-size: 0.82rem; color: #94a3b8; font-style: italic; text-align: center; padding: 16px;">
-                    No specific feedback comments recorded on this version.
+                  <div style="font-size: 0.82rem; color: #94a3b8; font-style: italic; text-align: center; padding: 20px;">
+                    No feedback comments on Version V${currentVersion ? currentVersion.version_number : 1}.
                   </div>
                 `}
               </div>
 
               <!-- Reply / Work Note Form -->
               <form id="form-add-comment" style="display: flex; gap: 8px;">
-                <input type="text" id="input-new-comment" class="fin-input" placeholder="Add work note, clarification, or reply..." style="flex: 1; font-size: 0.82rem;" required />
+                <input type="text" id="input-new-comment" class="fin-input" placeholder="Add reply or clarification on this version..." style="flex: 1; font-size: 0.82rem;" required />
                 <button type="submit" class="fin-btn primary sm" style="white-space: nowrap;">Send</button>
               </form>
-            </div>
-
-            <!-- SECTION E: Work Log -->
-            <div class="fin-panel" style="margin-bottom: 0;">
-              <div class="fin-panel-header">
-                <div>
-                  <div class="fin-panel-title">E. Work Log &amp; Time Tracking</div>
-                  <div class="fin-panel-subtitle">Logged design effort</div>
-                </div>
-                <button type="button" id="btn-quick-log-hours" class="fin-btn outline sm" style="font-size: 0.76rem;">
-                  + Log Hours
-                </button>
-              </div>
-
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 0.84rem; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-size: 0.74rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Hours Logged</div>
-                  <div style="font-size: 1.25rem; font-weight: 800; color: #009688;">
-                    ${t.actual_hours_logged || 0} hrs
-                  </div>
-                </div>
-                <div>
-                  <div style="font-size: 0.74rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Estimated Effort</div>
-                  <div style="font-size: 1.25rem; font-weight: 800; color: #475569;">
-                    ${t.estimated_hours || 0} hrs
-                  </div>
-                </div>
-              </div>
             </div>
 
           </div>
@@ -901,16 +1163,182 @@ export async function StudentDesign(route, router) {
     container.querySelector('#btn-back-to-ticket-list')?.addEventListener('click', () => {
       selectedTicketId = null;
       activeTicketDetail = null;
+      selectedUploadFile = null;
       render();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // Select version
-    container.querySelectorAll('.btn-select-version').forEach(btn => {
+    // Scroll to upload section
+    container.querySelector('#btn-scroll-to-upload')?.addEventListener('click', () => {
+      const uploadSec = container.querySelector('#section-deliverable-submission');
+      if (uploadSec) {
+        uploadSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const dropzone = container.querySelector('#deliverable-dropzone');
+        if (dropzone) {
+          dropzone.style.borderColor = '#2563eb';
+          dropzone.style.background = '#eff6ff';
+          setTimeout(() => {
+            dropzone.style.borderColor = '#009688';
+            dropzone.style.background = '#f0fdf9';
+          }, 1500);
+        }
+      }
+    });
+
+    // Inspect / Select version from history list
+    container.querySelectorAll('.btn-inspect-version').forEach(btn => {
       btn.addEventListener('click', () => {
         selectedVersionId = parseInt(btn.getAttribute('data-version-id'), 10);
         render();
       });
+    });
+
+    // Zoom preview image
+    const triggerZoom = () => {
+      const img = container.querySelector('#student-preview-img');
+      if (img && img.src) {
+        Swal.fire({
+          imageUrl: img.src,
+          imageAlt: 'Deliverable Preview',
+          width: '90vw',
+          padding: '1em',
+          showConfirmButton: false,
+          showCloseButton: true,
+          background: '#0f172a'
+        });
+      }
+    };
+    container.querySelector('#btn-zoom-preview')?.addEventListener('click', triggerZoom);
+    container.querySelector('#student-preview-img')?.addEventListener('click', triggerZoom);
+
+    // Dropzone & File Input Handling
+    const dropzone = container.querySelector('#deliverable-dropzone');
+    const fileInput = container.querySelector('#deliverable-file-input');
+    const fileDisplay = container.querySelector('#dropzone-file-display');
+    const fileNameSpan = container.querySelector('#dropzone-file-name');
+    const removeFileBtn = container.querySelector('#btn-remove-selected-file');
+
+    const updateFileSelection = (file) => {
+      if (!file) {
+        selectedUploadFile = null;
+        if (fileInput) fileInput.value = '';
+        if (fileDisplay) fileDisplay.style.display = 'none';
+        return;
+      }
+
+      // Validate size (max 50MB)
+      if (file.size > 52428800) {
+        showStudentError('File Too Large', 'Maximum deliverable file size is 50MB.');
+        return;
+      }
+
+      selectedUploadFile = file;
+      const sizeDisplay = file.size > 1048576 
+        ? `${(file.size / 1048576).toFixed(1)} MB` 
+        : `${Math.round(file.size / 1024)} KB`;
+
+      if (fileNameSpan) fileNameSpan.textContent = `📄 ${file.name} (${sizeDisplay})`;
+      if (fileDisplay) fileDisplay.style.display = 'flex';
+    };
+
+    dropzone?.addEventListener('click', (e) => {
+      if (e.target !== removeFileBtn) {
+        fileInput?.click();
+      }
+    });
+
+    fileInput?.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        updateFileSelection(e.target.files[0]);
+      }
+    });
+
+    removeFileBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      updateFileSelection(null);
+    });
+
+    dropzone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#047857';
+      dropzone.style.background = '#d1fae5';
+    });
+
+    dropzone?.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#009688';
+      dropzone.style.background = '#f0fdf9';
+    });
+
+    dropzone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#009688';
+      dropzone.style.background = '#f0fdf9';
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        updateFileSelection(e.dataTransfer.files[0]);
+      }
+    });
+
+    // Submit Deliverable Version Handler
+    container.querySelector('#btn-submit-deliverable')?.addEventListener('click', async () => {
+      const urlInput = container.querySelector('#deliverable-external-url');
+      const notesInput = container.querySelector('#deliverable-change-notes');
+      const submitBtn = container.querySelector('#btn-submit-deliverable');
+
+      const fileUrl = urlInput?.value.trim() || '';
+      const notes = notesInput?.value.trim() || '';
+
+      if (!selectedUploadFile && !fileUrl) {
+        showStudentError('Deliverable Required', 'Please drag-and-drop a deliverable file or enter an external URL link.');
+        return;
+      }
+
+      if (!notes || notes.length < 5) {
+        showStudentError('Change Notes Required', 'Please provide at least 5 characters detailing what was created or changed in this version.');
+        return;
+      }
+
+      try {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '⏳ Uploading &amp; Submitting...';
+        }
+
+        const formData = new FormData();
+        if (selectedUploadFile) {
+          formData.append('file', selectedUploadFile);
+        }
+        if (fileUrl) {
+          formData.append('file_url', fileUrl);
+        }
+        formData.append('change_notes', notes);
+
+        const res = await fetch(`${API_BASE}/student/design-tickets/${selectedTicketId}/versions`, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.status === 'error') {
+          throw new Error(data.message || data.error || 'Failed to submit deliverable version.');
+        }
+
+        showStudentSuccess('Deliverable Submitted!', `Version V${data.version_number} has been submitted for review.`);
+        selectedUploadFile = null;
+        await loadDashboardKPIs();
+        await loadTicketDetail(selectedTicketId);
+        await loadTickets(pagination.current_page);
+      } catch (err) {
+        showStudentError('Submission Failed', err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      }
     });
 
     // Start Task
@@ -929,62 +1357,6 @@ export async function StudentDesign(route, router) {
         showStudentError('Update Failed', err.message);
       }
     });
-
-    // Upload Deliverable Version Modal
-    const openUploadModal = async () => {
-      const nextVer = (activeTicketDetail?.versions?.length || 0) + 1;
-      const { value: formValues } = await Swal.fire({
-        title: `<span style="font-weight: 800; font-size: 1.25rem;">Submit Deliverable Version ${nextVer}</span>`,
-        html: `
-          <div style="display: flex; flex-direction: column; gap: 14px; text-align: left; margin: 12px 0;">
-            <div>
-              <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">Deliverable Image URL or Cloud Link *</label>
-              <input id="swal-file-url" class="swal2-input" placeholder="https://example.com/art.png or Figma link" style="width: 100%; margin: 0; font-size: 0.85rem;" required />
-            </div>
-            <div>
-              <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">Change Notes &amp; Version Summary *</label>
-              <textarea id="swal-change-notes" class="swal2-textarea" placeholder="Detail changes made in this version (e.g., color tweaks, typography adjustments)..." style="width: 100%; height: 80px; margin: 0; font-size: 0.85rem;" required></textarea>
-            </div>
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Submit for Review',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#009688',
-        preConfirm: () => {
-          const url = document.getElementById('swal-file-url').value.trim();
-          const notes = document.getElementById('swal-change-notes').value.trim();
-          if (!url) {
-            Swal.showValidationMessage('Deliverable URL link is required');
-            return false;
-          }
-          if (!notes || notes.length < 5) {
-            Swal.showValidationMessage('Please provide at least 5 characters of change notes');
-            return false;
-          }
-          return { file_url: url, change_notes: notes };
-        }
-      });
-
-      if (formValues) {
-        try {
-          await apiReq(`/student/design-tickets/${selectedTicketId}/versions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formValues)
-          });
-          showStudentSuccess('Deliverable Submitted!', `Version V${nextVer} has been submitted for review.`);
-          await loadDashboardKPIs();
-          await loadTicketDetail(selectedTicketId);
-          await loadTickets(pagination.current_page);
-        } catch (err) {
-          showStudentError('Upload Failed', err.message);
-        }
-      }
-    };
-
-    container.querySelector('#btn-upload-new-version')?.addEventListener('click', openUploadModal);
-    container.querySelector('#btn-quick-upload-version')?.addEventListener('click', openUploadModal);
 
     // Log Hours Modal
     const openLogHoursModal = async () => {

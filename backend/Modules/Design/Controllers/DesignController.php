@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class DesignController extends Controller
@@ -321,7 +322,7 @@ class DesignController extends Controller
      * @route GET /api/design/tickets/{id}
      * Get ticket details with versions, comments, and audit timeline
      */
-    public function getTicketDetail($id)
+    public function getTicketDetail(Request $request, $id)
     {
         $ticket = DB::table('design_tickets')
             ->leftJoin('users as requesters', 'design_tickets.requester_id', '=', 'requesters.id')
@@ -343,6 +344,17 @@ class DesignController extends Controller
 
         if (!$ticket) {
             return response()->json(['status' => 'error', 'message' => 'Ticket not found'], 404);
+        }
+
+        // Enforce role-based access: Students can only view tickets assigned to them
+        $auth = $request->attributes->get('auth_user');
+        if ($auth && $auth->role === 'student') {
+            if ($ticket->assigned_to != $auth->id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthorized ticket access. You are only permitted to view tickets assigned to your account.'
+                ], 403);
+            }
         }
 
         $ticket->type_specific_fields = json_decode($ticket->type_specific_fields ?? '{}', true);
@@ -368,6 +380,25 @@ class DesignController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
+        // Fetch brand kit guidelines if applicable
+        $brandKit = null;
+        if (Schema::hasTable('design_brand_kits') && !empty($ticket->brand_kit_name)) {
+            $brandKit = DB::table('design_brand_kits')
+                ->where('name', $ticket->brand_kit_name)
+                ->orWhere('name', 'like', "%{$ticket->brand_kit_name}%")
+                ->orWhere('slug', $ticket->brand_kit_name)
+                ->first();
+            if ($brandKit) {
+                $rawColors = $brandKit->brand_colors ?? ($brandKit->color_palette ?? null);
+                $rawType = $brandKit->typography ?? ($brandKit->typography_rules ?? null);
+                $rawLogos = $brandKit->downloadable_kits ?? ($brandKit->logo_assets ?? null);
+
+                $brandKit->color_palette = is_string($rawColors) ? json_decode($rawColors, true) : ($rawColors ?: []);
+                $brandKit->typography_rules = is_string($rawType) ? json_decode($rawType, true) : ($rawType ?: []);
+                $brandKit->logo_assets = is_string($rawLogos) ? json_decode($rawLogos, true) : ($rawLogos ?: []);
+            }
+        }
+
         // Fetch ticket chronological audit strip (PDF Module 11)
         $auditLogs = DB::table('design_audit_logs')
             ->leftJoin('users', 'design_audit_logs.user_id', '=', 'users.id')
@@ -382,6 +413,8 @@ class DesignController extends Controller
             'versions' => $versions,
             'comments' => $comments,
             'auditLogs' => $auditLogs,
+            'brand_kit' => $brandKit,
+            'brandKit' => $brandKit,
         ]);
     }
 
@@ -391,6 +424,14 @@ class DesignController extends Controller
      */
     public function assignTicket(Request $request, $id)
     {
+        $auth = $request->attributes->get('auth_user');
+        if ($auth && $auth->role === 'student') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden: Students cannot assign or reassign creative tickets.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'assigned_to' => 'required|exists:users,id',
             'committed_delivery_date' => 'required|date',
@@ -595,23 +636,68 @@ class DesignController extends Controller
      */
     public function uploadVersion(Request $request, $id)
     {
-        $validated = $request->validate([
-            'file_url' => 'required|string',
-            'file_name' => 'nullable|string',
-            'file_type' => 'nullable|string|in:image,video,pdf,archive',
-            'file_size_kb' => 'nullable|numeric',
-            'change_notes' => 'required|string',
-        ]);
-
         $ticket = DB::table('design_tickets')->where('id', $id)->first();
         if (!$ticket) {
             return response()->json(['status' => 'error', 'message' => 'Ticket not found'], 404);
         }
 
         $auth = $request->attributes->get('auth_user');
+
+        // Check if student is assigned to this ticket
+        if ($auth && $auth->role === 'student') {
+            if ($ticket->assigned_to != $auth->id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Forbidden: You are only authorized to upload deliverables for tickets assigned to you.'
+                ], 403);
+            }
+        }
+
+        // Check ticket status
+        if (in_array($ticket->status, ['Approved', 'Closed', 'Cancelled'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Cannot upload versions to a ticket marked as {$ticket->status}."
+            ], 403);
+        }
+
+        $changeNotes = $request->input('change_notes') ?? $request->input('change_summary');
+        if (empty($changeNotes) || !is_string($changeNotes)) {
+            return response()->json(['status' => 'error', 'message' => 'Change notes describing what was updated are required.'], 422);
+        }
+
+        $fileUrl = $request->input('file_url');
+        $fileName = $request->input('file_name');
+        $fileType = $request->input('file_type', 'image');
+        $fileSizeKb = 0;
+
+        if ($request->hasFile('file')) {
+            $request->validate([
+                'file' => 'required|file|max:51200|mimes:png,jpg,jpeg,webp,svg,pdf,mp4,webm,zip,tar,gz',
+            ]);
+            $uploaded = $request->file('file');
+            $fileName = $uploaded->getClientOriginalName();
+            $fileSizeKb = (int)ceil($uploaded->getSize() / 1024);
+            $mime = $uploaded->getMimeType();
+            if (str_starts_with($mime, 'image/')) $fileType = 'image';
+            elseif (str_starts_with($mime, 'video/')) $fileType = 'video';
+            elseif ($mime === 'application/pdf') $fileType = 'pdf';
+            else $fileType = 'archive';
+
+            $path = $uploaded->store('design_deliverables', 'public');
+            $fileUrl = Storage::disk('public')->url($path);
+        } elseif (!empty($fileUrl)) {
+            if (!filter_var($fileUrl, FILTER_VALIDATE_URL) && !str_starts_with($fileUrl, '/')) {
+                return response()->json(['status' => 'error', 'message' => 'A valid deliverable file or URL is required.'], 422);
+            }
+            if (empty($fileName)) $fileName = 'Deliverable_URL';
+        } else {
+            return response()->json(['status' => 'error', 'message' => 'Please select a deliverable file or enter a valid URL.'], 422);
+        }
+
         $uploaderId = $auth->id ?? ($ticket->assigned_to ?? 6);
 
-        $res = DB::transaction(function () use ($id, $uploaderId, $validated) {
+        $res = DB::transaction(function () use ($id, $uploaderId, $fileUrl, $fileName, $fileType, $fileSizeKb, $changeNotes) {
             // Determine next sequential version number
             $lastVersion = DB::table('design_versions')->where('ticket_id', $id)->lockForUpdate()->max('version_number');
             $versionNum = ($lastVersion ?? 0) + 1;
@@ -624,26 +710,26 @@ class DesignController extends Controller
                 'ticket_id' => $id,
                 'version_number' => $versionNum,
                 'uploader_id' => $uploaderId,
-                'file_url' => $validated['file_url'],
-                'file_name' => $validated['file_name'] ?? "Deliverable_V{$versionNum}",
-                'file_type' => $validated['file_type'] ?? 'image',
-                'file_size_kb' => $validated['file_size_kb'] ?? 1024,
-                'change_notes' => $validated['change_notes'],
+                'file_url' => $fileUrl,
+                'file_name' => $fileName ?? "Deliverable_V{$versionNum}",
+                'file_type' => $fileType,
+                'file_size_kb' => $fileSizeKb ?: 1024,
+                'change_notes' => $changeNotes,
                 'is_current' => true,
                 'is_approved' => false,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
 
-            // Transition ticket to 'Submitted'
+            // Transition ticket to 'Submitted' and set ball to Design Lead
             DB::table('design_tickets')->where('id', $id)->update([
                 'current_version_id' => $versionId,
                 'status' => 'Submitted',
-                'ball_is_with' => 'Requester',
+                'ball_is_with' => 'Design Lead',
                 'updated_at' => $now,
             ]);
 
-            $this->logAudit($id, $uploaderId, 'version_upload', "V" . ($versionNum - 1), "V{$versionNum}", $validated['change_notes']);
+            $this->logAudit($id, $uploaderId, 'version_upload', "V" . ($versionNum - 1), "V{$versionNum}", $changeNotes);
 
             return ['version_id' => $versionId, 'version_number' => $versionNum];
         });
@@ -774,6 +860,12 @@ class DesignController extends Controller
         }
 
         $auth = $request->attributes->get('auth_user');
+        if ($auth && $auth->role === 'student') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden: Students cannot approve or reject creative deliverables.'
+            ], 403);
+        }
         $userId = $auth->id ?? $ticket->requester_id;
 
         // Policy: Designers cannot approve their own work (PDF Module 7 constraint)
@@ -848,6 +940,12 @@ class DesignController extends Controller
         }
 
         $auth = $request->attributes->get('auth_user');
+        if ($auth && $auth->role === 'student') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden: Students cannot approve or reject creative deliverables.'
+            ], 403);
+        }
         $userId = $auth->id ?? $ticket->requester_id;
         $now = Carbon::now();
 
@@ -1794,6 +1892,14 @@ class DesignController extends Controller
      */
     public function reassignTicket(Request $request, $id)
     {
+        $auth = $request->attributes->get('auth_user');
+        if ($auth && $auth->role === 'student') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden: Students cannot assign or reassign creative tickets.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'assigned_to' => 'required|integer|exists:users,id',
             'reason' => 'required|string|max:1000',

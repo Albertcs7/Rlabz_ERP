@@ -31,6 +31,9 @@ export async function UserProfile(route, router) {
 
   const isStudentRole = authStore.role === 'student' || window.location.pathname.startsWith('/student');
   const studentInitialPhoto = isStudentRole ? getStudentProfilePhoto(authStore.user) : null;
+  const isFinancePath = window.location.pathname.startsWith('/finance');
+  const isDesignPath = window.location.pathname.startsWith('/design');
+  const getIsDesignHead = () => profileUser.role === 'design_head' || isDesignPath;
 
   let profileUser = {
     id: authStore.user?.id || 1,
@@ -272,7 +275,7 @@ export async function UserProfile(route, router) {
           </p>
         </div>
 
-        ${profileUser.role !== 'finance' && !isDesignHead ? `
+        ${profileUser.role !== 'finance' && !getIsDesignHead() ? `
           <!-- In Teams Section -->
           <div class="profile-card">
             <div class="profile-card-header">

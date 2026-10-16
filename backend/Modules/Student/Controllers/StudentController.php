@@ -3175,6 +3175,10 @@ class StudentController extends Controller
             return response()->json(['error' => 'Ticket not found or unauthorized.'], 404);
         }
 
+        if (in_array($ticket->status, ['Approved', 'Closed', 'Cancelled'])) {
+            return response()->json(['error' => "This ticket is {$ticket->status} and cannot accept new deliverable submissions."], 403);
+        }
+
         $changeNotes = $request->input('change_notes') ?? $request->input('change_summary');
         $fileUrl = $request->input('file_url') ?? $request->input('deliverable_url');
 
@@ -3187,6 +3191,9 @@ class StudentController extends Controller
         $fileSizeKb = 0;
 
         if ($request->hasFile('file')) {
+            $request->validate([
+                'file' => 'required|file|max:51200|mimes:png,jpg,jpeg,webp,svg,pdf,mp4,webm,zip,tar,gz',
+            ]);
             $uploaded = $request->file('file');
             $fileName = $uploaded->getClientOriginalName();
             $fileSizeKb = (int)ceil($uploaded->getSize() / 1024);
@@ -3198,10 +3205,13 @@ class StudentController extends Controller
 
             $path = $uploaded->store('design_deliverables', 'public');
             $fileUrl = Storage::disk('public')->url($path);
-        }
-
-        if (empty($fileUrl)) {
-            $fileUrl = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80';
+        } elseif (!empty($fileUrl)) {
+            if (!filter_var($fileUrl, FILTER_VALIDATE_URL) && !str_starts_with($fileUrl, '/')) {
+                return response()->json(['error' => 'A valid deliverable file or URL is required.'], 422);
+            }
+            if (empty($fileName)) $fileName = 'Deliverable_URL';
+        } else {
+            return response()->json(['error' => 'Please select a deliverable file or enter a valid URL.'], 422);
         }
 
         // Determine next version number
@@ -3219,14 +3229,14 @@ class StudentController extends Controller
             'file_name' => $fileName,
             'file_type' => $fileType,
             'file_size_kb' => $fileSizeKb,
-            'change_notes' => $request->input('change_notes'),
+            'change_notes' => $changeNotes,
             'is_current' => true,
             'is_approved' => false,
             'created_at' => now(),
             'updated_at' => now()
         ]);
 
-        // Update Ticket to Submitted and set ball to Requester/Design Lead
+        // Update Ticket to Submitted and set ball to Design Lead
         DB::table('design_tickets')->where('id', $id)->update([
             'current_version_id' => $versionId,
             'status' => 'Submitted',

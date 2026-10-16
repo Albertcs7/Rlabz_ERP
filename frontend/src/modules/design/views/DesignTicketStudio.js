@@ -69,11 +69,116 @@ export async function DesignTicketStudio(route, router) {
     });
   }
 
+  // Helper: Resolve media URL cleanly without hardcoded localhost
+  function resolveMediaUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+    if (url.startsWith('/storage/')) {
+      const origin = API_BASE.replace(/\/api\/?$/, '');
+      return `${origin}${url}`;
+    }
+    return url;
+  }
+
+  // Helper: Render Brand Colors without [object Object]
+  function renderBrandColors(palette) {
+    if (!palette || !Array.isArray(palette) || palette.length === 0) {
+      return `
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+          <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-family: monospace;">
+            <span style="width: 12px; height: 12px; border-radius: 3px; background: #009688; border: 1px solid rgba(0,0,0,0.15);"></span>
+            <span>#009688</span>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+        ${palette.map(item => {
+          let hex = '#009688';
+          let name = '';
+          if (typeof item === 'string') {
+            hex = item;
+            name = item;
+          } else if (typeof item === 'object' && item !== null) {
+            hex = item.hex || item.value || '#009688';
+            name = item.name ? `${item.name} (${hex})` : hex;
+          }
+          return `
+            <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-family: monospace;" title="${typeof item === 'object' && item.usage ? item.usage : ''}">
+              <span style="width: 12px; height: 12px; border-radius: 3px; background: ${hex}; border: 1px solid rgba(0,0,0,0.15);"></span>
+              <span style="font-weight: 600; color: #1e293b;">${name}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // Helper: Render Typography without [object Object]
+  function renderBrandTypography(rules) {
+    if (!rules) return 'Plus Jakarta Sans, Inter (Display: 700/800, Body: 400/500)';
+    if (Array.isArray(rules)) {
+      return rules.map(item => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item !== null) {
+          const lbl = item.label ? `<strong>${item.label}:</strong> ` : '';
+          const fam = item.family || 'Sans-serif';
+          const w = item.weights ? ` (${item.weights})` : '';
+          return `${lbl}${fam}${w}`;
+        }
+        return String(item);
+      }).join(' &nbsp;•&nbsp; ');
+    }
+    if (typeof rules === 'object') {
+      return rules.font_family || JSON.stringify(rules);
+    }
+    return String(rules);
+  }
+
+  // Helper: Render Brand Logos without [object Object]
+  function renderBrandLogos(logos) {
+    if (!logos || !Array.isArray(logos) || logos.length === 0) return '';
+    return `
+      <div style="margin-top: 8px;">
+        <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Brand Logos &amp; Assets</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          ${logos.map(logo => {
+            let title = 'Download Logo';
+            let url = '#';
+            let format = '';
+            if (typeof logo === 'string') {
+              url = resolveMediaUrl(logo);
+              title = logo.split('/').pop() || 'Logo Asset';
+            } else if (typeof logo === 'object' && logo !== null) {
+              title = logo.title || logo.name || 'Logo Asset';
+              url = resolveMediaUrl(logo.url);
+              format = logo.format ? ` (${logo.format})` : '';
+            }
+            if (!url || url === '#' || logo.is_available === false) {
+              return `
+                <span class="fin-badge neutral" style="font-size: 0.7rem;">
+                  ⏳ ${title}${format} - ${logo.note || 'Available Soon'}
+                </span>
+              `;
+            }
+            return `
+              <a href="${url}" target="_blank" download class="design-btn design-btn-secondary design-btn-sm" style="font-size: 0.72rem; padding: 2px 8px; text-decoration: none;">
+                📥 ${title}${format}
+              </a>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   function render() {
     const t = ticketDetail.ticket;
     const versions = ticketDetail.versions || [];
     const comments = ticketDetail.comments || [];
     const auditLogs = ticketDetail.auditLogs || [];
+    const brandKit = ticketDetail.brand_kit || ticketDetail.brandKit || null;
 
     const currentVersion = selectedVersionId
       ? (versions.find(v => v.id === selectedVersionId) || versions[versions.length - 1])
@@ -84,13 +189,20 @@ export async function DesignTicketStudio(route, router) {
       : comments;
 
     const isSelfAssigned = storedUser && storedUser.id && (t.assigned_to == storedUser.id);
+    const isStudent = storedUser && storedUser.role === 'student';
+    const isDesignHead = storedUser && (storedUser.role === 'design_head' || storedUser.role === 'admin' || storedUser.role === 'developer');
+
+    // Extract revision comments if applicable
+    const revComments = comments.filter(c => (c.comment && c.comment.startsWith('REVISION REQUESTED:')) || c.is_revision_note);
+    const latestRevComment = revComments.length > 0 ? revComments[revComments.length - 1] : null;
+    const latestRevisionFeedback = latestRevComment ? latestRevComment.comment.replace('REVISION REQUESTED:', '').trim() : null;
 
     container.innerHTML = `
       <!-- Top Navigation & Header Bar -->
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; background: #ffffff; padding: 1rem 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
         <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
           <button class="design-btn design-btn-secondary design-btn-sm" id="btn-back-tickets" style="display: flex; align-items: center; gap: 6px;">
-            <span>←</span> All Tickets
+            <span>←</span> ${isStudent ? 'My Design Workspace' : 'All Tickets'}
           </button>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-family: monospace; font-size: 1.25rem; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 3px 10px; border-radius: 6px;">
@@ -103,9 +215,18 @@ export async function DesignTicketStudio(route, router) {
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <button class="design-btn design-btn-secondary design-btn-sm" id="btn-reassign-ticket" title="Reassign ticket to another designer">
-            👤 Reassign Designer
-          </button>
+          ${!isStudent ? `
+            <button class="design-btn design-btn-secondary design-btn-sm" id="btn-reassign-ticket" title="Reassign ticket to another designer">
+              👤 Reassign Designer
+            </button>
+            <button class="design-btn design-btn-secondary design-btn-sm" id="btn-edit-deadline" title="Manage committed delivery date">
+              📅 Manage Deadline
+            </button>
+          ` : `
+            <span class="fin-badge neutral" style="font-size: 0.8rem; padding: 5px 12px;">
+              🎨 Assigned Designer Workspace
+            </span>
+          `}
           <button class="design-btn design-btn-secondary design-btn-sm" id="btn-log-time" title="Log time against this design deliverable">
             ⏱️ Log Time (${parseFloat(t.actual_hours_logged || 0).toFixed(1)}h logged)
           </button>
@@ -115,14 +236,16 @@ export async function DesignTicketStudio(route, router) {
       <!-- Main Studio 2-Column Split Workspace -->
       <div style="display: grid; grid-template-columns: minmax(320px, 380px) 1fr; gap: 1.5rem; align-items: start;">
         
-        <!-- LEFT COLUMN: Comprehensive Creative Brief, Specs, Brand Kit & Activity -->
+        <!-- LEFT COLUMN: Workflow & Responsibility, Brief, Brand Kit & Activity History -->
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
           
-          <!-- Quick Status & Ball Card -->
+          <!-- Workflow & Responsibility Card -->
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 700; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem;">
-              Workflow &amp; Responsibility
-            </h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem;">
+              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+                Workflow &amp; Responsibility
+              </h4>
+            </div>
             <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #64748b;">Current Ball:</span>
@@ -138,7 +261,9 @@ export async function DesignTicketStudio(route, router) {
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #64748b;">Committed Delivery:</span>
-                <strong>${t.committed_delivery_date ? new Date(t.committed_delivery_date).toLocaleDateString() : 'Pending'}</strong>
+                <strong style="color: #0284c7;">
+                  ${t.committed_delivery_date ? new Date(t.committed_delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending'}
+                </strong>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #64748b;">Revisions Count:</span>
@@ -147,91 +272,107 @@ export async function DesignTicketStudio(route, router) {
             </div>
           </div>
 
-          <!-- Project & Brand Guidelines Card -->
+          <!-- Creative Brief & Specifications (Rendered once per page) -->
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Brand &amp; Project Context</h4>
-              <a href="/design/brand-kit" class="design-btn design-btn-secondary design-btn-sm" style="font-size: 0.72rem; padding: 2px 8px;">
-                Tokens ↗
-              </a>
-            </div>
+            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+              Creative Brief &amp; Specifications
+            </h4>
             
-            <div style="margin-bottom: 0.75rem;">
-              <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Applicable Brand Kit</div>
-              <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                <span class="asset-brand-badge" style="font-size: 0.85rem; padding: 3px 10px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 6px; font-weight: 600;">
-                  🎨 ${t.brand_kit_name || 'RLabZ Core Platform'}
-                </span>
+            <h5 style="margin: 0 0 6px 0; font-size: 1rem; color: #1e293b; font-weight: 700;">${t.title}</h5>
+            ${t.description ? `
+              <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #475569; line-height: 1.5; white-space: pre-wrap;">${t.description}</p>
+            ` : ''}
+
+            ${t.final_copy ? `
+              <div style="margin-bottom: 1rem; background: #f8fafc; border-left: 4px solid #0284c7; padding: 10px 12px; border-radius: 0 8px 8px 0;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #0369a1; text-transform: uppercase; margin-bottom: 4px;">
+                  Mandatory Copy / Headline Text:
+                </div>
+                <div style="font-size: 0.84rem; color: #1e293b; font-style: italic; white-space: pre-wrap;">${t.final_copy}</div>
+              </div>
+            ` : ''}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #f1f5f9;">
+              ${t.target_audience ? `
+                <div>
+                  <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">TARGET AUDIENCE</span>
+                  <strong>${t.target_audience}</strong>
+                </div>
+              ` : ''}
+              ${t.publishing_channel ? `
+                <div>
+                  <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">PUBLISHING CHANNEL</span>
+                  <strong>${t.publishing_channel}</strong>
+                </div>
+              ` : ''}
+              ${t.required_by ? `
+                <div>
+                  <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">REQUIRED BY</span>
+                  <strong>${new Date(t.required_by).toLocaleDateString()}</strong>
+                </div>
+              ` : ''}
+              <div>
+                <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">ESTIMATED EFFORT</span>
+                <strong>${t.estimated_hours || 0} hrs</strong>
               </div>
             </div>
 
-            ${t.project_title ? `
+            ${(t.reference_link || t.reference_links) ? `
+              <div style="margin-top: 1rem; font-size: 0.82rem;">
+                <span style="color: #64748b; font-weight: 600;">Reference Link:</span>
+                <a href="${t.reference_link || t.reference_links}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; word-break: break-all; margin-left: 4px;">
+                  ${t.reference_link || t.reference_links} ↗
+                </a>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Compact Brand Kit Card (Rendered once per page) -->
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Brand Kit</h4>
+              <span class="asset-brand-badge" style="font-size: 0.75rem; padding: 2px 8px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 4px; font-weight: 600;">
+                🎨 ${t.brand_kit_name || 'RLabZ Core Brand'}
+              </span>
+            </div>
+
+            <!-- Brand Kit Colors & Typography -->
+            ${brandKit ? `
               <div style="margin-bottom: 0.75rem;">
-                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Associated Project</div>
-                <div style="font-size: 0.88rem; font-weight: 600; color: #1e293b; margin-top: 2px;">
+                <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Color Swatches</div>
+                ${renderBrandColors(brandKit.color_palette || brandKit.brand_colors)}
+              </div>
+
+              <div style="margin-bottom: 0.75rem;">
+                <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Typography Rules</div>
+                <div style="font-size: 0.78rem; color: #334155; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 3px;">
+                  ${renderBrandTypography(brandKit.typography_rules || brandKit.typography)}
+                </div>
+              </div>
+
+              ${renderBrandLogos(brandKit.logo_assets || brandKit.downloadable_kits)}
+            ` : ''}
+
+            ${t.project_title ? `
+              <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9;">
+                <div style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Associated Project</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-top: 2px;">
                   📁 ${t.project_title}
                 </div>
               </div>
             ` : ''}
 
             ${t.brand_constraints ? `
-              <div style="background: #f0fdf4; border-left: 3px solid #10b981; padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.8rem; color: #065f46;">
+              <div style="margin-top: 0.75rem; background: #f0fdf4; border-left: 3px solid #10b981; padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.8rem; color: #065f46;">
                 <strong>Brand Constraints:</strong> ${t.brand_constraints}
               </div>
             ` : ''}
           </div>
 
-          <!-- Full Creative Brief & Copy -->
+          <!-- Compact Activity History Timeline -->
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
             <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
-              Creative Brief &amp; Specifications
-            </h4>
-            
-            <h5 style="margin: 0 0 6px 0; font-size: 1rem; color: #1e293b;">${t.title}</h5>
-            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #475569; line-height: 1.5; white-space: pre-wrap;">${t.description || 'No description provided.'}</p>
-
-            ${t.final_copy ? `
-              <div style="margin-bottom: 1rem; background: #f8fafc; border-left: 4px solid #0284c7; padding: 10px 12px; border-radius: 0 8px 8px 0;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #0369a1; text-transform: uppercase; margin-bottom: 4px;">
-                  Mandatory Copy / Text to Include:
-                </div>
-                <div style="font-size: 0.85rem; color: #1e293b; font-style: italic; white-space: pre-wrap;">${t.final_copy}</div>
-              </div>
-            ` : ''}
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #f1f5f9;">
-              <div>
-                <span style="color: #64748b; font-size: 0.72rem; display: block;">TARGET AUDIENCE</span>
-                <strong>${t.target_audience || 'General public'}</strong>
-              </div>
-              <div>
-                <span style="color: #64748b; font-size: 0.72rem; display: block;">PUBLISHING CHANNEL</span>
-                <strong>${t.publishing_channel || 'Digital / Print'}</strong>
-              </div>
-              <div>
-                <span style="color: #64748b; font-size: 0.72rem; display: block;">REQUIRED BY</span>
-                <strong>${t.required_by ? new Date(t.required_by).toLocaleDateString() : 'N/A'}</strong>
-              </div>
-              <div>
-                <span style="color: #64748b; font-size: 0.72rem; display: block;">ESTIMATED HOURS</span>
-                <strong>${t.estimated_hours || 0} hrs</strong>
-              </div>
-            </div>
-
-            ${t.reference_links ? `
-              <div style="margin-top: 1rem; font-size: 0.82rem;">
-                <span style="color: #64748b; font-weight: 600;">Reference Link:</span>
-                <a href="${t.reference_links}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; word-break: break-all; margin-left: 4px;">
-                  ${t.reference_links} ↗
-                </a>
-              </div>
-            ` : ''}
-          </div>
-
-          <!-- Chronological Audit Log Strip -->
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
-              Activity &amp; Audit Trail
+              Activity History
             </h4>
             <div style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
               ${auditLogs.length === 0 ? `
@@ -250,33 +391,56 @@ export async function DesignTicketStudio(route, router) {
 
         </div>
 
-        <!-- RIGHT COLUMN: Expansive Deliverable Versions, Full Preview, Feedback & Lifecycle Bar -->
+        <!-- RIGHT COLUMN: Single Consolidated Deliverable Review Section -->
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
           
-          <!-- Versions & Upload Bar -->
+          <!-- ONE Deliverable Review Section -->
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
+            
+            <!-- Review Section Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
               <div style="display: flex; align-items: center; gap: 10px;">
-                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">
-                  Deliverable Versions (${versions.length})
-                </h4>
-                ${currentVersion?.is_approved ? '<span class="fin-badge success">✓ Final Approved</span>' : (currentVersion?.is_current ? '<span class="fin-badge blue">Current Review</span>' : '')}
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">
+                  Deliverable Review
+                </h3>
+                ${currentVersion?.is_approved ? '<span class="fin-badge success">✓ Approved Final</span>' : (currentVersion?.is_current ? '<span class="fin-badge blue">Current Review</span>' : '')}
+                <span class="fin-badge neutral" style="font-size: 0.75rem;">${versions.length} Version${versions.length === 1 ? '' : 's'}</span>
               </div>
 
               <div style="display: flex; align-items: center; gap: 8px;">
-                <button class="design-btn design-btn-secondary design-btn-sm" id="btn-compare-versions">
-                  📊 Side-by-Side Compare
-                </button>
-                <button class="design-btn design-btn-primary design-btn-sm" id="btn-upload-version">
-                  + Upload New Version
-                </button>
+                ${versions.length >= 2 ? `
+                  <button class="design-btn design-btn-secondary design-btn-sm" id="btn-compare-versions">
+                    📊 Side-by-Side Compare
+                  </button>
+                ` : ''}
+                ${currentVersion?.file_url ? `
+                  <a href="${resolveMediaUrl(currentVersion.file_url)}" target="_blank" download class="design-btn design-btn-secondary design-btn-sm" style="text-decoration: none;">
+                    ⬇ Download Active
+                  </a>
+                ` : ''}
               </div>
             </div>
 
-            <!-- Version Switcher Pills -->
+            ${t.status === 'Revision' ? `
+              <!-- Revision Instructions Banner -->
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 1.1rem;">⚠️</span>
+                    <strong style="color: #991b1b; font-size: 0.9rem;">Reviewer Requested Revisions (Round ${t.revision_count || 1})</strong>
+                  </div>
+                  <span class="fin-badge danger">Target: V${currentVersion?.version_number || 1}</span>
+                </div>
+                <div style="font-size: 0.84rem; color: #7f1d1d; background: #fff5f5; border: 1px dashed #fca5a5; padding: 8px 12px; border-radius: 6px; line-height: 1.45; white-space: pre-wrap;">
+                  ${latestRevisionFeedback || 'Please address reviewer feedback, adjust the creative deliverable, and upload the next version.'}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Sequential Version Switcher Pills -->
             <div class="version-tabs-row" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 0.75rem;">
               ${versions.length === 0 ? `
-                <span style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">No deliverable versions submitted yet. Click "+ Upload New Version" to upload V1.</span>
+                <span style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">No deliverable versions submitted yet. Waiting for assigned designer to upload V1.</span>
               ` : versions.map(v => `
                 <button class="version-chip-btn ${(currentVersion && currentVersion.id === v.id) ? 'active' : ''} ${v.is_approved ? 'approved' : ''}" data-version-id="${v.id}" style="padding: 6px 14px; font-weight: 700; border-radius: 8px; cursor: pointer;">
                   V${v.version_number} ${v.is_approved ? '✓ Approved' : (v.is_current ? '(Current)' : '')}
@@ -286,7 +450,7 @@ export async function DesignTicketStudio(route, router) {
 
             <!-- Current Version Notes Bar -->
             ${currentVersion ? `
-              <div style="background: #f1f5f9; border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <div style="background: #f1f5f9; border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem;">
                 <div>
                   <strong style="color: #0f172a;">Version V${currentVersion.version_number}</strong>
                   <span style="color: #64748b;"> · Uploaded by <strong>${currentVersion.uploader_name || 'Designer'}</strong> on ${new Date(currentVersion.created_at).toLocaleString()}</span>
@@ -296,114 +460,122 @@ export async function DesignTicketStudio(route, router) {
                 </div>
               </div>
             ` : ''}
-          </div>
 
-          <!-- Full Screen Deliverable Preview & Feedback Grid -->
-          <div style="display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: stretch; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); min-height: 520px;">
-            
-            <!-- Visual Media Preview Container -->
-            <div style="display: flex; flex-direction: column; background: #0f172a; border-radius: 10px; overflow: hidden; position: relative; min-height: 480px; align-items: center; justify-content: center;">
-              ${currentVersion ? (
-                currentVersion.file_type === 'video' ? `
-                  <video src="${currentVersion.file_url}" controls style="max-width: 100%; max-height: 520px; object-fit: contain;"></video>
-                ` : `
-                  <img src="${currentVersion.file_url}" alt="Version Preview" id="studio-preview-image" style="max-width: 100%; max-height: 520px; object-fit: contain; cursor: zoom-in;" title="Click to view full size">
-                `
-              ) : `
-                <div style="color: #94a3b8; text-align: center; padding: 3rem;">
-                  <div style="font-size: 3rem; margin-bottom: 0.5rem;">🖼️</div>
-                  <strong style="font-size: 1rem; color: #cbd5e1;">Awaiting Deliverable Draft</strong>
-                  <p style="font-size: 0.85rem; margin-top: 4px; color: #64748b;">Upload a graphic deliverable draft to preview and review feedback.</p>
+            <!-- Visual Preview & Version Feedback Split Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: stretch; min-height: 480px; margin-bottom: 1.25rem;">
+              
+              <!-- Visual Media Preview Canvas -->
+              <div style="display: flex; flex-direction: column; background: #0f172a; border-radius: 10px; overflow: hidden; position: relative; min-height: 460px; align-items: center; justify-content: center;">
+                ${currentVersion ? (
+                  (currentVersion.file_type === 'video' || (currentVersion.file_url && currentVersion.file_url.match(/\.(mp4|webm)$/i))) ? `
+                    <video src="${resolveMediaUrl(currentVersion.file_url)}" controls style="max-width: 100%; max-height: 500px; object-fit: contain;"></video>
+                  ` : (currentVersion.file_type === 'pdf' || (currentVersion.file_url && currentVersion.file_url.match(/\.pdf$/i))) ? `
+                    <div style="text-align: center; padding: 30px; color: #e2e8f0;">
+                      <div style="font-size: 3rem; margin-bottom: 8px;">📄</div>
+                      <div style="font-weight: 700; font-size: 1rem;">PDF Deliverable Document</div>
+                      <div style="font-size: 0.8rem; color: #94a3b8; margin: 4px 0 14px 0;">${currentVersion.file_name || 'Document.pdf'}</div>
+                      <a href="${resolveMediaUrl(currentVersion.file_url)}" target="_blank" download class="design-btn design-btn-primary design-btn-sm" style="text-decoration: none;">
+                        Open / Download PDF ↗
+                      </a>
+                    </div>
+                  ` : `
+                    <img src="${resolveMediaUrl(currentVersion.file_url)}" alt="Version Preview" id="studio-preview-image" style="max-width: 100%; max-height: 500px; object-fit: contain; cursor: zoom-in;" title="Click to view full size">
+                  `
+                ) : `
+                  <div style="color: #94a3b8; text-align: center; padding: 3rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🖼️</div>
+                    <strong style="font-size: 1rem; color: #cbd5e1;">Awaiting Deliverable Submission</strong>
+                    <p style="font-size: 0.85rem; margin-top: 4px; color: #64748b;">The assigned designer has not yet uploaded a deliverable version for this ticket.</p>
+                  </div>
+                `}
+
+                ${currentVersion ? `
+                  <div style="position: absolute; bottom: 12px; right: 12px; display: flex; gap: 6px; background: rgba(0,0,0,0.65); padding: 4px 8px; border-radius: 6px; backdrop-filter: blur(4px);">
+                    <a href="${resolveMediaUrl(currentVersion.file_url)}" target="_blank" download class="design-btn design-btn-sm" style="background: rgba(255,255,255,0.2); color: #fff; font-size: 0.75rem; text-decoration: none;">
+                      ⬇ Download
+                    </a>
+                    <button class="design-btn design-btn-sm" id="btn-fullscreen-preview" style="background: rgba(255,255,255,0.2); color: #fff; font-size: 0.75rem;">
+                      🔍 Zoom
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Threaded Version Comments & Feedback Panel -->
+              <div style="display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
+                    <h5 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Version Feedback</h5>
+                    <span style="font-size: 0.75rem; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: 700;">
+                      V${currentVersion ? currentVersion.version_number : 1}
+                    </span>
+                  </div>
+
+                  <div class="comments-thread-list" style="max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
+                    ${versionComments.length === 0 ? `
+                      <div style="color: #94a3b8; font-size: 0.82rem; text-align: center; padding: 2.5rem 0;">
+                        No feedback comments on this version yet. Add review notes below.
+                      </div>
+                    ` : versionComments.map(c => `
+                      <div class="comment-card-item ${c.status === 'resolved' ? 'resolved' : ''}" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
+                        <div class="comment-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                          <strong style="font-size: 0.8rem; color: #0f172a;">${c.author_name}</strong>
+                          <button class="design-btn design-btn-sm btn-resolve-comment" data-id="${c.id}" style="padding: 1px 6px; font-size: 0.7rem; border-radius: 4px; border: 1px solid #cbd5e1; background: ${c.status === 'resolved' ? '#dcfce7' : '#ffffff'}; color: ${c.status === 'resolved' ? '#166534' : '#475569'};">
+                            ${c.status === 'resolved' ? '✓ Resolved' : 'Mark Resolved'}
+                          </button>
+                        </div>
+                        <div class="comment-body" style="font-size: 0.82rem; color: #334155; line-height: 1.4;">${c.comment}</div>
+                      </div>
+                    `).join('')}
+                  </div>
                 </div>
-              `}
 
-              ${currentVersion ? `
-                <div style="position: absolute; bottom: 12px; right: 12px; display: flex; gap: 6px; background: rgba(0,0,0,0.65); padding: 4px 8px; border-radius: 6px; backdrop-filter: blur(4px);">
-                  <a href="${currentVersion.file_url}" target="_blank" download class="design-btn design-btn-sm" style="background: rgba(255,255,255,0.2); color: #fff; font-size: 0.75rem; text-decoration: none;">
-                    ⬇ Download
-                  </a>
-                  <button class="design-btn design-btn-sm" id="btn-fullscreen-preview" style="background: rgba(255,255,255,0.2); color: #fff; font-size: 0.75rem;">
-                    🔍 Zoom
+                <!-- Post Feedback Input Box -->
+                <div style="margin-top: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
+                  <textarea id="studio-input-comment" class="design-input" rows="2" placeholder="Type design review comment or feedback..." style="width: 100%; font-size: 0.82rem; margin-bottom: 6px; box-sizing: border-box; resize: vertical;"></textarea>
+                  <button class="design-btn design-btn-primary design-btn-sm" id="btn-post-comment" data-version-id="${currentVersion ? currentVersion.id : ''}" style="width: 100%;">
+                    Post Feedback
                   </button>
                 </div>
-              ` : ''}
+              </div>
+
             </div>
 
-            <!-- Threaded Version Comments & Feedback Panel -->
-            <div style="display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; justify-content: space-between;">
+            <!-- Review Actions & Sign-Off Footer -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
               <div>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
-                  <h5 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Feedback Thread</h5>
-                  <span style="font-size: 0.75rem; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: 700;">
-                    V${currentVersion ? currentVersion.version_number : 1}
+                <strong style="color: #0f172a; font-size: 0.95rem;">Review &amp; Sign-Off Actions</strong>
+                <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #64748b;">
+                  ${t.status === 'Approved' ? 'This deliverable is signed off and archived into the Asset Library.' : 'Evaluate the deliverable against the creative brief, request revisions, or grant sign-off.'}
+                </p>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                ${isSelfAssigned ? `
+                  <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; color: #991b1b;">
+                    🚫 <strong>Self-Approval Prevented:</strong> You are the assigned designer on this ticket.
+                  </div>
+                ` : (t.status !== 'Approved' && t.status !== 'Closed' && t.status !== 'Cancelled') ? `
+                  <button class="design-btn design-btn-danger" id="btn-studio-reject" title="Request revision round from designer">
+                    Request Revision Round
+                  </button>
+                  <button class="design-btn design-btn-success" id="btn-studio-approve" title="Sign off and archive to Asset Library">
+                    ✓ Approve Deliverable
+                  </button>
+                  <button class="design-btn design-btn-secondary design-btn-sm" id="btn-studio-hold" title="Place ticket on hold">
+                    ⏸️ On Hold
+                  </button>
+                  <button class="design-btn design-btn-secondary design-btn-sm" id="btn-studio-cancel" style="color: #dc2626; border-color: #fecaca;" title="Cancel ticket">
+                    ❌ Cancel
+                  </button>
+                ` : `
+                  <span class="fin-badge ${t.status === 'Approved' ? 'success' : 'neutral'}" style="font-size: 0.85rem; padding: 6px 14px;">
+                    ${t.status === 'Approved' ? '✓ Officially Approved' : `Status: ${t.status}`}
                   </span>
-                </div>
-
-                <div class="comments-thread-list" style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
-                  ${versionComments.length === 0 ? `
-                    <div style="color: #94a3b8; font-size: 0.82rem; text-align: center; padding: 2.5rem 0;">
-                      No feedback comments on this version yet. Add precise feedback below.
-                    </div>
-                  ` : versionComments.map(c => `
-                    <div class="comment-card-item ${c.status === 'resolved' ? 'resolved' : ''}" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
-                      <div class="comment-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <strong style="font-size: 0.8rem; color: #0f172a;">${c.author_name}</strong>
-                        <button class="design-btn design-btn-sm btn-resolve-comment" data-id="${c.id}" style="padding: 1px 6px; font-size: 0.7rem; border-radius: 4px; border: 1px solid #cbd5e1; background: ${c.status === 'resolved' ? '#dcfce7' : '#ffffff'}; color: ${c.status === 'resolved' ? '#166534' : '#475569'};">
-                          ${c.status === 'resolved' ? '✓ Resolved' : 'Mark Resolved'}
-                        </button>
-                      </div>
-                      <div class="comment-body" style="font-size: 0.82rem; color: #334155; line-height: 1.4;">${c.comment}</div>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-
-              <!-- Post Feedback Input Box -->
-              <div style="margin-top: 0.75rem; border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
-                <textarea id="studio-input-comment" class="design-input" rows="2" placeholder="Type design review comment or feedback..." style="width: 100%; font-size: 0.82rem; margin-bottom: 6px; box-sizing: border-box; resize: vertical;"></textarea>
-                <button class="design-btn design-btn-primary design-btn-sm" id="btn-post-comment" data-version-id="${currentVersion ? currentVersion.id : ''}" style="width: 100%;">
-                  Post Feedback
-                </button>
+                `}
               </div>
             </div>
 
-          </div>
-
-          <!-- Lifecycle, Approval, Revisions & Sign-Off Actions Bar -->
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <div>
-              <h4 style="margin: 0 0 4px 0; font-size: 1rem; font-weight: 700; color: #0f172a;">
-                Lifecycle, Approval &amp; Sign-Off
-              </h4>
-              <p style="margin: 0; font-size: 0.82rem; color: #64748b;">
-                Approving the deliverable archives it into the official Asset Library with auto-generated packaged formats.
-              </p>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-              ${isSelfAssigned ? `
-                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; color: #991b1b; display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 1.2rem;">🚫</span>
-                  <span><strong>Self-Approval Prevented:</strong> You are the assigned designer on this ticket. Another lead or requester must approve.</span>
-                </div>
-              ` : `
-                <button class="design-btn design-btn-danger" id="btn-studio-reject" title="Request revision round from designer">
-                  Request Revision Round
-                </button>
-                <button class="design-btn design-btn-success" id="btn-studio-approve" title="Sign off and archive to Asset Library">
-                  ✓ Approve Deliverable
-                </button>
-              `}
-
-              ${!['Approved', 'Closed', 'Cancelled'].includes(t.status) ? `
-                <button class="design-btn design-btn-secondary design-btn-sm" id="btn-studio-hold" title="Place ticket on hold">
-                  ⏸️ On Hold
-                </button>
-                <button class="design-btn design-btn-secondary design-btn-sm" id="btn-studio-cancel" style="color: #dc2626; border-color: #fecaca;" title="Cancel ticket">
-                  ❌ Cancel Ticket
-                </button>
-              ` : ''}
-            </div>
           </div>
 
         </div>
@@ -412,14 +584,19 @@ export async function DesignTicketStudio(route, router) {
     `;
 
     // Wire Interactive Actions
-    wireActions(t, versions, currentVersion);
+    wireActions(t, versions, currentVersion, isStudent);
   }
 
-  function wireActions(t, versions, currentVersion) {
-    // Back to Tickets
+  function wireActions(t, versions, currentVersion, isStudent) {
+    // Back navigation
     container.querySelector('#btn-back-tickets')?.addEventListener('click', () => {
-      if (router && typeof router.push === 'function') router.push('/design/tickets');
-      else window.location.href = '/design/tickets';
+      if (isStudent) {
+        if (router && typeof router.push === 'function') router.push('/student/design');
+        else window.location.href = '/student/design';
+      } else {
+        if (router && typeof router.push === 'function') router.push('/design/tickets');
+        else window.location.href = '/design/tickets';
+      }
     });
 
     // Version switcher pills
@@ -474,58 +651,6 @@ export async function DesignTicketStudio(route, router) {
       });
     });
 
-    // Upload sequential version
-    container.querySelector('#btn-upload-version')?.addEventListener('click', async () => {
-      const { value: formValues } = await Swal.fire({
-        title: 'Upload Sequential Deliverable Version',
-        html: `
-          <div style="display:flex; flex-direction:column; gap:12px; text-align:left;">
-            <div>
-              <label style="font-size:0.8rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Deliverable Image / Cloud URL *</label>
-              <input id="swal-file-url" class="swal2-input" placeholder="https://drive.google.com/... or cloud deliverable URL" value="" style="margin:0; width:100%; box-sizing:border-box;">
-            </div>
-            <div>
-              <label style="font-size:0.8rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Change Notes (What was updated?)</label>
-              <textarea id="swal-notes" class="swal2-textarea" placeholder="Detail changes made in this revision..." style="margin:0; width:100%; box-sizing:border-box;"></textarea>
-            </div>
-          </div>
-        `,
-        focusConfirm: false,
-        preConfirm: () => {
-          const file_url = document.getElementById('swal-file-url').value.trim();
-          const change_notes = document.getElementById('swal-notes').value.trim();
-          if (!file_url || !change_notes) {
-            Swal.showValidationMessage('Both deliverable URL and change notes are required');
-          }
-          return { file_url, change_notes };
-        },
-        showCancelButton: true,
-        confirmButtonText: 'Upload Version',
-        confirmButtonColor: '#059669'
-      });
-
-      if (formValues) {
-        try {
-          const uRes = await fetch(`${API_BASE}/design/tickets/${t.id}/versions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify(formValues)
-          });
-          const uData = await uRes.json();
-          if (uData.status === 'success') {
-            Swal.fire('Success', uData.message, 'success');
-            const refreshRes = await fetch(`${API_BASE}/design/tickets/${t.id}`, { headers });
-            ticketDetail = await refreshRes.json();
-            render();
-          } else {
-            Swal.fire('Upload Error', uData.message || 'Failed to upload version', 'error');
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    });
-
     // Side-by-Side Compare
     container.querySelector('#btn-compare-versions')?.addEventListener('click', () => {
       if (versions.length < 2) {
@@ -542,12 +667,12 @@ export async function DesignTicketStudio(route, router) {
           <div class="compare-container-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; text-align:center;">
             <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
               <span style="font-weight:700; color:#0f172a; display:block; margin-bottom:8px;">Version V${vA.version_number} (Initial)</span>
-              <img src="${vA.file_url}" alt="Version A" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px;">
+              <img src="${resolveMediaUrl(vA.file_url)}" alt="Version A" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px;">
               <div style="font-size:0.8rem; color:#64748b; margin-top:8px;">${vA.change_notes || 'Initial draft'}</div>
             </div>
             <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
               <span style="font-weight:700; color:#0f172a; display:block; margin-bottom:8px;">Version V${vB.version_number} (Current)</span>
-              <img src="${vB.file_url}" alt="Version B" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px;">
+              <img src="${resolveMediaUrl(vB.file_url)}" alt="Version B" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px;">
               <div style="font-size:0.8rem; color:#64748b; margin-top:8px;">${vB.change_notes || 'Revision draft'}</div>
             </div>
           </div>
@@ -561,9 +686,9 @@ export async function DesignTicketStudio(route, router) {
     const zoomImg = container.querySelector('#studio-preview-image');
     const zoomBtn = container.querySelector('#btn-fullscreen-preview');
     const triggerZoom = () => {
-      if (!currentVersion) return;
+      if (!currentVersion || !currentVersion.file_url) return;
       Swal.fire({
-        imageUrl: currentVersion.file_url,
+        imageUrl: resolveMediaUrl(currentVersion.file_url),
         imageAlt: 'Deliverable High Resolution',
         width: '90vw',
         padding: '1rem',
@@ -631,6 +756,66 @@ export async function DesignTicketStudio(route, router) {
             render();
           } else {
             Swal.fire('Error', data.message || 'Failed to reassign ticket', 'error');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+
+    // Manage Committed Deadline
+    container.querySelector('#btn-edit-deadline')?.addEventListener('click', async () => {
+      const defaultDate = t.committed_delivery_date ? t.committed_delivery_date.substring(0, 10) : '';
+
+      const { value: formValues } = await Swal.fire({
+        title: 'Manage Committed Delivery Date',
+        html: `
+          <div style="display:flex; flex-direction:column; gap:12px; text-align:left;">
+            <div>
+              <label style="font-size:0.8rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Committed Delivery Date</label>
+              <input type="date" id="swal-deadline-date" class="swal2-input" value="${defaultDate}" style="margin:0; width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:0.8rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Reason for Deadline Adjustment (Optional)</label>
+              <textarea id="swal-deadline-reason" class="swal2-textarea" placeholder="Reason for adjusting delivery schedule..." style="margin:0; width:100%; box-sizing:border-box;"></textarea>
+            </div>
+          </div>
+        `,
+        focusConfirm: false,
+        preConfirm: () => {
+          const dateVal = document.getElementById('swal-deadline-date').value;
+          const reason = document.getElementById('swal-deadline-reason').value.trim();
+          if (!dateVal) {
+            Swal.showValidationMessage('Please pick a valid delivery date');
+            return false;
+          }
+          return { committed_delivery_date: dateVal, reason };
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Update Deadline',
+        confirmButtonColor: '#0284c7'
+      });
+
+      if (formValues) {
+        try {
+          const res = await fetch(`${API_BASE}/design/tickets/${t.id}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              assigned_to: t.assigned_to,
+              committed_delivery_date: formValues.committed_delivery_date,
+              estimated_hours: t.estimated_hours,
+              reason: formValues.reason || 'Committed delivery date updated by Design Head'
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.status === 'success') {
+            Swal.fire('Deadline Updated', data.message || 'Committed delivery date updated.', 'success');
+            const refreshRes = await fetch(`${API_BASE}/design/tickets/${t.id}`, { headers });
+            ticketDetail = await refreshRes.json();
+            render();
+          } else {
+            Swal.fire('Error', data.message || 'Failed to update delivery date', 'error');
           }
         } catch (e) {
           console.error(e);
