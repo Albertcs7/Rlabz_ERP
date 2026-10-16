@@ -1,6 +1,8 @@
 import html2pdf from 'html2pdf.js';
 
 const LOGO_SRC = '/assets/RlabZ_Logo.png';
+// Rajagiri College of Social Sciences emblem, shown top-right opposite the RLabZ logo.
+const RCSS_LOGO_SRC = '/assets/RCSS_Logo.png';
 // Icon-only mark (no wordmark) — used for the decorative side watermark so a
 // half-crop never shows illegible cut-off text, only the swirl shape.
 const WATERMARK_SRC = '/assets/RlabZ_Watermark.png';
@@ -84,6 +86,7 @@ export function buildCertificateHtml(certificate) {
     <div class="certificate-sheet-inner">
       <img src="${WATERMARK_SRC}" alt="" aria-hidden="true" class="certificate-watermark" />
       <img src="${LOGO_SRC}" alt="RLabZ" class="certificate-logo" />
+      <img src="${RCSS_LOGO_SRC}" alt="Rajagiri College of Social Sciences" class="certificate-logo-rcss" />
 
       <div class="certificate-body">
         <div class="certificate-title">CERTIFICATE OF COMPLETION</div>

@@ -219,6 +219,18 @@
   z-index: 2;
 }
 
+/* RCSS emblem — mirrors .certificate-logo on the opposite (top-right) corner.
+   Slightly taller than the RLabZ wordmark because a round emblem reads
+   smaller than a wide logo at the same height. */
+.certificate-logo-rcss {
+  position: absolute;
+  top: 14px;
+  right: 22px;
+  height: 48px;
+  width: auto;
+  z-index: 2;
+}
+
 /* Decorative side watermark — shows only the right half of the icon-only mark
    (object-position shifts the crop), anchored to the left edge, low opacity
    so it reads as a background element rather than competing with the text.
