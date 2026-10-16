@@ -732,6 +732,7 @@ export function AdminUsers(route, router) {
 
   // 1. Create User Modal
   function renderCreateUserModal() {
+    const initialRandomPassword = generateRandomPassword();
     return `
       <div class="admin-modal-overlay">
         <div class="admin-modal modal-lg">
@@ -770,7 +771,7 @@ export function AdminUsers(route, router) {
                 <div class="admin-form-group">
                   <label class="admin-form-label">Temporary Password *</label>
                   <div style="display:flex; gap:0.5rem;">
-                    <input type="text" name="password" id="input-create-pwd" class="admin-form-input" value="Welcome@123" required />
+                    <input type="text" name="password" id="input-create-pwd" class="admin-form-input" value="${escapeHtml(initialRandomPassword)}" required minlength="6" />
                     <button type="button" class="btn-admin btn-admin-outline" id="btn-gen-pwd" style="white-space:nowrap; font-size:0.8rem;">Generate</button>
                   </div>
                 </div>
@@ -831,14 +832,14 @@ export function AdminUsers(route, router) {
     root.querySelector('#btn-modal-close')?.addEventListener('click', () => { activeModal = null; render(); });
     root.querySelector('#btn-cancel-create')?.addEventListener('click', () => { activeModal = null; render(); });
 
-    container.querySelector('#btn-gen-pwd')?.addEventListener('click', () => {
+    root.querySelector('#btn-gen-pwd')?.addEventListener('click', () => {
       const pwd = generateRandomPassword();
-      const input = container.querySelector('#input-create-pwd');
+      const input = root.querySelector('#input-create-pwd');
       if (input) input.value = pwd;
     });
 
-    const roleSelect = container.querySelector('#create-role-select');
-    const profileSection = container.querySelector('#create-role-profile-section');
+    const roleSelect = root.querySelector('#create-role-select');
+    const profileSection = root.querySelector('#create-role-profile-section');
     if (roleSelect && profileSection) {
       roleSelect.addEventListener('change', () => {
         const val = roleSelect.value;
@@ -901,7 +902,7 @@ export function AdminUsers(route, router) {
       });
     }
 
-    const form = container.querySelector('#form-create-user');
+    const form = root.querySelector('#form-create-user');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -921,7 +922,8 @@ export function AdminUsers(route, router) {
             await loadOverview();
             await loadUsers(1);
           } else {
-            Swal.fire({ title: 'Validation Error', text: data.error || data.message || 'Please correct inputs.', icon: 'error' });
+            const errorMsg = data.error || (data.errors ? Object.values(data.errors).flat().join('<br>') : data.message) || 'Please correct inputs.';
+            Swal.fire({ title: 'Validation Error', html: errorMsg, icon: 'error' });
           }
         } catch (err) {
           toast('Network error creating user.', 'error');
@@ -1171,25 +1173,25 @@ export function AdminUsers(route, router) {
         } else {
           selectedUserPermissions = selectedUserPermissions.filter(p => p !== val);
         }
-        const counter = container.querySelector('#val-perm-count');
+        const counter = root.querySelector('#val-perm-count');
         if (counter) counter.textContent = selectedUserPermissions.length;
       });
     });
 
     // Reset to role defaults
-    container.querySelector('#btn-reset-role-defaults')?.addEventListener('click', () => {
+    root.querySelector('#btn-reset-role-defaults')?.addEventListener('click', () => {
       const defaults = selectedUser.role_defaults || [];
       selectedUserPermissions = [...defaults];
-      container.querySelectorAll('.chk-perm').forEach(chk => {
+      root.querySelectorAll('.chk-perm').forEach(chk => {
         chk.checked = defaults.includes(chk.value);
       });
-      const counter = container.querySelector('#val-perm-count');
+      const counter = root.querySelector('#val-perm-count');
       if (counter) counter.textContent = selectedUserPermissions.length;
       toast(`Permissions reset to standard defaults for ${selectedUser.user.role}.`);
     });
 
     // Select all / clear per group
-    container.querySelectorAll('.btn-perm-group-select').forEach(btn => {
+    root.querySelectorAll('.btn-perm-group-select').forEach(btn => {
       btn.addEventListener('click', () => {
         const group = btn.closest('.admin-perm-group');
         const checkboxes = group.querySelectorAll('.chk-perm');
@@ -1200,13 +1202,13 @@ export function AdminUsers(route, router) {
           if (action === 'all' && !selectedUserPermissions.includes(val)) selectedUserPermissions.push(val);
           if (action === 'none') selectedUserPermissions = selectedUserPermissions.filter(p => p !== val);
         });
-        const counter = container.querySelector('#val-perm-count');
+        const counter = root.querySelector('#val-perm-count');
         if (counter) counter.textContent = selectedUserPermissions.length;
       });
     });
 
     // Save permissions
-    container.querySelector('#btn-save-perms')?.addEventListener('click', async () => {
+    root.querySelector('#btn-save-perms')?.addEventListener('click', async () => {
       try {
         const res = await fetch(`${API_BASE}/admin/users/${selectedUser.user.id}/permissions`, {
           method: 'PUT',
