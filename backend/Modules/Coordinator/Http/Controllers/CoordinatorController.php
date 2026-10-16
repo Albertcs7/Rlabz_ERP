@@ -490,6 +490,42 @@ class CoordinatorController extends Controller
         ], 201);
     }
 
+    public function start(Request $request, Project $project)
+    {
+        // Starting a project is a coordinator action. 'view-projects' is deliberately not
+        // accepted here (unlike read endpoints) because students also hold that permission.
+        if (!$this->isAuthorized($request, ['view-coordinator'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        // Only accepted → in_progress is allowed. The status check is part of the UPDATE
+        // itself, so a concurrent rejection/start cannot slip in between check and write.
+        $updated = Project::where('id', $project->id)
+            ->where('status', 'accepted')
+            ->update(['status' => 'in_progress']);
+
+        if (!$updated) {
+            $currentStatus = Project::where('id', $project->id)->value('status');
+            return response()->json([
+                'error' => "Only an 'accepted' project can be started (current status: {$currentStatus})",
+            ], 422);
+        }
+
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'user_id' => $this->currentUserId($request),
+                'action' => 'Project Started',
+                'description' => "Project \"{$project->title}\" (ID: {$project->id}) started by Coordinator — status changed to in_progress.",
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Project started successfully',
+            'data' => $project->fresh(),
+        ]);
+    }
+
     public function close(Request $request, Project $project)
     {
         if (!$this->isAuthorized($request, ['view-coordinator', 'view-projects'])) {
