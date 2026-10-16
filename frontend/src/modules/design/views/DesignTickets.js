@@ -77,66 +77,88 @@ export async function DesignTickets(route, router) {
           </a>
         </div>
 
-        <!-- Filters & Search Bar (Finance Module Styled) -->
-        <div class="design-controls-bar">
-          <div class="search-filter-wrap">
-            <div class="fin-search-wrap" style="flex: 1; min-width: 260px;">
-              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" id="ticket-search-input" class="fin-input" placeholder="Search by ID, title, project, division..." value="${searchQuery}">
+        <!-- Filters & Search Bar in Columns (Matching Finance Layout) -->
+        <div class="fin-filter-bar" style="display: flex; align-items: flex-end; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; background: #ffffff; padding: 1rem 1.25rem; border-radius: 10px; border: 1px solid var(--border-color, #e2e8f0);">
+          <div class="fin-filter-group" style="flex: 2; min-width: 220px;">
+            <label style="display: block; font-size: 0.74rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; margin-bottom: 4px;">Search Tickets</label>
+            <div class="fin-search-wrap" style="position: relative; width: 100%;">
+              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="ticket-search-input" class="fin-input" placeholder="Search by ID, title, project, division..." value="${searchQuery}" style="padding-left: 32px; width: 100%;">
             </div>
+          </div>
 
-            <select id="filter-project-select" class="design-select">
-              <option value="all" ${filterProject === 'all' ? 'selected' : ''}>All Projects</option>
-              ${availableProjects.map(p => `<option value="${p.id}" ${filterProject == p.id ? 'selected' : ''}>${p.title}</option>`).join('')}
-            </select>
-            
-            <select id="filter-status-select" class="design-select">
-              <option value="all" ${filterStatus === 'all' ? 'selected' : ''}>All States (10)</option>
-              <option value="New" ${filterStatus === 'New' ? 'selected' : ''}>New</option>
-              <option value="Assigned" ${filterStatus === 'Assigned' ? 'selected' : ''}>Assigned</option>
-              <option value="In Progress" ${filterStatus === 'In Progress' ? 'selected' : ''}>In Progress</option>
-              <option value="Submitted" ${filterStatus === 'Submitted' ? 'selected' : ''}>Submitted</option>
-              <option value="In Review" ${filterStatus === 'In Review' ? 'selected' : ''}>In Review</option>
-              <option value="Revision" ${filterStatus === 'Revision' ? 'selected' : ''}>Revision</option>
-              <option value="Approved" ${filterStatus === 'Approved' ? 'selected' : ''}>Approved</option>
-              <option value="Closed" ${filterStatus === 'Closed' ? 'selected' : ''}>Closed</option>
-              <option value="On Hold" ${filterStatus === 'On Hold' ? 'selected' : ''}>On Hold</option>
-              <option value="Cancelled" ${filterStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-            </select>
+          <div class="fin-filter-group" style="flex: 1; min-width: 130px; max-width: 180px;">
+            <label style="display: block; font-size: 0.74rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; margin-bottom: 4px;">Project</label>
+            <div class="fin-select-wrap">
+              <select id="filter-project-select" class="fin-input" style="width: 100%;">
+                <option value="all" ${filterProject === 'all' ? 'selected' : ''}>All Projects</option>
+                ${availableProjects.map(p => `<option value="${p.id}" ${filterProject == p.id ? 'selected' : ''}>${p.title}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          
+          <div class="fin-filter-group" style="flex: 1; min-width: 130px; max-width: 180px;">
+            <label style="display: block; font-size: 0.74rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; margin-bottom: 4px;">Workflow Status</label>
+            <div class="fin-select-wrap">
+              <select id="filter-status-select" class="fin-input" style="width: 100%;">
+                <option value="all" ${filterStatus === 'all' ? 'selected' : ''}>All States (10)</option>
+                <option value="New" ${filterStatus === 'New' ? 'selected' : ''}>New</option>
+                <option value="Assigned" ${filterStatus === 'Assigned' ? 'selected' : ''}>Assigned</option>
+                <option value="In Progress" ${filterStatus === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                <option value="Submitted" ${filterStatus === 'Submitted' ? 'selected' : ''}>Submitted</option>
+                <option value="In Review" ${filterStatus === 'In Review' ? 'selected' : ''}>In Review</option>
+                <option value="Revision" ${filterStatus === 'Revision' ? 'selected' : ''}>Revision</option>
+                <option value="Approved" ${filterStatus === 'Approved' ? 'selected' : ''}>Approved</option>
+                <option value="Closed" ${filterStatus === 'Closed' ? 'selected' : ''}>Closed</option>
+                <option value="On Hold" ${filterStatus === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                <option value="Cancelled" ${filterStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+              </select>
+            </div>
+          </div>
 
-            <select id="filter-work-select" class="design-select">
-              <option value="all" ${filterWorkType === 'all' ? 'selected' : ''}>All Work Types</option>
-              <option value="poster" ${filterWorkType === 'poster' ? 'selected' : ''}>Poster / Static</option>
-              <option value="social_creative" ${filterWorkType === 'social_creative' ? 'selected' : ''}>Social Creative</option>
-              <option value="video_motion" ${filterWorkType === 'video_motion' ? 'selected' : ''}>Video / Motion</option>
-              <option value="presentation" ${filterWorkType === 'presentation' ? 'selected' : ''}>Presentation</option>
-              <option value="other" ${filterWorkType === 'other' ? 'selected' : ''}>Other</option>
-            </select>
+          <div class="fin-filter-group" style="flex: 1; min-width: 130px; max-width: 180px;">
+            <label style="display: block; font-size: 0.74rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; margin-bottom: 4px;">Work Type</label>
+            <div class="fin-select-wrap">
+              <select id="filter-work-select" class="fin-input" style="width: 100%;">
+                <option value="all" ${filterWorkType === 'all' ? 'selected' : ''}>All Work Types</option>
+                <option value="poster" ${filterWorkType === 'poster' ? 'selected' : ''}>Poster / Static</option>
+                <option value="social_creative" ${filterWorkType === 'social_creative' ? 'selected' : ''}>Social Creative</option>
+                <option value="video_motion" ${filterWorkType === 'video_motion' ? 'selected' : ''}>Video / Motion</option>
+                <option value="presentation" ${filterWorkType === 'presentation' ? 'selected' : ''}>Presentation</option>
+                <option value="other" ${filterWorkType === 'other' ? 'selected' : ''}>Other</option>
+              </select>
+            </div>
+          </div>
 
-            <select id="filter-priority-select" class="design-select">
-              <option value="all" ${filterPriority === 'all' ? 'selected' : ''}>All Priorities</option>
-              <option value="normal" ${filterPriority === 'normal' ? 'selected' : ''}>Normal</option>
-              <option value="high" ${filterPriority === 'high' ? 'selected' : ''}>High</option>
-              <option value="urgent" ${filterPriority === 'urgent' ? 'selected' : ''}>Urgent</option>
-            </select>
+          <div class="fin-filter-group" style="flex: 1; min-width: 110px; max-width: 150px;">
+            <label style="display: block; font-size: 0.74rem; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; margin-bottom: 4px;">Priority</label>
+            <div class="fin-select-wrap">
+              <select id="filter-priority-select" class="fin-input" style="width: 100%;">
+                <option value="all" ${filterPriority === 'all' ? 'selected' : ''}>All Priorities</option>
+                <option value="normal" ${filterPriority === 'normal' ? 'selected' : ''}>Normal</option>
+                <option value="high" ${filterPriority === 'high' ? 'selected' : ''}>High</option>
+                <option value="urgent" ${filterPriority === 'urgent' ? 'selected' : ''}>Urgent</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <!-- Data Table -->
-        <table class="design-data-table">
-          <thead>
-            <tr>
-              <th>Ticket ID</th>
-              <th>Work Type &amp; Title</th>
-              <th>Division</th>
-              <th>Ball Is With</th>
-              <th>Status</th>
-              <th>Priority</th>
-              <th>Assigned To</th>
-              <th>Committed Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+        <!-- Data Table Wrapped in fin-table-wrap with No-Overflow -->
+        <div class="fin-table-wrap" style="overflow-x: auto; width: 100%;">
+          <table class="fin-table" style="width: 100%; min-width: 980px; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Ticket ID</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Work Type &amp; Title</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Division</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Ball Is With</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Status</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Priority</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Assigned To</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem;">Committed Date</th>
+                <th style="padding: 10px 14px; font-size: 0.74rem; text-align: right; white-space: nowrap;">Actions</th>
+              </tr>
+            </thead>
           <tbody>
             ${filtered.length === 0 ? `
               <tr>
@@ -181,8 +203,8 @@ export async function DesignTickets(route, router) {
                     <span style="color: #94a3b8;">Req: ${new Date(t.required_by).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                   `}
                 </td>
-                <td>
-                  <button class="design-btn design-btn-secondary design-btn-sm btn-open-studio" data-id="${t.id}">
+                <td style="text-align: right; white-space: nowrap;">
+                  <button class="fin-btn outline sm btn-open-studio" data-id="${t.id}" style="padding: 4px 10px; font-size: 0.78rem;">
                     Open Studio
                   </button>
                 </td>
@@ -191,6 +213,7 @@ export async function DesignTickets(route, router) {
           </tbody>
         </table>
       </div>
+    </div>
     `;
 
     attachEvents();

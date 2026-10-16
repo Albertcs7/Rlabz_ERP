@@ -60,7 +60,7 @@ async function photoRequest(method, body) {
 export function mountProfilePhotoEditor(slot, { name = '', onChange, layout = 'row' } = {}) {
   if (!slot) return;
 
-  let savedPath = null;
+  let savedPath = authStore?.user?.avatar || authStore?.user?.profile_photo_path || authStore?.user?.profile_photo_url || null;
   let pendingFile = null;
   let pendingUrl = null;
   let showUrlInput = false;
@@ -73,6 +73,16 @@ export function mountProfilePhotoEditor(slot, { name = '', onChange, layout = 'r
   // (topbar + popover) and the cached user, then let the page react.
   function photoChanged(url) {
     rememberProfilePhoto(url);
+    if (authStore?.user) {
+      authStore.user.avatar = url;
+      authStore.user.profile_photo_url = url;
+      authStore.user.profile_photo_path = url;
+      localStorage.setItem('user', JSON.stringify(authStore.user));
+    }
+    if (!url) {
+      localStorage.removeItem('rlabz_profile_photo');
+      localStorage.removeItem('profile_photo_url');
+    }
     applyHeaderAvatar(document, url, authStore?.user?.name || name);
     onChange?.(url);
   }

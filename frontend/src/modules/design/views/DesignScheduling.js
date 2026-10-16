@@ -150,7 +150,7 @@ export async function DesignScheduling(route, router) {
                     </div>
                   </div>
                   <div style="margin-top: 1rem; display: flex; gap: 8px;">
-                    <button class="fin-btn primary sm btn-assign-ticket" data-id="${t.id}" data-number="${t.ticket_number}" data-title="${t.title}" style="flex: 1; justify-content: center;">
+                    <button class="fin-btn primary sm btn-assign-ticket" data-id="${t.id}" data-number="${t.ticket_number}" data-title="${t.title}" data-required="${t.required_by || ''}" data-hours="${t.estimated_hours || 8}" style="flex: 1; justify-content: center;">
                       Assign Designer
                     </button>
                     <button class="fin-btn outline sm btn-view-ticket" data-id="${t.id}">
@@ -385,36 +385,70 @@ export async function DesignScheduling(route, router) {
         const ticketId = btn.dataset.id;
         const number = btn.dataset.number;
         const title = btn.dataset.title;
+        const reqDate = btn.dataset.required ? new Date(btn.dataset.required).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not specified';
+        const estHours = btn.dataset.hours || 8;
 
         const designers = (capacityData && Array.isArray(capacityData.team)) ? capacityData.team : [];
-        const designerOptions = designers.map(d => `<option value="${d.user_id}">${d.name} (${d.hours_committed_this_week || 0}h committed)</option>`).join('');
+        const designerOptions = designers.map(d => `<option value="${d.user_id}">${d.name} (${d.hours_committed_this_week || 0}h committed · ${d.weekly_capacity_hours || 20}h cap)</option>`).join('');
+
+        const defaultCommittedDate = btn.dataset.required ? new Date(btn.dataset.required).toISOString().slice(0, 16) : new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16);
 
         const { value: formValues } = await Swal.fire({
-          title: `Assign ${number}`,
+          title: `Assign Designer: ${number}`,
+          width: '560px',
           html: `
-            <div style="display:flex; flex-direction:column; gap:10px; text-align:left;">
-              <p style="margin:0; font-size:0.85rem; color:#475569;">${title}</p>
-              <label style="font-size:0.8rem; font-weight:700;">Select Designer</label>
-              <select id="swal-assignee" class="swal2-select" style="margin:0; width:100%;">
-                ${designerOptions}
-              </select>
-              <label style="font-size:0.8rem; font-weight:700;">Committed Delivery Date</label>
-              <input type="datetime-local" id="swal-committed-date" class="swal2-input" style="margin:0;">
-              <label style="font-size:0.8rem; font-weight:700;">Estimated Effort (Hours)</label>
-              <input type="number" id="swal-effort" class="swal2-input" value="8" style="margin:0;">
+            <div style="display:flex; flex-direction:column; gap:12px; text-align:left; font-family: inherit;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
+                <strong style="color: #0f172a; font-size: 0.95rem; display: block;">${title}</strong>
+                <div style="font-size: 0.8rem; color: #0284c7; font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+                  <span>📅 Requester Delivery Deadline:</span>
+                  <span style="background: #e0f2fe; padding: 2px 8px; border-radius: 4px;">${reqDate}</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:0.8rem; font-weight:700; color: #334155; display: block; margin-bottom: 4px;">1. Select Designer *</label>
+                <select id="swal-assignee" class="swal2-select" style="margin:0; width:100%; box-sizing: border-box; font-size: 0.88rem; height: 40px;">
+                  ${designerOptions}
+                </select>
+              </div>
+
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label style="font-size:0.8rem; font-weight:700; color: #334155;">2. Committed Delivery Date *</label>
+                  <span style="font-size: 0.72rem; color: #64748b;">Compare with deadline above</span>
+                </div>
+                <input type="datetime-local" id="swal-committed-date" class="swal2-input" value="${defaultCommittedDate}" style="margin:0; width:100%; box-sizing: border-box; font-size: 0.88rem;">
+              </div>
+
+              <div>
+                <label style="font-size:0.8rem; font-weight:700; color: #334155; display: block; margin-bottom: 4px;">3. Estimated Effort (Hours for capacity planning)</label>
+                <input type="number" id="swal-effort" class="swal2-input" value="${estHours}" min="1" max="100" style="margin:0; width:100%; box-sizing: border-box; font-size: 0.88rem;">
+              </div>
             </div>
           `,
           focusConfirm: false,
           preConfirm: () => {
+            const assignee = document.getElementById('swal-assignee').value;
+            const committedDate = document.getElementById('swal-committed-date').value;
+            const effort = document.getElementById('swal-effort').value;
+            if (!assignee) {
+              Swal.showValidationMessage('Please select a designer.');
+              return false;
+            }
+            if (!committedDate) {
+              Swal.showValidationMessage('Committed delivery date is required.');
+              return false;
+            }
             return {
-              assigned_to: document.getElementById('swal-assignee').value,
-              committed_delivery_date: document.getElementById('swal-committed-date').value || new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16),
-              estimated_hours: document.getElementById('swal-effort').value || 8
+              assigned_to: assignee,
+              committed_delivery_date: committedDate,
+              estimated_hours: effort || 8
             };
           },
           showCancelButton: true,
           confirmButtonText: 'Confirm Assignment',
-          confirmButtonColor: '#059669'
+          confirmButtonColor: '#009688'
         });
 
         if (formValues) {

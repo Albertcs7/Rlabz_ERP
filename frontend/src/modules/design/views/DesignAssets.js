@@ -116,28 +116,28 @@ export async function DesignAssets(route, router) {
           </div>
         </div>
 
-        <!-- Compact Asset Grid (Requirement 9) -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+        <!-- Compact Card-Sized Asset Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 240px)); gap: 16px; justify-content: start;">
           ${filtered.length === 0 ? `
             <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: #94a3b8;">
               <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📂</div>
               No approved assets match your search or filter criteria.
             </div>
           ` : filtered.map(a => `
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.15s ease, box-shadow 0.15s ease;">
-              <!-- Compact Thumbnail Preview (110px max height) -->
-              <div style="height: 110px; background: #0f172a; position: relative; overflow: hidden;">
+            <div class="fin-asset-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease; max-width: 240px; width: 100%;">
+              <!-- Card Thumbnail Preview (160px height, object-fit: cover - no image stretch) -->
+              <div style="height: 160px; background: #0f172a; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                 <img src="${a.preview_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'}" alt="${a.title}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95;">
-                <span style="position: absolute; top: 6px; right: 6px; background: rgba(15, 23, 42, 0.85); color: #ffffff; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; backdrop-filter: blur(4px);">
+                <span style="position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.85); color: #ffffff; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; backdrop-filter: blur(4px);">
                   Reused ${a.usage_count || 0}x
                 </span>
-                <span style="position: absolute; bottom: 6px; left: 6px; background: rgba(15, 23, 42, 0.75); color: #cbd5e1; font-size: 0.65rem; font-weight: 600; padding: 2px 6px; border-radius: 4px;">
+                <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(15, 23, 42, 0.75); color: #cbd5e1; font-size: 0.65rem; font-weight: 600; padding: 2px 6px; border-radius: 4px;">
                   ${workTypeLabels[a.work_type] || a.work_type}
                 </span>
               </div>
 
-              <!-- Compact Body with Truncated Meta -->
-              <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1;">
+              <!-- Card Body with Meta -->
+              <div style="padding: 12px; display: flex; flex-direction: column; gap: 6px; flex: 1;">
                 <h4 style="margin: 0; font-size: 0.88rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${a.title}">
                   ${a.title}
                 </h4>
@@ -148,32 +148,27 @@ export async function DesignAssets(route, router) {
                 </div>
 
                 <div style="display: flex; gap: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                  <span class="asset-brand-badge" style="font-size: 0.68rem; padding: 1px 6px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <span class="asset-brand-badge" style="font-size: 0.68rem; padding: 1px 6px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     🎨 ${a.brand_kit_name || 'RLabZ Brand'}
                   </span>
                   ${a.project_title ? `
-                    <span class="asset-project-badge" style="font-size: 0.68rem; padding: 1px 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span class="asset-project-badge" style="font-size: 0.68rem; padding: 1px 6px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                       📁 ${a.project_title}
                     </span>
                   ` : ''}
                 </div>
 
-                <!-- Compact Action Area -->
-                <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; gap: 4px; align-items: center;">
+                <!-- Clean Card Action Area (Export only, removed redundant Source) -->
+                <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #f1f5f9; display: flex; gap: 6px; align-items: center;">
                   <button class="fin-btn outline sm btn-preview-asset" data-id="${a.id}" style="padding: 3px 8px; font-size: 0.72rem;" title="Quick Preview & Details">
                     Preview
                   </button>
                   <button class="fin-btn primary sm btn-clone-asset" data-id="${a.id}" style="flex: 1; justify-content: center; padding: 3px 6px; font-size: 0.72rem;">
                     Clone
                   </button>
-                  ${a.deliverable_url ? `
-                    <a href="${a.deliverable_url}" download target="_blank" class="fin-btn outline sm" style="padding: 3px 8px; font-size: 0.72rem;" title="Download Deliverable">
+                  ${(a.deliverable_url || a.source_file_url) ? `
+                    <a href="${a.deliverable_url || a.source_file_url}" download target="_blank" class="fin-btn outline sm" style="padding: 3px 8px; font-size: 0.72rem;" title="Export Deliverable">
                       Export
-                    </a>
-                  ` : ''}
-                  ${a.source_file_url ? `
-                    <a href="${a.source_file_url}" download target="_blank" class="fin-btn outline sm" style="padding: 3px 6px; font-size: 0.72rem; background:#f8fafc;" title="Download Source File">
-                      Source
                     </a>
                   ` : ''}
                 </div>
@@ -241,14 +236,9 @@ export async function DesignAssets(route, router) {
                 </div>
               </div>
               <div style="display:flex; gap:8px; margin-top:8px;">
-                ${a.deliverable_url ? `
-                  <a href="${a.deliverable_url}" download target="_blank" class="fin-btn primary sm" style="flex:1; justify-content:center;">
-                    Download Deliverable
-                  </a>
-                ` : ''}
-                ${a.source_file_url ? `
-                  <a href="${a.source_file_url}" download target="_blank" class="fin-btn outline sm" style="flex:1; justify-content:center;">
-                    Download Source File
+                ${(a.deliverable_url || a.source_file_url) ? `
+                  <a href="${a.deliverable_url || a.source_file_url}" download target="_blank" class="fin-btn primary sm" style="flex:1; justify-content:center;">
+                    Export Deliverable File
                   </a>
                 ` : ''}
               </div>

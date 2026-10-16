@@ -29,7 +29,7 @@ export async function DesignLayout(contentChild, route, router) {
   const currentPath = window.location.pathname;
   
   const wrapper = document.createElement('div');
-  wrapper.className = 'dashboard-layout design-layout animate-fade-in';
+  wrapper.className = 'dashboard-layout design-layout';
   
   const displayName = authStore.user?.name || authStore.user?.username || 'Design Head';
   const roleName = authStore.role ? authStore.role.replace('_', ' ').toUpperCase() : 'DESIGN HEAD';
@@ -190,6 +190,44 @@ export async function DesignLayout(contentChild, route, router) {
       
       <main class="content-outlet design-content-outlet" id="layout-outlet"></main>
     </div>
+
+    <!-- Native Right Floating Bell & Slide-Out Drawer (Flush to Right Border) -->
+    <button class="fin-bell-trigger" id="design-layout-bell-btn" title="View Action Items &amp; Notifications">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      <span class="fin-bell-badge" id="design-layout-bell-badge" style="display: none;">0</span>
+    </button>
+
+    <!-- Drawer Backdrop -->
+    <div class="fin-drawer-backdrop" id="design-layout-drawer-backdrop"></div>
+
+    <!-- Notification Drawer -->
+    <div class="fin-notification-drawer" id="design-layout-notification-drawer">
+      <div class="fin-drawer-header">
+        <div class="fin-drawer-title-wrap">
+          <span class="fin-drawer-title">Design Action Items</span>
+          <span class="fin-drawer-count" id="design-layout-drawer-count" style="display: none;">0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <a href="/design/notifications" class="fin-btn outline sm" id="btn-design-drawer-top-view-all" style="font-size: 0.75rem; padding: 4px 10px; font-weight: 700; text-decoration: none; border-radius: 6px;">
+            View All ↗
+          </a>
+          <button class="fin-drawer-close" id="design-layout-drawer-close" title="Close Drawer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="fin-drawer-body" id="design-layout-drawer-body">
+        <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b; font-size: 0.9rem;">
+          Loading action items...
+        </div>
+      </div>
+    </div>
   `;
 
   // Attach Content Child
@@ -202,6 +240,132 @@ export async function DesignLayout(contentChild, route, router) {
       outlet.appendChild(contentChild);
     }
   }
+
+  // Bind Native Drawer Controls
+  const bellBtn = wrapper.querySelector('#design-layout-bell-btn');
+  const drawer = wrapper.querySelector('#design-layout-notification-drawer');
+  const backdrop = wrapper.querySelector('#design-layout-drawer-backdrop');
+  const closeBtn = wrapper.querySelector('#design-layout-drawer-close');
+  const drawerBody = wrapper.querySelector('#design-layout-drawer-body');
+  const bellBadge = wrapper.querySelector('#design-layout-bell-badge');
+  const drawerCount = wrapper.querySelector('#design-layout-drawer-count');
+
+  function openDrawer() {
+    drawer?.classList.add('open');
+    backdrop?.classList.add('open');
+    bellBtn?.classList.add('drawer-open');
+  }
+
+  function closeDrawer() {
+    drawer?.classList.remove('open');
+    backdrop?.classList.remove('open');
+    bellBtn?.classList.remove('drawer-open');
+  }
+
+  bellBtn?.addEventListener('click', openDrawer);
+  closeBtn?.addEventListener('click', closeDrawer);
+  backdrop?.addEventListener('click', closeDrawer);
+
+  // Load Action Items & Notifications for Drawer
+  async function loadDrawerNotifications() {
+    const tkn = localStorage.getItem('token');
+    if (!tkn) return;
+    try {
+      const res = await fetch(`${API_BASE}/design/notifications`, {
+        headers: { Authorization: `Bearer ${tkn}`, 'Content-Type': 'application/json' }
+      }).then(r => r.ok ? r.json() : null);
+
+      if (res && res.status === 'success') {
+        const dismissed = JSON.parse(localStorage.getItem('design_dismissed_alerts') || '[]');
+        const activeAlerts = (res.alerts || []).filter(a => !dismissed.includes(a.id));
+        const unreadDb = (res.data || []).filter(n => !n.is_read);
+
+        const totalUnread = activeAlerts.length + unreadDb.length;
+
+        if (totalUnread > 0) {
+          if (bellBadge) {
+            bellBadge.textContent = totalUnread;
+            bellBadge.style.display = 'block';
+          }
+          if (drawerCount) {
+            drawerCount.textContent = totalUnread;
+            drawerCount.style.display = 'inline-block';
+          }
+          bellBtn?.classList.add('fin-bell-shake');
+        } else {
+          if (bellBadge) bellBadge.style.display = 'none';
+          if (drawerCount) drawerCount.style.display = 'none';
+          bellBtn?.classList.remove('fin-bell-shake');
+        }
+
+        if (drawerBody) {
+          if (activeAlerts.length === 0 && unreadDb.length === 0) {
+            drawerBody.innerHTML = `
+              <div style="text-align:center; padding: 2.5rem 1rem; color: #64748b; font-size: 0.9rem;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
+                No pending action items.<br>All design briefs are scoped, assigned, and on schedule.
+              </div>
+            `;
+          } else {
+            const allItemsHtml = [
+              ...activeAlerts.map(a => `
+                <div class="fin-action-card ${a.isOverdue || (a.daysLeft !== null && a.daysLeft <= 0) ? 'card-overdue' : 'card-upcoming'}" data-ticket-id="${a.ticketId || ''}" role="button" tabindex="0">
+                  <div class="fin-card-header-row">
+                    <span class="fin-cat-badge fin-cat-${a.type || 'info'}">${a.category}</span>
+                    ${a.daysLeft !== null && a.daysLeft !== undefined ? `
+                      <span class="fin-countdown-tag ${a.isOverdue || a.daysLeft < 0 ? 'tag-red' : (a.daysLeft === 0 ? 'tag-red' : 'tag-amber')}">
+                        ${a.isOverdue || a.daysLeft < 0 ? `${Math.abs(a.daysLeft)}d Overdue` : (a.daysLeft === 0 ? 'Due Today' : `${a.daysLeft}d Left`)}
+                      </span>
+                    ` : `
+                      <span class="fin-countdown-tag tag-amber">Action Needed</span>
+                    `}
+                  </div>
+                  <div class="fin-card-msg">${a.message}</div>
+                  <div class="fin-card-meta">
+                    <span class="fin-project-name">${a.ticketNumber ? `<strong>${a.ticketNumber}</strong> · ` : ''}${a.projectName || 'Design Studio'}</span>
+                  </div>
+                </div>
+              `),
+              ...unreadDb.map(n => `
+                <div class="fin-action-card card-upcoming" role="button" tabindex="0">
+                  <div class="fin-card-header-row">
+                    <span class="fin-cat-badge fin-cat-info">${n.category || 'NOTIFICATION'}</span>
+                    <span class="fin-countdown-tag tag-blue">New</span>
+                  </div>
+                  <div class="fin-card-msg">${n.message}</div>
+                  <div class="fin-card-meta">
+                    <span class="fin-project-name">${new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  </div>
+                </div>
+              `)
+            ].join('');
+
+            drawerBody.innerHTML = allItemsHtml;
+
+            // Click action cards
+            drawerBody.querySelectorAll('.fin-action-card').forEach(card => {
+              card.addEventListener('click', () => {
+                const ticketId = card.getAttribute('data-ticket-id');
+                closeDrawer();
+                if (ticketId) {
+                  if (router && typeof router.push === 'function') router.push(`/design/tickets/${ticketId}`);
+                  else window.location.href = `/design/tickets/${ticketId}`;
+                } else {
+                  if (router && typeof router.push === 'function') router.push('/design/notifications');
+                  else window.location.href = '/design/notifications';
+                }
+              });
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load design drawer alerts:', e);
+    }
+  }
+
+  loadDrawerNotifications();
+  window.addEventListener('design-notifications-updated', loadDrawerNotifications);
 
   // Update active sidebar link
   setTimeout(updateDesignSidebar, 0);

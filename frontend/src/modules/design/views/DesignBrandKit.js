@@ -303,18 +303,25 @@ export async function DesignBrandKit(route, router) {
           preConfirm: () => {
             const name = document.getElementById('swal-bk-name').value.trim();
             const client = document.getElementById('swal-bk-client').value.trim();
-            if (!name || !client) {
-              Swal.showValidationMessage('Brand Name and Institution/Client are required');
+            const portal = document.getElementById('swal-bk-portal').value.trim();
+
+            if (!name) {
+              Swal.showValidationMessage('Brand Kit Name is required');
               return false;
             }
+            if (portal && !portal.match(/^https?:\/\//i)) {
+              Swal.showValidationMessage('Branding portal URL must be a valid URL starting with http:// or https://');
+              return false;
+            }
+
             const color1 = document.getElementById('swal-bk-color1').value.trim() || '#1E3A8A';
             const color2 = document.getElementById('swal-bk-color2').value.trim() || '#3B82F6';
 
             return {
               name,
-              institution_or_client: client,
-              applicable_entity: document.getElementById('swal-bk-entity').value.trim() || client,
-              branding_portal_url: document.getElementById('swal-bk-portal').value.trim() || null,
+              institution_or_client: client || 'Internal / RLabZ',
+              applicable_entity: document.getElementById('swal-bk-entity').value.trim() || client || 'RLabZ Global',
+              branding_portal_url: portal || null,
               description: document.getElementById('swal-bk-desc').value.trim() || 'Custom institutional brand guidelines and assets.',
               brand_colors: [
                 { name: 'Primary Identity', hex: color1, token: 'Primary', usage: 'Dominant headers, key brand buttons, and hero elements' },
@@ -404,11 +411,21 @@ export async function DesignBrandKit(route, router) {
           confirmButtonText: 'Save Changes',
           confirmButtonColor: '#059669',
           preConfirm: () => {
+            const name = document.getElementById('swal-edit-name').value.trim();
+            const portal = document.getElementById('swal-edit-portal').value.trim();
+            if (!name) {
+              Swal.showValidationMessage('Brand Kit Name is required');
+              return false;
+            }
+            if (portal && !portal.match(/^https?:\/\//i)) {
+              Swal.showValidationMessage('Branding portal URL must be a valid URL starting with http:// or https://');
+              return false;
+            }
             return {
-              name: document.getElementById('swal-edit-name').value.trim(),
+              name,
               institution_or_client: document.getElementById('swal-edit-client').value.trim(),
               applicable_entity: document.getElementById('swal-edit-entity').value.trim(),
-              branding_portal_url: document.getElementById('swal-edit-portal').value.trim(),
+              branding_portal_url: portal || null,
               description: document.getElementById('swal-edit-desc').value.trim()
             };
           }

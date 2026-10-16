@@ -61,67 +61,8 @@ export async function DesignDashboard(route, router) {
     assetCount: 0
   };
 
-  // Build Notification Drawer HTML (exact match to Finance module layout)
-  const drawerHtml = `
-    <!-- Floating Bell Button -->
-    <button class="fin-bell-trigger ${designAlerts.length > 0 ? 'fin-bell-shake' : ''}" id="fin-bell-btn" title="View Action Items & Notifications">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-      </svg>
-      ${designAlerts.length > 0 ? `<span class="fin-bell-badge">${designAlerts.length}</span>` : ''}
-    </button>
-
-    <!-- Drawer Backdrop -->
-    <div class="fin-drawer-backdrop" id="fin-drawer-backdrop"></div>
-
-    <!-- Notification Drawer -->
-    <div class="fin-notification-drawer" id="fin-notification-drawer">
-      <div class="fin-drawer-header">
-        <div class="fin-drawer-title-wrap">
-          <span class="fin-drawer-title">Design Action Items</span>
-          ${designAlerts.length > 0 ? `<span class="fin-drawer-count">${designAlerts.length}</span>` : ''}
-        </div>
-        <button class="fin-drawer-close" id="fin-drawer-close" title="Close Drawer">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-
-      <div class="fin-drawer-body">
-        ${designAlerts.length > 0
-          ? designAlerts.map(a => `
-            <div class="fin-action-card ${a.isOverdue || (a.daysLeft !== null && a.daysLeft <= 0) ? 'card-overdue' : 'card-upcoming'}" data-ticket-id="${a.ticketId || ''}" data-category="${a.category}" data-type="${a.type}" role="button" tabindex="0">
-              <div class="fin-card-header-row">
-                <span class="fin-cat-badge fin-cat-${a.type || 'info'}">${a.category}</span>
-                ${a.daysLeft !== null && a.daysLeft !== undefined ? `
-                  <span class="fin-countdown-tag ${a.isOverdue || a.daysLeft < 0 ? 'tag-red' : (a.daysLeft === 0 ? 'tag-red' : 'tag-amber')}">
-                    ${a.isOverdue || a.daysLeft < 0 ? `${Math.abs(a.daysLeft)}d Overdue` : (a.daysLeft === 0 ? 'Due Today' : `${a.daysLeft}d Left`)}
-                  </span>
-                ` : `
-                  <span class="fin-countdown-tag tag-amber">Action Needed</span>
-                `}
-              </div>
-              <div class="fin-card-msg">${a.message}</div>
-              <div class="fin-card-meta">
-                <span class="fin-project-name">${a.ticketNumber ? `<strong>${a.ticketNumber}</strong> · ` : ''}${a.projectName || 'Design Studio'}</span>
-              </div>
-            </div>
-          `).join('')
-          : `<div style="text-align:center; padding: 2.5rem 1rem; color: #64748b; font-size: 0.9rem;">
-              <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
-              No pending action items.<br>All design briefs are scoped, assigned, and on schedule.
-            </div>`
-        }
-      </div>
-    </div>
-  `;
-
   container.innerHTML = `
-    <!-- Native Notification Drawer & Bell (Finance Styled) -->
-    ${drawerHtml}
+    <!-- Top Header & Quick Actions (Finance Styled) -->
 
     <!-- Top Header & Quick Actions -->
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
@@ -322,56 +263,6 @@ export async function DesignDashboard(route, router) {
         // Refresh page after approval/rejection
         router.push('/design');
       });
-    });
-  });
-
-  // ── Action Items Drawer Interactive Controls (Finance-Matched) ──
-  const bellBtn = container.querySelector('#fin-bell-btn');
-  const drawer = container.querySelector('#fin-notification-drawer');
-  const backdrop = container.querySelector('#fin-drawer-backdrop');
-  const closeBtn = container.querySelector('#fin-drawer-close');
-
-  const openDrawer = () => {
-    if (drawer) drawer.classList.add('open');
-    if (backdrop) backdrop.classList.add('open');
-    if (bellBtn) bellBtn.classList.add('drawer-open');
-  };
-
-  const closeDrawer = () => {
-    if (drawer) drawer.classList.remove('open');
-    if (backdrop) backdrop.classList.remove('open');
-    if (bellBtn) bellBtn.classList.remove('drawer-open');
-  };
-
-  if (bellBtn) bellBtn.addEventListener('click', openDrawer);
-  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
-  if (backdrop) backdrop.addEventListener('click', closeDrawer);
-
-  // ── Action Cards Interactive Studio/Ticket Trigger ─────────────
-  container.querySelectorAll('.fin-action-card').forEach(card => {
-    const handleCardClick = () => {
-      const ticketId = card.dataset.ticketId;
-      const category = (card.dataset.category || '').toUpperCase();
-
-      closeDrawer();
-
-      if (ticketId) {
-        openTicketStudioModal(ticketId, () => {
-          router.push('/design');
-        });
-      } else if (category === 'UNASSIGNED') {
-        router.push('/design/scheduling');
-      } else {
-        router.push('/design/tickets');
-      }
-    };
-
-    card.addEventListener('click', handleCardClick);
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleCardClick();
-      }
     });
   });
 

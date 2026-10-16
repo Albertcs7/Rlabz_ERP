@@ -51,6 +51,24 @@ const routes = [
         component: () => import('./views/StudentChat.js')
       },
       {
+        path: 'notifications',
+        name: 'student-notifications',
+        title: 'ACTION ITEMS & NOTIFICATIONS',
+        component: () => import('./views/StudentNotifications.js')
+      },
+      {
+        path: 'design',
+        name: 'student-design',
+        title: 'STUDENT DESIGN WORKSPACE',
+        component: () => import('./views/StudentDesign.js')
+      },
+      {
+        path: 'design/:id',
+        name: 'student-design-ticket',
+        title: 'STUDENT DESIGN WORKSPACE',
+        component: () => import('./views/StudentDesign.js')
+      },
+      {
         path: 'profile',
         name: 'student-profile',
         title: 'STUDENT PROFILE & SETTINGS',

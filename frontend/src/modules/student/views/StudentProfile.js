@@ -7,6 +7,7 @@ import {
   removeStudentProfilePhoto
 } from './studentStore.js';
 import { useAuthStore } from '@/core/stores/auth.js';
+import { API_BASE } from '@/core/config/api.js';
 import { StudentSwal, showStudentSuccess, showStudentError, showStudentWarning } from '../studentAlerts.js';
 import '../student.css';
 
@@ -340,11 +341,38 @@ export async function StudentProfile(route, router) {
               cancelButtonText: 'Cancel',
               confirmButtonColor: '#059669',
               cancelButtonColor: '#64748b'
-            }).then((result) => {
+            }).then(async (result) => {
               if (result.isConfirmed) {
                 saveStudentProfilePhoto(currentUser, dataUrl);
-                if (currentUser) currentUser.avatar = dataUrl;
+                if (currentUser) {
+                  currentUser.avatar = dataUrl;
+                  currentUser.profile_photo_path = dataUrl;
+                }
+                if (authStore && authStore.user) {
+                  authStore.user.avatar = dataUrl;
+                  authStore.user.profile_photo_path = dataUrl;
+                }
                 profileData.avatar = dataUrl;
+                profileData.profile_photo_path = dataUrl;
+
+                // Persist photo to backend
+                try {
+                  const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+                  if (token) {
+                    await fetch(`${API_BASE}/auth/profile-photo`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify({ photo_url: dataUrl })
+                    });
+                  }
+                } catch (err) {
+                  console.warn('Could not persist avatar to server:', err);
+                }
+
                 StudentSwal.fire({
                   toast: true,
                   position: 'top-end',
@@ -357,6 +385,10 @@ export async function StudentProfile(route, router) {
                 });
                 render();
                 updateStudentNavbarAvatar();
+                try {
+                  const { applyHeaderAvatar } = await import('@/core/shared/profilePhoto.js');
+                  applyHeaderAvatar(document, dataUrl, profileData.name);
+                } catch (e) {}
               }
               photoFileInput.value = '';
             });
@@ -376,11 +408,43 @@ export async function StudentProfile(route, router) {
         cancelButtonText: 'Cancel',
         confirmButtonColor: '#dc2626',
         cancelButtonColor: '#64748b'
-      }).then((res) => {
+      }).then(async (res) => {
         if (res.isConfirmed) {
+          // 1. Remove from backend
+          try {
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            if (token) {
+              await fetch(`${API_BASE}/auth/profile-photo`, {
+                method: 'DELETE',
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+            }
+          } catch (e) {
+            console.warn('Could not delete photo from server:', e);
+          }
+
+          // 2. Remove from local storage
           removeStudentProfilePhoto(currentUser);
-          if (currentUser) delete currentUser.avatar;
+
+          // 3. Reset local store and user state
+          if (currentUser) {
+            currentUser.avatar = null;
+            currentUser.profile_photo_path = null;
+            delete currentUser.avatar;
+            delete currentUser.profile_photo_path;
+          }
+          if (authStore && authStore.user) {
+            authStore.user.avatar = null;
+            authStore.user.profile_photo_path = null;
+          }
+          profileData.avatar = null;
+          profileData.profile_photo_path = null;
           delete profileData.avatar;
+          delete profileData.profile_photo_path;
+
           StudentSwal.fire({
             toast: true,
             position: 'top-end',
@@ -393,6 +457,10 @@ export async function StudentProfile(route, router) {
           });
           render();
           updateStudentNavbarAvatar();
+          try {
+            const { applyHeaderAvatar } = await import('@/core/shared/profilePhoto.js');
+            applyHeaderAvatar(document, null, profileData.name);
+          } catch (e) {}
         }
       });
     });

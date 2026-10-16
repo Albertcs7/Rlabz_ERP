@@ -327,7 +327,9 @@ class DesignController extends Controller
             ->leftJoin('users as requesters', 'design_tickets.requester_id', '=', 'requesters.id')
             ->leftJoin('users as designers', 'design_tickets.assigned_to', '=', 'designers.id')
             ->leftJoin('projects', 'design_tickets.project_id', '=', 'projects.id')
-            ->where('design_tickets.id', $id)
+            ->where(function($q) use ($id) {
+                $q->where('design_tickets.id', $id)->orWhere('design_tickets.ticket_number', $id);
+            })
             ->select(
                 'design_tickets.*',
                 'projects.title as project_title',
@@ -347,10 +349,12 @@ class DesignController extends Controller
         $ticket->attachments = json_decode($ticket->attachments ?? '[]', true);
         $ticket->collaborators = json_decode($ticket->collaborators ?? '[]', true);
 
+        $ticketId = $ticket->id;
+
         // Fetch sequential versions (V1, V2, V3)
         $versions = DB::table('design_versions')
             ->leftJoin('users', 'design_versions.uploader_id', '=', 'users.id')
-            ->where('ticket_id', $id)
+            ->where('ticket_id', $ticketId)
             ->select('design_versions.*', 'users.name as uploader_name')
             ->orderBy('version_number', 'asc')
             ->get();
@@ -359,7 +363,7 @@ class DesignController extends Controller
         $comments = DB::table('design_comments')
             ->leftJoin('users', 'design_comments.user_id', '=', 'users.id')
             ->leftJoin('users as resolvers', 'design_comments.resolved_by', '=', 'resolvers.id')
-            ->where('ticket_id', $id)
+            ->where('ticket_id', $ticketId)
             ->select('design_comments.*', 'users.name as author_name', 'resolvers.name as resolver_name')
             ->orderBy('created_at', 'asc')
             ->get();
@@ -367,7 +371,7 @@ class DesignController extends Controller
         // Fetch ticket chronological audit strip (PDF Module 11)
         $auditLogs = DB::table('design_audit_logs')
             ->leftJoin('users', 'design_audit_logs.user_id', '=', 'users.id')
-            ->where('ticket_id', $id)
+            ->where('ticket_id', $ticketId)
             ->select('design_audit_logs.*', 'users.name as actor_name')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -1021,13 +1025,15 @@ class DesignController extends Controller
      */
     public function getTeamCapacity()
     {
-        // Get all design users (Design Head + Designer students)
+        // Get all active design team members (design_user_profiles) + design_head
+        $profiles = DB::table('design_user_profiles')->get()->keyBy('user_id');
+        $profileUserIds = $profiles->where('is_active', 1)->pluck('user_id')->toArray();
+
         $users = DB::table('users')
-            ->whereIn('role', ['design_head', 'student'])
+            ->whereIn('id', $profileUserIds)
+            ->orWhere('role', 'design_head')
             ->select('id', 'name', 'email', 'role', 'avatar')
             ->get();
-
-        $profiles = DB::table('design_user_profiles')->get()->keyBy('user_id');
 
         $now = Carbon::now();
         $startOfWeek = $now->copy()->startOfWeek();
@@ -1461,18 +1467,43 @@ class DesignController extends Controller
 
     /**
      * @route GET /api/design/users
-     * PDF Module 1: Users, roles & permissions
+     * Team Management: View Design Team members with capacity, skills, workload
      */
     public function getDesignUsers()
     {
+        $profiles = DB::table('design_user_profiles')->get()->keyBy('user_id');
+        $profileUserIds = $profiles->keys()->toArray();
+
+        // Include users with design_user_profiles or design_head role
         $users = DB::table('users')
+            ->whereIn('id', $profileUserIds)
+            ->orWhere('role', 'design_head')
             ->select('id', 'name', 'email', 'phone', 'avatar', 'role', 'department', 'created_at')
             ->get();
 
-        $profiles = DB::table('design_user_profiles')->get()->keyBy('user_id');
+        // Calculate workload & committed hours from active tickets
+        $workloads = DB::table('design_tickets')
+            ->whereIn('status', ['New', 'Assigned', 'In Progress', 'Submitted', 'In Review', 'Revision'])
+            ->whereNotNull('assigned_to')
+            ->select(
+                'assigned_to',
+                DB::raw('COUNT(id) as open_tickets_count'),
+                DB::raw('SUM(estimated_hours) as hours_committed')
+            )
+            ->groupBy('assigned_to')
+            ->get()
+            ->keyBy('assigned_to');
 
-        $result = $users->map(function ($u) use ($profiles) {
+        $result = $users->map(function ($u) use ($profiles, $workloads) {
             $prof = $profiles->get($u->id);
+            $wl = $workloads->get($u->id);
+
+            $designRole = 'Designer';
+            if ($u->role === 'design_head') $designRole = 'Design Lead';
+            elseif ($u->role === 'director' || $u->id == 1) $designRole = 'Admin';
+            elseif ($u->role === 'student') $designRole = 'Student Designer';
+            else $designRole = 'Designer';
+
             return [
                 'id' => $u->id,
                 'name' => $u->name,
@@ -1480,12 +1511,14 @@ class DesignController extends Controller
                 'phone' => $u->phone ?? '+91 98470 00000',
                 'avatar' => $u->avatar,
                 'system_role' => $u->role,
-                // Design permission roles from PDF: Requester, Designer, Design Lead, Admin
-                'design_role' => ($u->role === 'design_head') ? 'Design Lead' : (($u->role === 'director' || $u->id == 1) ? 'Admin' : (($u->role === 'student' && in_array($u->id, [6, 7, 8])) ? 'Designer' : 'Requester')),
-                'division' => $prof->division ?? ($u->department ?? 'General'),
+                'design_role' => $designRole,
+                'division' => $prof->division ?? ($u->department ?? 'Creative Studio'),
                 'skill_tags' => $prof ? json_decode($prof->skill_tags ?? '[]', true) : ['poster', 'UI'],
-                'weekly_capacity_hours' => $prof ? $prof->weekly_capacity_hours : 20,
+                'weekly_capacity_hours' => $prof ? (int)$prof->weekly_capacity_hours : 20,
                 'is_active' => $prof ? (bool)$prof->is_active : true,
+                'open_tickets_count' => $wl ? (int)$wl->open_tickets_count : 0,
+                'hours_committed_this_week' => $wl ? (float)$wl->hours_committed : 0,
+                'notification_preferences' => $prof ? json_decode($prof->notification_preferences ?? '{"in_app":true,"email":true}', true) : ['in_app' => true, 'email' => true],
                 'joining_date' => Carbon::parse($u->created_at)->format('Y-m-d'),
             ];
         });
@@ -1497,8 +1530,238 @@ class DesignController extends Controller
     }
 
     /**
+     * @route GET /api/design/team-candidates
+     * Search existing ERP users to add to the design team
+     */
+    public function searchEligibleTeamCandidates(Request $request)
+    {
+        $q = trim($request->input('q', ''));
+        $existingTeamUserIds = DB::table('design_user_profiles')
+            ->where('is_active', 1)
+            ->pluck('user_id')
+            ->toArray();
+
+        $query = DB::table('users')
+            ->leftJoin('student_profiles', 'users.id', '=', 'student_profiles.student_id')
+            ->select(
+                'users.id',
+                'users.name',
+                'users.email',
+                'users.role',
+                'users.department',
+                'student_profiles.course',
+                'student_profiles.batch',
+                'student_profiles.designation as student_designation'
+            );
+
+        if (!empty($q)) {
+            $s = '%' . $q . '%';
+            $query->where(function ($sub) use ($s) {
+                $sub->where('users.name', 'like', $s)
+                    ->orWhere('users.email', 'like', $s)
+                    ->orWhere('users.role', 'like', $s);
+            });
+        }
+
+        $candidates = $query->limit(20)->get()->map(function ($u) use ($existingTeamUserIds) {
+            $isOnTeam = in_array($u->id, $existingTeamUserIds);
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'role' => $u->role,
+                'department' => $u->department ?? 'General',
+                'is_student' => ($u->role === 'student'),
+                'academic_summary' => ($u->role === 'student') ? "{$u->course} · {$u->batch} · " . ucfirst($u->student_designation ?? 'Nova') : null,
+                'is_on_design_team' => $isOnTeam,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $candidates,
+        ]);
+    }
+
+    /**
+     * @route POST /api/design/team-members
+     * Add existing ERP user to Design Team
+     */
+    public function addExistingUserToTeam(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'skill_tags' => 'required|array|min:1',
+            'weekly_capacity_hours' => 'required|integer|min:1|max:80',
+            'division' => 'nullable|string|max:100',
+            'notification_preferences' => 'nullable|array',
+        ]);
+
+        $userId = $validated['user_id'];
+        $user = DB::table('users')->where('id', $userId)->first();
+
+        // Check if already on team and active
+        $existing = DB::table('design_user_profiles')->where('user_id', $userId)->first();
+        if ($existing && $existing->is_active) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "User {$user->name} already belongs to the Design Team.",
+            ], 422);
+        }
+
+        $division = $validated['division'] ?? ($user->department ?: 'Design');
+
+        DB::table('design_user_profiles')->updateOrInsert(
+            ['user_id' => $userId],
+            [
+                'division' => $division,
+                'skill_tags' => json_encode($validated['skill_tags']),
+                'weekly_capacity_hours' => $validated['weekly_capacity_hours'],
+                'notification_preferences' => json_encode($validated['notification_preferences'] ?? ['in_app' => true, 'email' => true]),
+                'is_active' => true,
+                'updated_at' => now(),
+                'created_at' => $existing ? $existing->created_at : now(),
+            ]
+        );
+
+        $auth = $request->attributes->get('auth_user');
+        $actorId = $auth['id'] ?? ($auth['sub'] ?? 17);
+        $this->logAudit(null, $actorId, 'team_member_added', null, [
+            'user_id' => $userId,
+            'name' => $user->name,
+            'skills' => $validated['skill_tags'],
+            'capacity' => $validated['weekly_capacity_hours'],
+        ], "Added {$user->name} to Design Team.");
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "{$user->name} added to the Design Team successfully.",
+        ], 201);
+    }
+
+    /**
+     * @route POST /api/design/create-designer
+     * Create new designer account (reuses Coordinator/Admin account creation workflow)
+     */
+    public function createNewDesignerAccount(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:6',
+            'phone' => 'nullable|string|max:20',
+            'account_type' => 'required|string|in:student,non-student',
+            'skill_tags' => 'required|array|min:1',
+            'weekly_capacity_hours' => 'required|integer|min:1|max:80',
+            'division' => 'nullable|string|max:100',
+            // Student specific fields if student
+            'course' => 'nullable|string|max:100',
+            'batch' => 'nullable|string|max:50',
+            'semester' => 'nullable|integer|min:1|max:12',
+            'student_designation' => 'nullable|string|in:nova,orbit,spark',
+        ]);
+
+        $isStudent = ($validated['account_type'] === 'student');
+        $role = $isStudent ? 'student' : 'developer'; // narrow supported designer role
+        $permissions = $isStudent
+            ? ['view-student', 'view-projects', 'view-communication', 'view-design']
+            : ['view-design', 'view-projects', 'view-communication'];
+
+        $userId = DB::table('users')->insertGetId([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+            'phone' => $validated['phone'] ?? null,
+            'role' => $role,
+            'permissions' => json_encode($permissions),
+            'department' => $validated['division'] ?? 'Design & Creative Studio',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Student Profile (if student designer)
+        if ($isStudent && Schema::hasTable('student_profiles')) {
+            DB::table('student_profiles')->insert([
+                'student_id' => $userId,
+                'course' => $validated['course'] ?? 'MCA',
+                'batch' => $validated['batch'] ?? date('Y') . '-' . (date('Y') + 2),
+                'semester' => (int)($validated['semester'] ?? 1),
+                'designation' => $validated['student_designation'] ?? 'nova',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Design Profile
+        DB::table('design_user_profiles')->insert([
+            'user_id' => $userId,
+            'division' => $validated['division'] ?? 'Design',
+            'skill_tags' => json_encode($validated['skill_tags']),
+            'weekly_capacity_hours' => (int)$validated['weekly_capacity_hours'],
+            'notification_preferences' => json_encode(['in_app' => true, 'email' => true]),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $auth = $request->attributes->get('auth_user');
+        $actorId = $auth['id'] ?? ($auth['sub'] ?? 17);
+        $this->logAudit(null, $actorId, 'designer_account_created', null, [
+            'user_id' => $userId,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $role,
+        ], "Created new {$validated['account_type']} designer account for {$validated['name']}.");
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Designer account for {$validated['name']} created successfully.",
+            'user' => [
+                'id' => $userId,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'role' => $role,
+            ]
+        ], 201);
+    }
+
+    /**
+     * @route PATCH /api/design/users/{id}/status
+     * Activate or deactivate design team membership
+     */
+    public function toggleTeamMemberStatus(Request $request, $id)
+    {
+        $membership = DB::table('design_user_profiles')->where('user_id', $id)->first();
+        if (!$membership) {
+            return response()->json(['error' => 'Design profile not found'], 404);
+        }
+
+        $newActive = $request->has('is_active') ? (bool)$request->is_active : !$membership->is_active;
+
+        DB::table('design_user_profiles')->where('user_id', $id)->update([
+            'is_active' => $newActive,
+            'updated_at' => now(),
+        ]);
+
+        $auth = $request->attributes->get('auth_user');
+        $actorId = $auth['id'] ?? ($auth['sub'] ?? 17);
+        $action = $newActive ? 'membership_activated' : 'membership_deactivated';
+        $user = DB::table('users')->where('id', $id)->first();
+        $userName = $user ? $user->name : "User #{$id}";
+
+        $this->logAudit(null, $actorId, $action, (string)$membership->is_active, (string)$newActive, "{$action} for {$userName}");
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Membership for {$userName} " . ($newActive ? 'activated' : 'deactivated') . " successfully.",
+            'is_active' => $newActive,
+        ]);
+    }
+
+    /**
      * @route PUT /api/design/users/{id}/profile
-     * Update user skills, capacity, active toggle
+     * Update user skills, capacity, division
      */
     public function updateUserProfile(Request $request, $id)
     {
@@ -1522,6 +1785,60 @@ class DesignController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Design user profile updated.',
+        ]);
+    }
+
+    /**
+     * @route POST /api/design/tickets/{id}/reassign
+     * Reassign ticket with required permission and recorded reason
+     */
+    public function reassignTicket(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'assigned_to' => 'required|integer|exists:users,id',
+            'reason' => 'required|string|max:1000',
+            'committed_delivery_date' => 'nullable|date',
+            'estimated_hours' => 'nullable|numeric|min:0.5',
+        ]);
+
+        $ticket = DB::table('design_tickets')->where('id', $id)->first();
+        if (!$ticket) {
+            return response()->json(['error' => 'Ticket not found'], 404);
+        }
+
+        $prevAssigneeId = $ticket->assigned_to;
+        $prevAssignee = $prevAssigneeId ? DB::table('users')->where('id', $prevAssigneeId)->value('name') : 'Unassigned';
+        $newAssignee = DB::table('users')->where('id', $validated['assigned_to'])->value('name');
+
+        $update = [
+            'assigned_to' => $validated['assigned_to'],
+            'updated_at' => now(),
+        ];
+        if (!empty($validated['committed_delivery_date'])) {
+            $update['committed_delivery_date'] = $validated['committed_delivery_date'];
+        }
+        if (!empty($validated['estimated_hours'])) {
+            $update['estimated_hours'] = $validated['estimated_hours'];
+        }
+
+        DB::table('design_tickets')->where('id', $id)->update($update);
+
+        $auth = $request->attributes->get('auth_user');
+        $actorId = $auth['id'] ?? ($auth['sub'] ?? 17);
+        $this->logAudit($id, $actorId, 'reassigned', $prevAssignee, $newAssignee, $validated['reason']);
+
+        // Notify new designer
+        $this->notifyUser(
+            $id,
+            $validated['assigned_to'],
+            'ticket_reassigned',
+            'Ticket Reassigned to You',
+            "You have been assigned ticket {$ticket->ticket_number} ({$ticket->title}). Reason: {$validated['reason']}"
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Ticket {$ticket->ticket_number} reassigned to {$newAssignee}.",
         ]);
     }
 

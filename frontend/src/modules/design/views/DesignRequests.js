@@ -201,15 +201,15 @@ export async function DesignRequests(route, router) {
               </div>
             </div>
 
-            <!-- Audience & Publication Channel -->
+            <!-- Audience & Publication Channel (Optional) -->
             <div class="form-grid-2">
               <div class="form-group">
-                <label style="font-weight:700;">Target Audience *</label>
-                <input type="text" id="intake-audience" class="design-input" placeholder="e.g. Undergrad CS students & Industry delegates" value="${intakeForm.target_audience}">
+                <label style="font-weight:700;">Target Audience (Optional)</label>
+                <input type="text" id="intake-audience" class="design-input" placeholder="e.g. Undergrad CS students &amp; Industry delegates" value="${intakeForm.target_audience}">
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Publication Channel *</label>
+                <label style="font-weight:700;">Publication Channel (Optional)</label>
                 <input type="text" id="intake-channel" class="design-input" placeholder="e.g. Instagram feed, Campus noticeboards, Website banner" value="${intakeForm.publishing_channel}">
               </div>
             </div>
@@ -223,8 +223,8 @@ export async function DesignRequests(route, router) {
               </div>
 
               <div class="form-group">
-                <label style="font-weight:700;">Special Colour or Branding Constraints</label>
-                <input type="text" id="intake-brand-constraints" class="design-input" placeholder="e.g. Sponsor logos on bottom bar; Gold & Navy palette" value="${intakeForm.brand_constraints}">
+                <label style="font-weight:700;">Special Colour or Branding Constraints (Optional)</label>
+                <input type="text" id="intake-brand-constraints" class="design-input" placeholder="e.g. Sponsor logos on bottom bar; Gold &amp; Navy palette" value="${intakeForm.brand_constraints}">
               </div>
             </div>
 
@@ -453,14 +453,6 @@ export async function DesignRequests(route, router) {
           toast('Request title is mandatory.', 'warning');
           return;
         }
-        if (!audience) {
-          toast('Target audience is required.', 'warning');
-          return;
-        }
-        if (!channel) {
-          toast('Publication channel is required.', 'warning');
-          return;
-        }
         if (!reqDate) {
           toast('Required-by date and time is required.', 'warning');
           return;
@@ -520,28 +512,24 @@ export async function DesignRequests(route, router) {
         } else if (intakeForm.work_type === 'video_motion') {
           const duration = container.querySelector('#type-video-duration')?.value.trim();
           const footage = container.querySelector('#type-footage-links')?.value.trim();
-          if (!duration || !footage) {
-            toast('Duration and raw footage/reference links are required for video requests.', 'warning');
+          if (!duration) {
+            toast('Target duration is required for video requests.', 'warning');
             return;
           }
           intakeForm.type_specific_fields = {
             target_duration: duration,
             aspect_ratio: container.querySelector('#type-video-ratio')?.value,
-            raw_footage_links: footage,
+            raw_footage_links: footage || '',
             subtitles: container.querySelector('#type-subtitles')?.value,
             language: container.querySelector('#type-video-lang')?.value,
             music: container.querySelector('#type-music')?.value
           };
         } else if (intakeForm.work_type === 'presentation') {
           const sourceDoc = container.querySelector('#type-source-doc')?.value.trim();
-          if (!sourceDoc) {
-            toast('Source content document link is required for presentations.', 'warning');
-            return;
-          }
           intakeForm.type_specific_fields = {
-            slide_count: container.querySelector('#type-slide-count')?.value,
+            slide_count: container.querySelector('#type-slide-count')?.value || '10',
             template_preference: container.querySelector('#type-template-pref')?.value,
-            source_doc: sourceDoc
+            source_doc: sourceDoc || ''
           };
         } else {
           const otherScope = container.querySelector('#type-other-scope')?.value.trim();

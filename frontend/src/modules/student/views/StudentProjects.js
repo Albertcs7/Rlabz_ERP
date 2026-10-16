@@ -29,23 +29,8 @@ export async function StudentProjects(route, router) {
     p.designation = currentUser?.designation || p.designation;
   });
 
-  // 1.1 Fetch Design tickets assigned to this student (Visibility Only)
-  let studentDesignTickets = [];
-  try {
-    const token = localStorage.getItem('token');
-    const dRes = await fetch(`${API_BASE}/student/design-tickets`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    if (dRes.ok) {
-      const dJson = await dRes.json();
-      studentDesignTickets = dJson.data || [];
-    }
-  } catch (err) {
-    console.error('Failed to load student design tickets:', err);
-  }
-
   // State
-  let viewMode = 'active'; // 'active' | 'history' | 'design'
+  let viewMode = 'active'; // 'active' | 'history'
   let selectedProjectId = route?.params?.id ? parseInt(route.params.id, 10) : null;
   let isDetailView = Boolean(selectedProjectId);
   let activeTab = 'overview'; // 'overview', 'team', 'modules', 'tasks', 'github'
@@ -59,11 +44,6 @@ export async function StudentProjects(route, router) {
   let historySearch = '';
   let historyStatusFilter = 'all'; // 'all' | 'Completed' | 'In Progress'
   let historyRoleFilter = 'all'; // 'all' | 'lead' | 'developer'
-
-  // Design Tickets Filter State
-  let designSearch = '';
-  let designStatusFilter = 'all'; // 'all' | 'In Progress' | 'Submitted' | 'Revision' | 'Approved' | 'Closed'
-  let designPriorityFilter = 'all'; // 'all' | 'urgent' | 'high' | 'normal'
 
   // PDF Export Helper for Project History Dossier
   async function exportProjectHistoryToPDF(projectsToExport, scopeTitle = 'Complete Lifetime Project History') {
@@ -619,22 +599,6 @@ export async function StudentProjects(route, router) {
     });
     const isHistoryFilterActive = historySearch.trim() !== '' || historyStatusFilter !== 'all' || historyRoleFilter !== 'all';
 
-    // Design tickets filtered list
-    const filteredDesignTickets = studentDesignTickets.filter(t => {
-      if (designStatusFilter !== 'all' && t.status !== designStatusFilter) return false;
-      if (designPriorityFilter !== 'all' && t.priority !== designPriorityFilter) return false;
-      if (designSearch.trim()) {
-        const q = designSearch.toLowerCase().trim();
-        const mNum = (t.ticket_number || '').toLowerCase().includes(q);
-        const mTitle = (t.title || '').toLowerCase().includes(q);
-        const mBrand = (t.brand_kit_name || '').toLowerCase().includes(q);
-        const mType = (t.work_type || '').toLowerCase().includes(q);
-        const mDiv = (t.requesting_division || '').toLowerCase().includes(q);
-        if (!mNum && !mTitle && !mBrand && !mType && !mDiv) return false;
-      }
-      return true;
-    });
-
     // Filter module data and github for selected project
     const projectModules = selectedProject ? modulesData.filter(s => s.projectId === selectedProject.id) : [];
     const projectGithub = selectedProject ? githubData.find(g => g.project === selectedProject.title) : null;
@@ -1010,23 +974,6 @@ export async function StudentProjects(route, router) {
         `;
       }).join('');
 
-      // Filter assigned Design tickets
-      const filteredDesignTickets = studentDesignTickets.filter(t => {
-        if (designStatusFilter !== 'all' && t.status !== designStatusFilter) return false;
-        if (designPriorityFilter !== 'all' && t.priority !== designPriorityFilter) return false;
-        if (designSearch) {
-          const q = designSearch.toLowerCase();
-          return (
-            (t.ticket_number || '').toLowerCase().includes(q) ||
-            (t.title || '').toLowerCase().includes(q) ||
-            (t.work_type || '').toLowerCase().includes(q) ||
-            (t.brand_kit_name || '').toLowerCase().includes(q) ||
-            (t.project_title || '').toLowerCase().includes(q)
-          );
-        }
-        return true;
-      });
-
       container.innerHTML = `
         <!-- Header Banner with View Mode Switcher -->
         <div class="student-proj-header-wrapper">
@@ -1044,7 +991,7 @@ export async function StudentProjects(route, router) {
             </div>
           </div>
 
-          <!-- View Switcher Tabs: Active Projects vs. Project History vs. Design Tickets -->
+          <!-- View Switcher Tabs: Active Projects vs. Project History -->
           <div class="student-proj-view-switcher">
             <button type="button" class="student-proj-switcher-btn ${viewMode === 'active' ? 'active' : ''}" data-view="active">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
@@ -1054,196 +1001,10 @@ export async function StudentProjects(route, router) {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               <span>📜 Project History (${assignedProjects.length})</span>
             </button>
-            <button type="button" class="student-proj-switcher-btn ${viewMode === 'design' ? 'active' : ''}" data-view="design">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
-              <span>🎨 Design Tickets (${studentDesignTickets.length})</span>
-            </button>
           </div>
         </div>
 
-        ${viewMode === 'design' ? `
-          <!-- DESIGN TICKETS SECTION / TAB -->
-          <!-- KPI Grid Matching Student Tasks Layout -->
-          <div class="student-proj-kpi-grid">
-            <div class="student-proj-kpi-card kpi-purple">
-              <div class="student-proj-kpi-icon purple">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
-              </div>
-              <div class="student-proj-kpi-info">
-                <div class="student-proj-kpi-val">${studentDesignTickets.length}</div>
-                <div class="student-proj-kpi-lbl">Assigned Design Tickets</div>
-              </div>
-            </div>
-
-            <div class="student-proj-kpi-card kpi-crimson">
-              <div class="student-proj-kpi-icon crimson">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </div>
-              <div class="student-proj-kpi-info">
-                <div class="student-proj-kpi-val">${studentDesignTickets.filter(t => t.status === 'In Progress').length}</div>
-                <div class="student-proj-kpi-lbl">In Progress</div>
-              </div>
-            </div>
-
-            <div class="student-proj-kpi-card kpi-amber">
-              <div class="student-proj-kpi-icon amber">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-              </div>
-              <div class="student-proj-kpi-info">
-                <div class="student-proj-kpi-val">${studentDesignTickets.filter(t => ['Submitted', 'In Review', 'Revision'].includes(t.status)).length}</div>
-                <div class="student-proj-kpi-lbl">Under Review / Revision</div>
-              </div>
-            </div>
-
-            <div class="student-proj-kpi-card kpi-indigo">
-              <div class="student-proj-kpi-icon indigo">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              </div>
-              <div class="student-proj-kpi-info">
-                <div class="student-proj-kpi-val">${studentDesignTickets.filter(t => ['Approved', 'Closed'].includes(t.status)).length}</div>
-                <div class="student-proj-kpi-lbl">Approved &amp; Completed</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Governance / Read-Only Policy Notice -->
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.82rem; color: #166534; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span>🎨</span>
-              <span><strong>Design Ticket Assignments:</strong> These are creative design deliverables allocated to you. Showing ticket ID, title, work type, priority, committed delivery date and status.</span>
-            </div>
-            <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-transform: uppercase;">Visibility Mode</span>
-          </div>
-
-          <!-- Search and Filter Bar -->
-          <div class="student-proj-history-filter-bar" style="margin-bottom: 16px;">
-            <div class="student-proj-history-search">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" id="design-search-input" placeholder="Search design tickets by ID, title, brand kit or work type..." value="${designSearch}">
-            </div>
-
-            <!-- Status Filter Pills -->
-            <div class="student-proj-filter-pills" id="design-status-pills">
-              <button type="button" class="student-proj-filter-pill ${designStatusFilter === 'all' ? 'active' : ''}" data-design-status="all">All (${studentDesignTickets.length})</button>
-              <button type="button" class="student-proj-filter-pill ${designStatusFilter === 'In Progress' ? 'active' : ''}" data-design-status="In Progress">In Progress</button>
-              <button type="button" class="student-proj-filter-pill ${designStatusFilter === 'Submitted' ? 'active' : ''}" data-design-status="Submitted">Submitted</button>
-              <button type="button" class="student-proj-filter-pill ${designStatusFilter === 'Revision' ? 'active' : ''}" data-design-status="Revision">Revision</button>
-              <button type="button" class="student-proj-filter-pill ${designStatusFilter === 'Approved' ? 'active' : ''}" data-design-status="Approved">Approved</button>
-              <button type="button" class="student-proj-filter-pill ${designStatusFilter === 'Closed' ? 'active' : ''}" data-design-status="Closed">Closed</button>
-            </div>
-
-            <!-- Priority Filter Pills -->
-            <div class="student-proj-filter-pills" id="design-priority-pills">
-              <button type="button" class="student-proj-filter-pill ${designPriorityFilter === 'all' ? 'active' : ''}" data-design-priority="all">All Priorities</button>
-              <button type="button" class="student-proj-filter-pill ${designPriorityFilter === 'urgent' ? 'active' : ''}" data-design-priority="urgent" style="color: #dc2626;">Urgent</button>
-              <button type="button" class="student-proj-filter-pill ${designPriorityFilter === 'high' ? 'active' : ''}" data-design-priority="high" style="color: #d97706;">High</button>
-              <button type="button" class="student-proj-filter-pill ${designPriorityFilter === 'normal' ? 'active' : ''}" data-design-priority="normal">Normal</button>
-            </div>
-          </div>
-
-          <!-- Design Tickets Table -->
-          ${filteredDesignTickets.length === 0 ? `
-            <div class="student-card">
-              <div class="student-empty-filter" style="padding: 48px 24px; text-align: center;">
-                <div style="font-size: 2.2rem; margin-bottom: 8px;">🎨</div>
-                <div class="student-empty-filter-text" style="font-weight: 700; color: #0f172a; font-size: 1rem;">No Design Tickets Found</div>
-                <div class="student-empty-filter-sub" style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">
-                  ${studentDesignTickets.length === 0 ? 'You currently have no creative design tickets assigned to you.' : 'No design tickets match your selected status or search filter.'}
-                </div>
-              </div>
-            </div>
-          ` : `
-            <div class="student-proj-table-wrap" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-              <table class="student-proj-table" style="width: 100%; border-collapse: collapse;">
-                <thead>
-                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left; font-size: 0.78rem; text-transform: uppercase; color: #475569;">
-                    <th style="padding: 12px 14px; width: 16%;">Ticket ID</th>
-                    <th style="padding: 12px 14px; width: 34%;">Title &amp; Work Type</th>
-                    <th style="padding: 12px 14px; width: 14%;">Brand Kit</th>
-                    <th style="padding: 12px 14px; width: 10%; text-align: center;">Priority</th>
-                    <th style="padding: 12px 14px; width: 14%;">Committed Date</th>
-                    <th style="padding: 12px 14px; width: 12%; text-align: center;">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${filteredDesignTickets.map(t => {
-                    const statusBadgeClass = t.status === 'Approved' || t.status === 'Closed'
-                      ? 'student-badge-success'
-                      : (t.status === 'Revision' ? 'student-badge-danger' : 'student-badge-warning');
-
-                    const priorityPillStyle = t.priority === 'urgent'
-                      ? 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;'
-                      : (t.priority === 'high' ? 'background: #fffbeb; color: #d97706; border: 1px solid #fde68a;' : 'background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;');
-
-                    const dateDisplay = t.committed_delivery_date
-                      ? new Date(t.committed_delivery_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                      : (t.required_by ? new Date(t.required_by).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Pending Allocation');
-
-                    const workTypeLabel = {
-                      poster: 'Poster / Static',
-                      social_creative: 'Social Creative',
-                      video_motion: 'Video / Motion',
-                      presentation: 'Presentation',
-                      other: 'Other Work'
-                    }[t.work_type] || t.work_type;
-
-                    return `
-                      <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 12px 14px; vertical-align: top;">
-                          <span class="student-rep-task-code" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 800; font-family: monospace; font-size: 0.8rem; padding: 2px 8px; border-radius: 4px;">
-                            ${t.ticket_number}
-                          </span>
-                          ${t.project_title ? `
-                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">
-                              📁 ${t.project_title}
-                            </div>
-                          ` : ''}
-                        </td>
-                        <td style="padding: 12px 14px; vertical-align: top;">
-                          <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">${t.title}</div>
-                          <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
-                            <span style="background: #f1f5f9; color: #475569; font-size: 0.72rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">
-                              ${workTypeLabel}
-                            </span>
-                            <span style="font-size: 0.72rem; color: #64748b;">
-                              Division: <strong>${t.requesting_division}</strong>
-                            </span>
-                          </div>
-                        </td>
-                        <td style="padding: 12px 14px; vertical-align: top;">
-                          <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 0.74rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;">
-                            🎨 ${t.brand_kit_name || 'RLabZ Core'}
-                          </span>
-                        </td>
-                        <td style="padding: 12px 14px; text-align: center; vertical-align: top;">
-                          <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; ${priorityPillStyle}">
-                            ${t.priority}
-                          </span>
-                        </td>
-                        <td style="padding: 12px 14px; vertical-align: top;">
-                          <div style="font-size: 0.82rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 4px;">
-                            📅 ${dateDisplay}
-                          </div>
-                          <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">
-                            ${t.committed_delivery_date ? 'Committed Delivery' : 'Requested Target'}
-                          </div>
-                        </td>
-                        <td style="padding: 12px 14px; text-align: center; vertical-align: top;">
-                          <span class="student-badge ${statusBadgeClass}" style="font-size: 0.75rem; font-weight: 700; padding: 3px 8px;">
-                            ${t.status}
-                          </span>
-                          <div style="font-size: 0.7rem; color: #64748b; margin-top: 4px;">
-                            Ball: ${t.ball_is_with || 'Lead'}
-                          </div>
-                        </td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          `}
-        ` : (viewMode === 'active' ? `
+        ${viewMode === 'active' ? `
           <!-- ACTIVE PROJECTS VIEW -->
           <!-- KPI Grid (Executive Color Palette Matching Dashboard) -->
           <div class="student-proj-kpi-grid">
@@ -1430,7 +1191,7 @@ export async function StudentProjects(route, router) {
               ${historyProjectCardsHtml}
             </div>
           `}
-        `)}
+        `}
       `;
     } else {
       // Dynamic Team members list for Project Team tab
@@ -1876,32 +1637,7 @@ export async function StudentProjects(route, router) {
         });
       });
 
-      if (viewMode === 'design') {
-        const designSearchInput = container.querySelector('#design-search-input');
-        designSearchInput?.addEventListener('input', (e) => {
-          designSearch = e.target.value;
-          render();
-          const newInput = container.querySelector('#design-search-input');
-          if (newInput) {
-            newInput.focus();
-            newInput.setSelectionRange(newInput.value.length, newInput.value.length);
-          }
-        });
-
-        container.querySelectorAll('#design-status-pills [data-design-status]').forEach(pill => {
-          pill.addEventListener('click', () => {
-            designStatusFilter = pill.getAttribute('data-design-status');
-            render();
-          });
-        });
-
-        container.querySelectorAll('#design-priority-pills [data-design-priority]').forEach(pill => {
-          pill.addEventListener('click', () => {
-            designPriorityFilter = pill.getAttribute('data-design-priority');
-            render();
-          });
-        });
-      } else if (viewMode === 'active') {
+      if (viewMode === 'active') {
         // Search input handler
         const projSearchInput = container.querySelector('#project-search-input');
         projSearchInput?.addEventListener('input', (e) => {

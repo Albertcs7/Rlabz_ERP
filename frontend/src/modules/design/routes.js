@@ -42,6 +42,12 @@ const routes = [
         component: () => import('./views/DesignTickets.js').then(m => m.default || m.DesignTickets)
       },
       {
+        path: 'tickets/:id',
+        name: 'design-ticket-studio',
+        title: 'CREATIVE DELIVERABLE STUDIO',
+        component: () => import('./views/DesignTicketStudio.js').then(m => m.default || m.DesignTicketStudio)
+      },
+      {
         path: 'version-control',
         name: 'design-version-control',
         title: 'VERSION CONTROL & FEEDBACK',

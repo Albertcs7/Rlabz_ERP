@@ -1860,6 +1860,21 @@ class StudentController extends Controller
         $yearSuffix = ($yearNum == 1) ? 'st' : (($yearNum == 2) ? 'nd' : (($yearNum == 3) ? 'rd' : 'th'));
         $semesterText = "{$yearNum}{$yearSuffix} Year / {$semesterNum}{$suffix} Semester";
 
+        $hasDesignAccess = false;
+        $designProfile = null;
+        if (Schema::hasTable('design_user_profiles')) {
+            $membership = DB::table('design_user_profiles')->where('user_id', $studentId)->first();
+            if ($membership && (bool)$membership->is_active) {
+                $hasDesignAccess = true;
+                $designProfile = [
+                    'division' => $membership->division,
+                    'skill_tags' => json_decode($membership->skill_tags ?? '[]', true),
+                    'weekly_capacity_hours' => $membership->weekly_capacity_hours,
+                    'is_active' => (bool)$membership->is_active
+                ];
+            }
+        }
+
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
@@ -1870,7 +1885,11 @@ class StudentController extends Controller
             'course' => $profile->course ?? 'MCA',
             'batch' => $profile->batch ?? '2025-2027',
             'semester' => $semesterNum,
-            'semester_text' => $semesterText
+            'semester_text' => $semesterText,
+            'profile_photo_path' => $user->profile_photo_path ?? null,
+            'avatar' => $user->profile_photo_path ?? ($user->avatar ?? null),
+            'has_design_access' => $hasDesignAccess,
+            'design_profile' => $designProfile
         ]);
     }
 
@@ -2284,7 +2303,8 @@ class StudentController extends Controller
                 'totalTasksCount' => $tasks->count(),
                 'assignedModulesCount' => $modules->count(),
                 'upcomingMeetingsCount' => $upcomingMeetingsCount,
-            ]
+            ],
+            'has_design_access' => $this->hasActiveDesignMembership($studentId),
         ]);
     }
 
@@ -2785,8 +2805,95 @@ class StudentController extends Controller
     }
 
     /**
+     * Check if authenticated student has active Design team membership
+     */
+    protected function hasActiveDesignMembership(int $studentId): bool
+    {
+        if (!Schema::hasTable('design_user_profiles')) {
+            return false;
+        }
+        $membership = DB::table('design_user_profiles')->where('user_id', $studentId)->first();
+        return $membership && (bool)$membership->is_active;
+    }
+
+    /**
+     * Student Design Dashboard: calculated genuine KPIs
+     */
+    public function getDesignDashboard(Request $request)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasActiveDesignMembership($studentId)) {
+            return response()->json([
+                'status' => 'error',
+                'has_design_access' => false,
+                'message' => 'No active Design team membership found. Please contact the Design Head to join the team.'
+            ], 403);
+        }
+
+        if (!Schema::hasTable('design_tickets')) {
+            return response()->json([
+                'status' => 'success',
+                'has_design_access' => true,
+                'kpis' => [
+                    'my_open' => 0,
+                    'in_progress' => 0,
+                    'submitted' => 0,
+                    'revision' => 0,
+                    'upcoming_deadlines' => 0,
+                    'overdue' => 0
+                ]
+            ]);
+        }
+
+        $allTickets = DB::table('design_tickets')
+            ->where('assigned_to', $studentId)
+            ->get();
+
+        $now = Carbon::now();
+        $in7Days = Carbon::now()->addDays(7);
+
+        $openCount = $allTickets->whereNotIn('status', ['Approved', 'Closed', 'Cancelled'])->count();
+        $inProgressCount = $allTickets->where('status', 'In Progress')->count();
+        $submittedCount = $allTickets->whereIn('status', ['Submitted', 'In Review'])->count();
+        $revisionCount = $allTickets->where('status', 'Revision')->count();
+
+        $upcomingCount = $allTickets->filter(function ($t) use ($now, $in7Days) {
+            if (in_array($t->status, ['Approved', 'Closed', 'Cancelled'])) return false;
+            $d = $t->committed_delivery_date ?: $t->required_by;
+            if (!$d) return false;
+            $date = Carbon::parse($d);
+            return $date->between($now, $in7Days);
+        })->count();
+
+        $overdueCount = $allTickets->filter(function ($t) use ($now) {
+            if (in_array($t->status, ['Approved', 'Closed', 'Cancelled'])) return false;
+            $d = $t->committed_delivery_date ?: $t->required_by;
+            if (!$d) return false;
+            return Carbon::parse($d)->isPast();
+        })->count();
+
+        return response()->json([
+            'status' => 'success',
+            'has_design_access' => true,
+            'kpis' => [
+                'my_open' => $openCount,
+                'in_progress' => $inProgressCount,
+                'submitted' => $submittedCount,
+                'revision' => $revisionCount,
+                'upcoming_deadlines' => $upcomingCount,
+                'overdue' => $overdueCount,
+                'total_assigned' => $allTickets->count()
+            ]
+        ]);
+    }
+
+    /**
      * Retrieve Design tickets assigned to the authenticated student
-     * Enforces student-level access scoping (assigned_to = auth_user.id)
+     * Enforces student-level access scoping, status/priority filtering, search, sorting and pagination
      */
     public function getDesignTickets(Request $request)
     {
@@ -2795,11 +2902,25 @@ class StudentController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        if (!Schema::hasTable('design_tickets')) {
-            return response()->json(['status' => 'success', 'data' => []]);
+        if (!$this->hasActiveDesignMembership($studentId)) {
+            return response()->json([
+                'status' => 'error',
+                'has_design_access' => false,
+                'message' => 'No active Design team membership found.',
+                'data' => []
+            ], 403);
         }
 
-        $tickets = DB::table('design_tickets')
+        if (!Schema::hasTable('design_tickets')) {
+            return response()->json([
+                'status' => 'success',
+                'has_design_access' => true,
+                'data' => [],
+                'pagination' => ['total' => 0, 'current_page' => 1, 'per_page' => 10, 'last_page' => 1]
+            ]);
+        }
+
+        $query = DB::table('design_tickets')
             ->leftJoin('users as requesters', 'design_tickets.requester_id', '=', 'requesters.id')
             ->leftJoin('projects', 'design_tickets.project_id', '=', 'projects.id')
             ->leftJoin('design_versions', 'design_tickets.current_version_id', '=', 'design_versions.id')
@@ -2818,18 +2939,485 @@ class StudentController extends Controller
                 'design_tickets.brand_kit_name',
                 'design_tickets.estimated_hours',
                 'design_tickets.actual_hours_logged',
+                'design_tickets.revision_count',
                 'design_tickets.created_at',
                 'requesters.name as requester_name',
+                'requesters.email as requester_email',
                 'projects.title as project_title',
                 'design_versions.version_number as current_version_number',
                 'design_versions.file_url as current_preview_url'
-            )
-            ->orderBy('design_tickets.committed_delivery_date', 'asc')
-            ->get();
+            );
+
+        // Status Filter
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('design_tickets.status', $request->status);
+        }
+
+        // Priority Filter
+        if ($request->filled('priority') && $request->priority !== 'all') {
+            $query->where('design_tickets.priority', $request->priority);
+        }
+
+        // Work Type Filter
+        if ($request->filled('work_type') && $request->work_type !== 'all') {
+            $query->where('design_tickets.work_type', $request->work_type);
+        }
+
+        // Search Filter
+        if ($request->filled('search') && !empty(trim($request->search))) {
+            $s = '%' . trim($request->search) . '%';
+            $query->where(function ($q) use ($s) {
+                $q->where('design_tickets.ticket_number', 'like', $s)
+                  ->orWhere('design_tickets.title', 'like', $s)
+                  ->orWhere('design_tickets.work_type', 'like', $s)
+                  ->orWhere('design_tickets.brand_kit_name', 'like', $s)
+                  ->orWhere('projects.title', 'like', $s);
+            });
+        }
+
+        // Sorting by deadline
+        $sortParam = $request->input('sort_deadline', $request->input('sort', 'asc'));
+        $sortOrder = ($sortParam === 'desc') ? 'desc' : 'asc';
+        $query->orderByRaw("COALESCE(design_tickets.committed_delivery_date, design_tickets.required_by) {$sortOrder}");
+
+        $perPage = max(1, min(50, (int)$request->input('per_page', 10)));
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
-            'data' => $tickets
+            'has_design_access' => true,
+            'data' => $paginator->items(),
+            'pagination' => [
+                'total' => $paginator->total(),
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'last_page' => $paginator->lastPage()
+            ]
+        ]);
+    }
+
+    /**
+     * View complete ticket brief, attachments, references, versions, feedback comments
+     */
+    public function getDesignTicketDetail(Request $request, $id)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasActiveDesignMembership($studentId)) {
+            return response()->json(['error' => 'Forbidden: Active Design membership required'], 403);
+        }
+
+        $ticket = DB::table('design_tickets')
+            ->leftJoin('users as requesters', 'design_tickets.requester_id', '=', 'requesters.id')
+            ->leftJoin('projects', 'design_tickets.project_id', '=', 'projects.id')
+            ->where('design_tickets.id', $id)
+            ->where('design_tickets.assigned_to', $studentId)
+            ->select(
+                'design_tickets.*',
+                'requesters.name as requester_name',
+                'requesters.email as requester_email',
+                'projects.title as project_title'
+            )
+            ->first();
+
+        if (!$ticket) {
+            return response()->json(['error' => 'Design ticket not found or access denied.'], 404);
+        }
+
+        // Decode JSON fields
+        $ticket->type_specific_fields = json_decode($ticket->type_specific_fields ?? '{}', true);
+        $ticket->attachments = json_decode($ticket->attachments ?? '[]', true);
+        $ticket->collaborators = json_decode($ticket->collaborators ?? '[]', true);
+
+        // Fetch Versions
+        $versions = DB::table('design_versions')
+            ->leftJoin('users', 'design_versions.uploader_id', '=', 'users.id')
+            ->where('design_versions.ticket_id', $id)
+            ->select('design_versions.*', 'users.name as uploader_name')
+            ->orderBy('design_versions.version_number', 'desc')
+            ->get();
+
+        // Fetch Comments
+        $comments = DB::table('design_comments')
+            ->leftJoin('users', 'design_comments.user_id', '=', 'users.id')
+            ->where('design_comments.ticket_id', $id)
+            ->select(
+                'design_comments.*',
+                'users.name as author_name',
+                'users.role as author_role'
+            )
+            ->orderBy('design_comments.created_at', 'asc')
+            ->get();
+
+        // Fetch brand kit guidelines if applicable
+        $brandKit = null;
+        if (Schema::hasTable('design_brand_kits') && !empty($ticket->brand_kit_name)) {
+            $brandKit = DB::table('design_brand_kits')
+                ->where('name', $ticket->brand_kit_name)
+                ->orWhere('name', 'like', "%{$ticket->brand_kit_name}%")
+                ->orWhere('slug', $ticket->brand_kit_name)
+                ->first();
+            if ($brandKit) {
+                $rawColors = $brandKit->brand_colors ?? ($brandKit->color_palette ?? null);
+                $rawType = $brandKit->typography ?? ($brandKit->typography_rules ?? null);
+                $rawLogos = $brandKit->downloadable_kits ?? ($brandKit->logo_assets ?? null);
+
+                $brandKit->color_palette = is_string($rawColors) ? json_decode($rawColors, true) : ($rawColors ?: []);
+                $brandKit->typography_rules = is_string($rawType) ? json_decode($rawType, true) : ($rawType ?: []);
+                $brandKit->logo_assets = is_string($rawLogos) ? json_decode($rawLogos, true) : ($rawLogos ?: []);
+            }
+        }
+
+        // Fetch audit history if available
+        $history = [];
+        if (Schema::hasTable('design_audit_logs')) {
+            $history = DB::table('design_audit_logs')
+                ->leftJoin('users', 'design_audit_logs.user_id', '=', 'users.id')
+                ->where('design_audit_logs.ticket_id', $id)
+                ->select(
+                    'design_audit_logs.*',
+                    'users.name as actor_name',
+                    'users.role as actor_role'
+                )
+                ->orderBy('design_audit_logs.created_at', 'desc')
+                ->get();
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'ticket' => $ticket,
+            'versions' => $versions,
+            'comments' => $comments,
+            'brand_kit' => $brandKit,
+            'history' => $history,
+        ]);
+    }
+
+    /**
+     * Update progress state by assigned designer
+     * Students cannot approve or close tickets
+     */
+    public function updateDesignTicketStatus(Request $request, $id)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $ticket = DB::table('design_tickets')
+            ->where('id', $id)
+            ->where('assigned_to', $studentId)
+            ->first();
+
+        if (!$ticket) {
+            return response()->json(['error' => 'Ticket not found or unauthorized.'], 404);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|string|in:In Progress,Submitted,Revision',
+            'note' => 'nullable|string|max:1000'
+        ]);
+
+        $newStatus = $validated['status'];
+        if (in_array($newStatus, ['Approved', 'Closed'])) {
+            return response()->json(['error' => 'Role restriction: Students cannot self-approve or close tickets.'], 403);
+        }
+
+        $ball = ($newStatus === 'Submitted') ? 'Requester' : 'Designer';
+
+        DB::table('design_tickets')->where('id', $id)->update([
+            'status' => $newStatus,
+            'ball_is_with' => $ball,
+            'updated_at' => now()
+        ]);
+
+        // Audit Log
+        if (Schema::hasTable('design_audit_logs')) {
+            DB::table('design_audit_logs')->insert([
+                'ticket_id' => $id,
+                'user_id' => $studentId,
+                'action' => 'status_update',
+                'previous_value' => $ticket->status,
+                'new_value' => $newStatus,
+                'reason' => $validated['note'] ?? 'Status updated by designer',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Ticket status updated to {$newStatus}.",
+            'current_status' => $newStatus,
+            'ball_is_with' => $ball
+        ]);
+    }
+
+    /**
+     * Upload a new deliverable version (V1, V2, V3...) with mandatory change summary
+     */
+    public function uploadDesignDeliverableVersion(Request $request, $id)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $ticket = DB::table('design_tickets')
+            ->where('id', $id)
+            ->where('assigned_to', $studentId)
+            ->first();
+
+        if (!$ticket) {
+            return response()->json(['error' => 'Ticket not found or unauthorized.'], 404);
+        }
+
+        $changeNotes = $request->input('change_notes') ?? $request->input('change_summary');
+        $fileUrl = $request->input('file_url') ?? $request->input('deliverable_url');
+
+        if (empty($changeNotes) || !is_string($changeNotes)) {
+            return response()->json(['error' => 'Change notes describing this version are required.'], 422);
+        }
+
+        $fileName = $request->input('file_name', 'deliverable_output');
+        $fileType = $request->input('file_type', 'image');
+        $fileSizeKb = 0;
+
+        if ($request->hasFile('file')) {
+            $uploaded = $request->file('file');
+            $fileName = $uploaded->getClientOriginalName();
+            $fileSizeKb = (int)ceil($uploaded->getSize() / 1024);
+            $mime = $uploaded->getMimeType();
+            if (str_starts_with($mime, 'image/')) $fileType = 'image';
+            elseif (str_starts_with($mime, 'video/')) $fileType = 'video';
+            elseif ($mime === 'application/pdf') $fileType = 'pdf';
+            else $fileType = 'archive';
+
+            $path = $uploaded->store('design_deliverables', 'public');
+            $fileUrl = Storage::disk('public')->url($path);
+        }
+
+        if (empty($fileUrl)) {
+            $fileUrl = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80';
+        }
+
+        // Determine next version number
+        $lastVer = DB::table('design_versions')->where('ticket_id', $id)->max('version_number') ?: 0;
+        $nextVer = $lastVer + 1;
+
+        // Reset previous is_current flags
+        DB::table('design_versions')->where('ticket_id', $id)->update(['is_current' => false]);
+
+        $versionId = DB::table('design_versions')->insertGetId([
+            'ticket_id' => $id,
+            'version_number' => $nextVer,
+            'uploader_id' => $studentId,
+            'file_url' => $fileUrl,
+            'file_name' => $fileName,
+            'file_type' => $fileType,
+            'file_size_kb' => $fileSizeKb,
+            'change_notes' => $request->input('change_notes'),
+            'is_current' => true,
+            'is_approved' => false,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        // Update Ticket to Submitted and set ball to Requester/Design Lead
+        DB::table('design_tickets')->where('id', $id)->update([
+            'current_version_id' => $versionId,
+            'status' => 'Submitted',
+            'ball_is_with' => 'Design Lead',
+            'revision_count' => DB::raw('revision_count + 1'),
+            'updated_at' => now()
+        ]);
+
+        // Audit Log
+        if (Schema::hasTable('design_audit_logs')) {
+            DB::table('design_audit_logs')->insert([
+                'ticket_id' => $id,
+                'user_id' => $studentId,
+                'action' => 'version_upload',
+                'previous_value' => "V{$lastVer}",
+                'new_value' => "V{$nextVer}",
+                'reason' => $request->input('change_notes'),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Version V{$nextVer} submitted successfully for review.",
+            'version_id' => $versionId,
+            'version_number' => $nextVer,
+            'file_url' => $fileUrl
+        ]);
+    }
+
+    /**
+     * Add work note, question, blocker, or reply to feedback
+     */
+    public function addDesignTicketComment(Request $request, $id)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $ticket = DB::table('design_tickets')
+            ->where('id', $id)
+            ->where('assigned_to', $studentId)
+            ->first();
+
+        if (!$ticket) {
+            return response()->json(['error' => 'Ticket not found or unauthorized.'], 404);
+        }
+
+        $validated = $request->validate([
+            'comment' => 'required|string|max:3000',
+            'version_id' => 'nullable|integer',
+            'parent_id' => 'nullable|integer'
+        ]);
+
+        $commentId = DB::table('design_comments')->insertGetId([
+            'ticket_id' => $id,
+            'version_id' => $validated['version_id'] ?? $ticket->current_version_id,
+            'user_id' => $studentId,
+            'parent_id' => $validated['parent_id'] ?? null,
+            'comment' => $validated['comment'],
+            'status' => 'open',
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        $author = DB::table('users')->where('id', $studentId)->first(['name', 'role']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Comment posted successfully.',
+            'comment' => [
+                'id' => $commentId,
+                'ticket_id' => $id,
+                'version_id' => $validated['version_id'] ?? $ticket->current_version_id,
+                'user_id' => $studentId,
+                'author_name' => $author->name ?? 'Designer',
+                'author_role' => $author->role ?? 'student',
+                'comment' => $validated['comment'],
+                'status' => 'open',
+                'created_at' => now()->toIso8601String()
+            ]
+        ]);
+    }
+
+    /**
+     * Resolve feedback comment
+     */
+    public function resolveDesignTicketComment(Request $request, $ticketId, $commentId)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $ticket = DB::table('design_tickets')
+            ->where('id', $ticketId)
+            ->where('assigned_to', $studentId)
+            ->first();
+
+        if (!$ticket) {
+            return response()->json(['error' => 'Ticket not found or unauthorized.'], 404);
+        }
+
+        DB::table('design_comments')
+            ->where('id', $commentId)
+            ->where('ticket_id', $ticketId)
+            ->update([
+                'status' => 'resolved',
+                'resolved_by' => $studentId,
+                'resolved_at' => now()
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Comment marked as resolved.'
+        ]);
+    }
+
+    public function resolveDesignCommentDirect(Request $request, $commentId)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        DB::table('design_comments')
+            ->where('id', $commentId)
+            ->update([
+                'status' => 'resolved',
+                'resolved_by' => $studentId,
+                'resolved_at' => now()
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Comment marked as resolved.'
+        ]);
+    }
+
+    /**
+     * Log time against assigned Design ticket
+     */
+    public function logDesignTime(Request $request, $id)
+    {
+        $studentId = $this->getStudentId($request);
+        if (!$studentId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $ticket = DB::table('design_tickets')
+            ->where('id', $id)
+            ->where('assigned_to', $studentId)
+            ->first();
+
+        if (!$ticket) {
+            return response()->json(['error' => 'Ticket not found or unauthorized.'], 404);
+        }
+
+        $rawHours = $request->input('hours') ?? $request->input('hours_spent');
+        $rawNotes = $request->input('notes') ?? $request->input('work_description');
+
+        if (!is_numeric($rawHours) || (float)$rawHours < 0.25 || (float)$rawHours > 24) {
+            return response()->json(['error' => 'Please provide valid hours between 0.25 and 24.'], 422);
+        }
+
+        $hours = (float)$rawHours;
+
+        DB::table('design_tickets')->where('id', $id)->update([
+            'actual_hours_logged' => DB::raw("actual_hours_logged + {$hours}"),
+            'updated_at' => now()
+        ]);
+
+        if (Schema::hasTable('design_audit_logs')) {
+            DB::table('design_audit_logs')->insert([
+                'ticket_id' => $id,
+                'user_id' => $studentId,
+                'action' => 'time_logged',
+                'previous_value' => (string)$ticket->actual_hours_logged,
+                'new_value' => (string)($ticket->actual_hours_logged + $hours),
+                'reason' => $validated['notes'] ?? "Logged {$hours}h of creative design work",
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Successfully logged {$hours} hours.",
+            'total_hours' => (float)$ticket->actual_hours_logged + $hours
         ]);
     }
 }

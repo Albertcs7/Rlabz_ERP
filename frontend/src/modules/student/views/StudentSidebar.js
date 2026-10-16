@@ -39,9 +39,19 @@ export function renderStudentSidebar() {
 
   if (!sidebarNav) return;
 
-  // Render the student specific links only if not already done
-  if (sidebarNav.dataset.portal !== 'student' || !sidebarNav.querySelector('a[href="/student/work-logs"]')) {
+  let hasDesignAccess = Boolean(authStore.user?.has_design_access);
+  if (!hasDesignAccess) {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      hasDesignAccess = Boolean(stored?.has_design_access);
+    } catch (_) {}
+  }
+
+  // Render the student specific links only if not already done or if design access changed
+  const lastDesignAccess = sidebarNav.dataset.hasDesignAccess;
+  if (sidebarNav.dataset.portal !== 'student' || !sidebarNav.querySelector('a[href="/student/work-logs"]') || lastDesignAccess !== String(hasDesignAccess)) {
     sidebarNav.dataset.portal = 'student';
+    sidebarNav.dataset.hasDesignAccess = String(hasDesignAccess);
     sidebarNav.innerHTML = `
       <ul>
         <li>
@@ -63,6 +73,21 @@ export function renderStudentSidebar() {
             <span>My Projects</span>
           </a>
         </li>
+        ${hasDesignAccess ? `
+        <li>
+          <a href="/student/design" id="student-sidebar-design-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m4.93 4.93 4.24 4.24"></path>
+              <path d="m14.83 9.17 4.24-4.24"></path>
+              <path d="m14.83 14.83 4.24 4.24"></path>
+              <path d="m9.17 14.83-4.24 4.24"></path>
+              <circle cx="12" cy="12" r="4"></circle>
+            </svg>
+            <span>Design</span>
+          </a>
+        </li>
+        ` : ''}
         <li>
           <a href="/student/reports">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

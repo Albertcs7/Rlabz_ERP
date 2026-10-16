@@ -4,6 +4,7 @@
  */
 
 import { API_BASE } from '@/core/config/api.js';
+import { useAuthStore } from '@/core/stores/auth.js';
 
 let cachedProjects = [];
 let cachedSprints = [];
@@ -177,6 +178,19 @@ export async function fetchLiveDashboard(force = true) {
     try {
       cachedDashboard = await apiFetch('/student/dashboard');
       if (cachedDashboard) {
+        if (cachedDashboard.has_design_access !== undefined) {
+          try {
+            const authStore = useAuthStore();
+            if (authStore && authStore.user) {
+              authStore.user.has_design_access = Boolean(cachedDashboard.has_design_access);
+            }
+          } catch (_) {}
+          try {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            storedUser.has_design_access = Boolean(cachedDashboard.has_design_access);
+            localStorage.setItem('user', JSON.stringify(storedUser));
+          } catch (_) {}
+        }
         if (cachedDashboard.projects && cachedDashboard.projects.length > 0) {
           cachedProjects = cachedDashboard.projects;
         }
@@ -279,6 +293,14 @@ export async function markStudentNotificationRead(id) {
       notif.is_read = true;
       notif.isRead = true;
     }
+    if (cachedDashboard && cachedDashboard.notifications) {
+      const dNotif = cachedDashboard.notifications.find(n => String(n.id) === String(id));
+      if (dNotif) {
+        dNotif.is_read = true;
+        dNotif.isRead = true;
+      }
+    }
+    window.dispatchEvent(new CustomEvent('student-notifications-updated', { detail: { id, allRead: false } }));
   } catch (e) {
     console.error(`Failed to mark notification ${id} as read:`, e);
   }
@@ -293,6 +315,13 @@ export async function markAllStudentNotificationsRead() {
       n.is_read = true;
       n.isRead = true;
     });
+    if (cachedDashboard && cachedDashboard.notifications) {
+      cachedDashboard.notifications.forEach(n => {
+        n.is_read = true;
+        n.isRead = true;
+      });
+    }
+    window.dispatchEvent(new CustomEvent('student-notifications-updated', { detail: { allRead: true } }));
   } catch (e) {
     console.error('Failed to mark all notifications as read:', e);
   }

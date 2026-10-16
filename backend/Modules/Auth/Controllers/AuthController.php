@@ -183,6 +183,18 @@ class AuthController extends Controller
             }
         }
 
+        // Check active Design Team membership (for conditional design access)
+        $hasDesignAccess = false;
+        if ($role === 'design_head') {
+            $hasDesignAccess = true;
+        } elseif (Schema::hasTable('design_user_profiles')) {
+            $hasDesignAccess = DB::table('design_user_profiles')
+                ->where('user_id', $user->id)
+                ->where('is_active', 1)
+                ->exists();
+        }
+        $userArray['has_design_access'] = $hasDesignAccess;
+
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
@@ -375,12 +387,15 @@ class AuthController extends Controller
         if (Schema::hasColumn('users', 'location')) $updateData['location'] = $validated['location'] ?? 'Kochi, India';
         if (Schema::hasColumn('users', 'department')) $updateData['department'] = $validated['department'] ?? null;
         
-        $photo = $validated['photo_url'] ?? ($validated['avatar'] ?? null);
-        if ($photo !== null && Schema::hasColumn('users', 'profile_photo_path')) {
-            $updateData['profile_photo_path'] = $photo ?: null;
-        }
-        if ($photo !== null && Schema::hasColumn('users', 'avatar')) {
-            $updateData['avatar'] = $photo ?: null;
+        if (array_key_exists('photo_url', $validated) || array_key_exists('avatar', $validated)) {
+            $photo = $validated['photo_url'] ?? ($validated['avatar'] ?? null);
+            $cleanPhoto = (!empty($photo) && is_string($photo)) ? trim($photo) : null;
+            if (Schema::hasColumn('users', 'profile_photo_path')) {
+                $updateData['profile_photo_path'] = $cleanPhoto;
+            }
+            if (Schema::hasColumn('users', 'avatar')) {
+                $updateData['avatar'] = $cleanPhoto;
+            }
         }
 
         DB::table('users')->where('id', $userId)->update($updateData);

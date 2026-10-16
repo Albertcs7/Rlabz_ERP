@@ -42,10 +42,10 @@ export async function UserProfile(route, router) {
     location: authStore.user?.location || 'Kochi, Kerala, India',
     department: authStore.user?.department || (authStore.role === 'finance' ? 'Finance & Accounts' : ''),
     // Students keep their existing photo source; every other role uses only the
-    // server-side profile photo (users.profile_photo_path), never users.avatar.
+    // server-side profile photo (users.profile_photo_path or users.avatar).
     avatar: isStudentRole
       ? (studentInitialPhoto || authStore.user?.avatar || null)
-      : (authStore.user?.profile_photo_url || null),
+      : (authStore.user?.profile_photo_url || authStore.user?.avatar || null),
     created_at: authStore.user?.created_at || null,
   };
 
@@ -71,9 +71,9 @@ export async function UserProfile(route, router) {
             profileUser.avatar = studentInitialPhoto;
           }
           if (!isStudentRole) {
-            profileUser.avatar = 'profile_photo_path' in liveUser
+            profileUser.avatar = liveUser.profile_photo_path
               ? profilePhotoUrl(liveUser.profile_photo_path)
-              : (authStore.user?.profile_photo_url || null);
+              : (liveUser.avatar || authStore.user?.profile_photo_url || authStore.user?.avatar || null);
           }
         }
         if (body.user?.role !== 'finance' && body.teams && body.teams.length > 0) {
@@ -105,8 +105,14 @@ export async function UserProfile(route, router) {
     const isStudent = authStore.role === 'student' || window.location.pathname.startsWith('/student');
     const isFinancePath = window.location.pathname.startsWith('/finance');
     const isDesignPath = window.location.pathname.startsWith('/design');
+    const isDesignHead = profileUser.role === 'design_head' || isDesignPath;
     const homeLabel = isFinancePath ? 'Finance Portal' : (isDesignPath ? 'Design Studio' : 'Homepage');
     const homeHref = isFinancePath ? '/finance' : (isDesignPath ? '/design' : '/');
+
+    // If projects tab was active but user is Design Head, fallback to profile tab
+    if (activeTab === 'projects' && (profileUser.role === 'finance' || isDesignHead)) {
+      activeTab = 'profile';
+    }
 
     container.innerHTML = `
       <!-- Breadcrumb -->
@@ -142,7 +148,10 @@ export async function UserProfile(route, router) {
                 <span class="profile-role-pill">${roleLabel}</span>
                 ${profileUser.role === 'finance'
                   ? `<span><strong>All Projects</strong> (Finance Scope)</span>`
-                  : `<span><strong>${teams.length}</strong> Associated Projects</span>`
+                  : (isDesignHead
+                    ? `<span><strong>All Projects & Teams</strong> (Design Head Scope)</span>`
+                    : `<span><strong>${teams.length}</strong> Associated Projects</span>`
+                  )
                 }
                 <span><strong>Active</strong> Status</span>
               </div>
@@ -172,7 +181,7 @@ export async function UserProfile(route, router) {
           <button class="profile-tab-item ${activeTab === 'security' ? 'active' : ''}" data-tab="security">
             Security & Password
           </button>
-          ${profileUser.role !== 'finance' ? `
+          ${profileUser.role !== 'finance' && !isDesignHead ? `
             <button class="profile-tab-item ${activeTab === 'projects' ? 'active' : ''}" data-tab="projects">
               Teams & Projects (${teams.length})
             </button>
@@ -263,7 +272,7 @@ export async function UserProfile(route, router) {
           </p>
         </div>
 
-        ${profileUser.role !== 'finance' ? `
+        ${profileUser.role !== 'finance' && !isDesignHead ? `
           <!-- In Teams Section -->
           <div class="profile-card">
             <div class="profile-card-header">
@@ -509,18 +518,34 @@ export async function UserProfile(route, router) {
       mountProfilePhotoEditor(container.querySelector('#profile-photo-slot'), {
         name: profileUser.name,
         layout: 'stacked',
-        onChange: (url) => { profileUser.avatar = url; },
+        onChange: (url) => {
+          profileUser.avatar = url;
+          if (authStore.user) {
+            authStore.user.avatar = url;
+            authStore.user.profile_photo_url = url;
+            authStore.user.profile_photo_path = url;
+          }
+          render();
+        },
       });
     }
 
     // Quick Profile Photo Upload Handler
     async function applyProfilePhoto(photoDataUrl) {
       profileUser.avatar = photoDataUrl;
+      profileUser.profile_photo_url = photoDataUrl;
+      profileUser.profile_photo_path = photoDataUrl;
       rememberProfilePhoto(photoDataUrl);
       if (authStore.user) {
         authStore.user.avatar = photoDataUrl;
         authStore.user.profile_photo_url = photoDataUrl;
+        authStore.user.profile_photo_path = photoDataUrl;
         localStorage.setItem('user', JSON.stringify(authStore.user));
+      }
+
+      if (!photoDataUrl) {
+        localStorage.removeItem('rlabz_profile_photo');
+        localStorage.removeItem('profile_photo_url');
       }
 
       if (authStore.role === 'student' || window.location.pathname.startsWith('/student')) {

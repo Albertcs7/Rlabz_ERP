@@ -46,7 +46,8 @@ class ProfilePhotoController extends Controller
             return $this->columnMissingResponse();
         }
 
-        $path = DB::table('users')->where('id', $userId)->value('profile_photo_path');
+        $user = DB::table('users')->where('id', $userId)->first();
+        $path = $user ? ($user->profile_photo_path ?: (isset($user->avatar) ? $user->avatar : null)) : null;
 
         return response()->json(['profile_photo_path' => $path]);
     }
@@ -99,10 +100,15 @@ class ProfilePhotoController extends Controller
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        DB::table('users')->where('id', $userId)->update([
+        $updates = [
             'profile_photo_path' => $newPath,
             'updated_at' => now(),
-        ]);
+        ];
+        if (Schema::hasColumn('users', 'avatar')) {
+            $updates['avatar'] = $newPath;
+        }
+
+        DB::table('users')->where('id', $userId)->update($updates);
 
         if ($user->profile_photo_path && $user->profile_photo_path !== $newPath) {
             $this->deleteStoredPhoto($user->profile_photo_path);
@@ -124,16 +130,28 @@ class ProfilePhotoController extends Controller
             return $this->columnMissingResponse();
         }
 
-        $oldPath = DB::table('users')->where('id', $userId)->value('profile_photo_path');
+        $user = DB::table('users')->where('id', $userId)->first();
+        $oldPath = $user ? ($user->profile_photo_path ?: ($user->avatar ?? null)) : null;
 
-        DB::table('users')->where('id', $userId)->update([
+        $updates = [
             'profile_photo_path' => null,
             'updated_at' => now(),
+        ];
+        if (Schema::hasColumn('users', 'avatar')) {
+            $updates['avatar'] = null;
+        }
+
+        DB::table('users')->where('id', $userId)->update($updates);
+
+        if ($oldPath) {
+            $this->deleteStoredPhoto($oldPath);
+        }
+
+        return response()->json([
+            'message' => 'Profile photo removed.',
+            'profile_photo_path' => null,
+            'avatar' => null,
         ]);
-
-        $this->deleteStoredPhoto($oldPath);
-
-        return response()->json(['message' => 'Profile photo removed.', 'profile_photo_path' => null]);
     }
 
     /** Only ever deletes files inside profile_photos/ on the public disk. */

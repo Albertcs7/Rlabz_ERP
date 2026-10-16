@@ -118,9 +118,23 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
     targetPortal = 'design';
   }
 
-  if (sidebarNav.dataset.portal !== targetPortal || (targetPortal === 'student' && !sidebarNav.querySelector('a[href="/student/work-logs"]'))) {
+  let studentHasDesignAccess = false;
+  if (targetPortal === 'student') {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      studentHasDesignAccess = Boolean(authStore.user?.has_design_access || storedUser?.has_design_access);
+    } catch (_) {}
+  }
+
+  const needsStudentRerender = targetPortal === 'student' && (
+    !sidebarNav.querySelector('a[href="/student/work-logs"]') ||
+    sidebarNav.dataset.hasDesignAccess !== String(studentHasDesignAccess)
+  );
+
+  if (sidebarNav.dataset.portal !== targetPortal || needsStudentRerender) {
     sidebarNav.dataset.portal = targetPortal;
     if (targetPortal === 'student') {
+      sidebarNav.dataset.hasDesignAccess = String(studentHasDesignAccess);
       sidebarNav.innerHTML = `
         <ul>
           <li>
@@ -142,6 +156,21 @@ function populateSidebarNav(sidebarNav, currentPath, authStore) {
               <span>My Projects</span>
             </a>
           </li>
+          ${studentHasDesignAccess ? `
+          <li>
+            <a href="/student/design" id="student-sidebar-design-link">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="m4.93 4.93 4.24 4.24"></path>
+                <path d="m14.83 9.17 4.24-4.24"></path>
+                <path d="m14.83 14.83 4.24 4.24"></path>
+                <path d="m9.17 14.83-4.24 4.24"></path>
+                <circle cx="12" cy="12" r="4"></circle>
+              </svg>
+              <span>Design</span>
+            </a>
+          </li>
+          ` : ''}
           <li>
             <a href="/student/reports">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -559,15 +588,20 @@ export async function DashboardLayout(contentChild, route, router) {
     <div class="fin-notification-drawer" id="fin-notification-drawer">
       <div class="fin-drawer-header">
         <div class="fin-drawer-title-wrap">
-          <span class="fin-drawer-title">Action Items & Notifications</span>
+          <span class="fin-drawer-title">Action Items &amp; Notifications</span>
           <span class="fin-drawer-count" id="fin-drawer-count" style="display: none;">0</span>
         </div>
-        <button class="fin-drawer-close" id="fin-drawer-close" title="Close Drawer">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <a href="/student/notifications" class="fin-btn outline sm" id="btn-drawer-top-view-all" style="font-size: 0.75rem; padding: 4px 10px; font-weight: 700; text-decoration: none; border-radius: 6px;">
+            View All ↗
+          </a>
+          <button class="fin-drawer-close" id="fin-drawer-close" title="Close Drawer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="fin-drawer-body" id="fin-drawer-body">
         <div style="text-align:center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem;">Loading notifications...</div>

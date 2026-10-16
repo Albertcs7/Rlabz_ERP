@@ -34,8 +34,29 @@ export async function DesignNotifications(route, router) {
     try {
       const res = await fetch(`${API_BASE}/design/notifications`, { headers }).then(r => r.ok ? r.json() : null);
       if (res && res.status === 'success') {
-        notifications = res.data || [];
-        unreadCount = res.unreadCount || notifications.filter(n => !n.is_read).length;
+        const dismissed = JSON.parse(localStorage.getItem('design_dismissed_alerts') || '[]');
+        
+        const actionItems = (res.alerts || []).map(a => ({
+          id: a.id,
+          isAlert: true,
+          ticketId: a.ticketId,
+          ticketNumber: a.ticketNumber,
+          category: a.category || 'ACTION',
+          urgency: a.isOverdue || (a.daysLeft !== null && a.daysLeft <= 0) ? 'urgent' : (a.daysLeft <= 2 ? 'high' : 'normal'),
+          message: a.message,
+          is_read: dismissed.includes(a.id) ? 1 : 0,
+          created_at: a.dateStr ? new Date(a.dateStr).toISOString() : new Date().toISOString()
+        }));
+
+        const dbNotifs = (res.data || []).map(n => ({
+          ...n,
+          isAlert: false,
+          urgency: n.urgency || 'normal'
+        }));
+
+        // Merge: action alerts + db notifications (showing all 9+ items exactly as drawer)
+        notifications = [...actionItems, ...dbNotifs];
+        unreadCount = notifications.filter(n => !n.is_read).length;
       }
     } catch (e) {
       console.error('Error loading notifications:', e);
@@ -44,21 +65,39 @@ export async function DesignNotifications(route, router) {
   }
 
   async function markAsRead(id) {
-    try {
-      const res = await fetch(`${API_BASE}/design/notifications/${id}/read`, {
-        method: 'PATCH',
-        headers
-      }).then(r => r.ok ? r.json() : null);
+    const item = notifications.find(n => String(n.id) === String(id));
+    if (!item) return;
 
-      if (res && res.status === 'success') {
-        const item = notifications.find(n => n.id === id);
-        if (item) item.is_read = 1;
-        unreadCount = notifications.filter(n => !n.is_read).length;
-        render();
-        toast('Notification marked as read');
+    if (item.isAlert) {
+      const dismissed = JSON.parse(localStorage.getItem('design_dismissed_alerts') || '[]');
+      const idStr = String(item.id);
+      if (!dismissed.includes(idStr)) {
+        dismissed.push(idStr);
+        localStorage.setItem('design_dismissed_alerts', JSON.stringify(dismissed));
       }
-    } catch (e) {
-      toast('Failed to update notification', 'error');
+      item.is_read = 1;
+      unreadCount = notifications.filter(n => !n.is_read).length;
+      render();
+      window.dispatchEvent(new CustomEvent('design-notifications-updated'));
+      toast('Action item marked as read');
+    } else {
+      try {
+        const dbId = parseInt(id, 10);
+        const res = await fetch(`${API_BASE}/design/notifications/${dbId}/read`, {
+          method: 'PATCH',
+          headers
+        }).then(r => r.ok ? r.json() : null);
+
+        if (res && res.status === 'success') {
+          item.is_read = 1;
+          unreadCount = notifications.filter(n => !n.is_read).length;
+          render();
+          window.dispatchEvent(new CustomEvent('design-notifications-updated'));
+          toast('Notification marked as read');
+        }
+      } catch (e) {
+        toast('Failed to update notification', 'error');
+      }
     }
   }
 
@@ -69,11 +108,27 @@ export async function DesignNotifications(route, router) {
       return;
     }
 
+    const dismissed = JSON.parse(localStorage.getItem('design_dismissed_alerts') || '[]');
+    const unreadDb = [];
+
+    unread.forEach(n => {
+      n.is_read = 1;
+      if (n.isAlert) {
+        if (!dismissed.includes(n.id)) dismissed.push(n.id);
+      } else {
+        unreadDb.push(n.id);
+      }
+    });
+
+    localStorage.setItem('design_dismissed_alerts', JSON.stringify(dismissed));
+
     try {
-      await Promise.all(unread.map(n => fetch(`${API_BASE}/design/notifications/${n.id}/read`, { method: 'PATCH', headers })));
-      notifications.forEach(n => n.is_read = 1);
+      if (unreadDb.length > 0) {
+        await Promise.all(unreadDb.map(id => fetch(`${API_BASE}/design/notifications/${id}/read`, { method: 'PATCH', headers })));
+      }
       unreadCount = 0;
       render();
+      window.dispatchEvent(new CustomEvent('design-notifications-updated'));
       toast('All notifications marked as read');
     } catch (e) {
       toast('Error updating notifications', 'error');
@@ -210,7 +265,12 @@ export async function DesignNotifications(route, router) {
                   </div>
                 </div>
 
-                <div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  ${n.ticketId ? `
+                    <a href="/design/tickets/${n.ticketId}" class="fin-btn outline sm" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; text-decoration: none; font-weight: 600;">
+                      Open Studio ↗
+                    </a>
+                  ` : ''}
                   ${isUnread ? `
                     <button class="mark-single-read-btn fin-btn" data-id="${n.id}" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; background: #ffffff; border: 1px solid #cbd5e1; color: #059669; font-weight: 600;">
                       Mark Read
@@ -259,8 +319,10 @@ export async function DesignNotifications(route, router) {
 
     container.querySelectorAll('.mark-single-read-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const id = parseInt(btn.dataset.id);
-        markAsRead(id);
+        const id = btn.dataset.id;
+        if (id) {
+          markAsRead(id);
+        }
       });
     });
   }

@@ -34,6 +34,7 @@ export async function StudentDashboard(route, router) {
     fetchLiveDashboard(true),
     fetchLiveStudentProfile().catch(() => null)
   ]);
+  renderStudentSidebar();
 
   function renderNotificationCard(n) {
     const isUnread = !n.is_read && !n.isRead;
@@ -320,6 +321,12 @@ export async function StudentDashboard(route, router) {
               </div>`
           }
         </div>
+        <div class="student-drawer-footer" style="padding: 12px 18px; background: #f8fafc; border-top: 1px solid var(--border-color, #e2e8f0); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.76rem; color: var(--text-muted);">${notifications.length} total notifications</span>
+          <a href="/student/notifications" class="student-btn student-btn-primary student-btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.78rem; text-decoration: none;">
+            <span>View All Notifications →</span>
+          </a>
+        </div>
       </div>
     `;
 
@@ -546,7 +553,7 @@ export async function StudentDashboard(route, router) {
 
           <!-- SECTION 3: Action Items & Alerts (Matching Finance Dashboard UI) -->
           <div class="student-dash-card student-dash-card-compact" id="card-dashboard-alerts">
-            <div class="student-dash-card-header">
+            <div class="student-dash-card-header" style="display: flex; justify-content: space-between; align-items: center;">
               <div class="student-dash-card-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00796B" stroke-width="2">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -557,9 +564,14 @@ export async function StudentDashboard(route, router) {
                   ${unreadCount > 0 ? `${unreadCount} Unread` : `${notifications.length} Total`}
                 </span>
               </div>
-              <button type="button" class="student-btn student-btn-outline student-btn-sm" id="btn-open-notif-drawer" style="font-size: 0.75rem; padding: 4px 10px;">
-                View Drawer (${notifications.length}) →
-              </button>
+              <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+                <button type="button" class="student-btn student-btn-outline student-btn-sm" id="btn-open-notif-drawer" style="font-size: 0.75rem; padding: 4px 10px;">
+                  Open Drawer
+                </button>
+                <a href="/student/notifications" class="student-btn student-btn-primary student-btn-sm" style="font-size: 0.75rem; padding: 4px 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>View All (${notifications.length}) →</span>
+                </a>
+              </div>
             </div>
 
             <div class="student-dash-notif-list" style="display: flex; flex-direction: column; gap: 10px;">
@@ -774,6 +786,12 @@ export async function StudentDashboard(route, router) {
       router.push('/student/profile');
     });
   }
+
+  // Real-time notification sync with full-page view
+  const onSync = () => {
+    render();
+  };
+  window.addEventListener('student-notifications-updated', onSync);
 
   render();
   return container;

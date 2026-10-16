@@ -13,12 +13,17 @@ Route::group(['prefix' => 'design', 'middleware' => [JwtMiddleware::class]], fun
     Route::get('/users', [DesignController::class, 'getDesignUsers']);
     Route::put('/users/{id}/profile', [DesignController::class, 'updateUserProfile']);
     Route::get('/team-capacity', [DesignController::class, 'getTeamCapacity']);
+    Route::get('/team-candidates', [DesignController::class, 'searchEligibleTeamCandidates']);
+    Route::post('/team-members', [DesignController::class, 'addExistingUserToTeam']);
+    Route::post('/create-designer', [DesignController::class, 'createNewDesignerAccount']);
+    Route::patch('/users/{id}/status', [DesignController::class, 'toggleTeamMemberStatus']);
 
     // 3. Request Intake & Ticket Lifecycle
     Route::get('/tickets', [DesignController::class, 'getTickets']);
     Route::post('/tickets', [DesignController::class, 'createTicket']);
     Route::get('/tickets/{id}', [DesignController::class, 'getTicketDetail']);
     Route::patch('/tickets/{id}/status', [DesignController::class, 'updateTicketStatus']);
+    Route::post('/tickets/{id}/reassign', [DesignController::class, 'reassignTicket']);
     
     // 4. Assignment & Scheduling
     Route::post('/tickets/{id}/assign', [DesignController::class, 'assignTicket']);

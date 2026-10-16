@@ -30,5 +30,13 @@ Route::group(['prefix' => 'student', 'middleware' => ['auth.jwt']], function () 
     Route::post('/tasks/{id}/status', [StudentController::class, 'updateTaskStatus']);
     Route::get('/chats/{projectId}', [StudentController::class, 'getChatMessages']);
     Route::post('/chats/{projectId}/messages', [StudentController::class, 'saveChatMessage']);
+    Route::get('/design-dashboard', [StudentController::class, 'getDesignDashboard']);
     Route::get('/design-tickets', [StudentController::class, 'getDesignTickets']);
+    Route::get('/design-tickets/{id}', [StudentController::class, 'getDesignTicketDetail']);
+    Route::patch('/design-tickets/{id}/status', [StudentController::class, 'updateDesignTicketStatus']);
+    Route::post('/design-tickets/{id}/versions', [StudentController::class, 'uploadDesignDeliverableVersion']);
+    Route::post('/design-tickets/{id}/comments', [StudentController::class, 'addDesignTicketComment']);
+    Route::patch('/design-tickets/{ticketId}/comments/{commentId}/resolve', [StudentController::class, 'resolveDesignTicketComment']);
+    Route::patch('/design-comments/{commentId}/resolve', [StudentController::class, 'resolveDesignCommentDirect']);
+    Route::post('/design-tickets/{id}/time', [StudentController::class, 'logDesignTime']);
 });
